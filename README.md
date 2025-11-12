@@ -6,18 +6,19 @@ Abstract: string (unlimited?)
 subjects: 
 rights: string (license)
 license: string (paragraph)
-primary: -> <author>
-Primary institute: -> <institution>
-contacts: -> <authors>
-funders: -> <funders>
+primary: -> <author> # ManyToOne or ManyToMany
+Primary institute: -> <institution> # ManyToOne
+contacts: -> <authors> # ManyToMany
+funders: -> <funders> # ManyToMany
 cite as: string (300 char limit)
 data access: (list)
-Authors Table
+
+## Authors Table
 Author ID (internal)
 firstname: string
 lastname: string
 PID: orcid
-affiliation -> institution
+affiliation -> institution # Many
 
 ## Funders Table
 Funding ID (internal)
@@ -30,6 +31,16 @@ IID: Institute ID
 <Other Institution Metadata>
 
 Relations - Unsure what these mean or how they are represented
+
+## Database table relations
+
+Citation -> primary author # Many to One
+Citation -> contacts # Many to Many
+Citation -> primary institute # Many to One
+Citation -> Funders # Many to Many
+
+Author Affiliation -> Institute # Many to One
+Funder Affiliation -> Institute # Many to One
 
 ## Web Interface
 ### Reading Data
