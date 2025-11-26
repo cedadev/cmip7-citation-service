@@ -1,18 +1,20 @@
 from django.contrib import admin
 from django.urls import path, include
 from citations.views import (
-    InstitutionView,
-    AuthorView,
-    FundingStreamView,
-    CitationView
+    InstitutionAPIView,
+    AuthorAPIView,
+    SpecificAuthorAPIView,
+    FundingStreamAPIView,
+    CitationAPIView
 )
 
 urlpatterns = [
     path('api/', include('rest_framework.urls')),
-    path('institute/', InstitutionView.as_view()),
-    path('author/', AuthorView.as_view()),
-    path('funding/', FundingStreamView.as_view()),
-    path('citation/', CitationView.as_view()),
+    path('api/institute/', InstitutionAPIView.as_view()),
+    path('api/author/', AuthorAPIView.as_view()),
+    path('api/author/<str:pk>', SpecificAuthorAPIView.as_view()),
+    path('api/funding/', FundingStreamAPIView.as_view()),
+    path('api/citation/', CitationAPIView.as_view()),
     #path('/'), # Search
     #path('/<id>') # Specific Citation
     #path('/authors') # List all authors alphabetically by last name

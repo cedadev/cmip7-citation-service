@@ -14,7 +14,7 @@ def validate_orcid(orcid: Union[str,None]):
         requests.get(
             f'https://pub.orcid.org/v3.0/expanded-search/?q=orcid%3A{orcid}'
         ).text
-    )['expanded-search:expanded-search']['@num_found']
+    )['expanded-search:expanded-search'].get('@num-found',"0")
 
     if r == "0":
         raise ValidationError(

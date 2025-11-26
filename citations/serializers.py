@@ -13,7 +13,7 @@ class GenericSerializerMixin(serializers.ModelSerializer):
         Create and return an Institution instance given validated data.
         """
 
-        return self.model.objects.create(validated_data)
+        return self.Meta.model.objects.create(**validated_data)
     
     def update(self, instance, validated_data: dict):
         """
@@ -33,7 +33,7 @@ class InstitutionSerializer(GenericSerializerMixin):
 
 class AuthorSerializer(GenericSerializerMixin):
     #affiliations = InstitutionSerializer(read_only=True, many=True)
-    affiliations = serializers.StringRelatedField(many=True)
+    affiliations = serializers.StringRelatedField(many=True, required=False)
     class Meta:
         model = Authors
         fields = ['first_name','last_name','email','orcid','affiliations','id']
