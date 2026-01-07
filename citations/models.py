@@ -111,6 +111,38 @@ class Citations(models.Model):
     # An endpoint for obtaining a list of ESGF urls that can be rendered
     #data_access = 
 
+def locate_institute(inst):
+    """
+    Use ROR lookup API to find institute-level metadata
+    """
+
+    ROR_api = 'https://api.ror.org/v2/organizations?query=' + '%20'.join(inst.split(' '))
+    r = requests.get(ROR_api)
+    if int(r.status_code) >= 300:
+        print('Institute not found')
+        return None
+    
+    resp = r.json()
+    found = False
+    inst_count = 0
+    while not found and inst_count < 10:
+        names = resp['items'][inst_count]['names']
+        for entry in names:
+            if entry['value'] == inst:
+                found = True
+                break
+
+        if not found:
+            inst_count += 1
+
+    if found:
+        return {
+            'name':inst,
+            'acronym': ''.join([i[0] for i in inst.split(' ')]),
+            'country': resp['items'][inst_count]['locations'][0]['geonames_details']['country_name']
+        }
+
+
 @receiver(post_save, sender=Authors)
 def extract_from_orcid(sender, instance, created, **kwargs):
     if created:
@@ -137,4 +169,14 @@ def extract_from_orcid(sender, instance, created, **kwargs):
                     instance.save(update_fields='affiliations')
                 except:
                     # Unknown institutions are ignored
-                    pass
+                    # Instead, attempt to locate and add new institution from the ROR API.
+                    # Ignore institute if it is not within the first 10 entries of ROR API.
+                    inst_meta = locate_institute(inst)
+                    if inst_meta is not None:
+                        # ValueError here
+                        institute = Institutions.objects.create(**inst_meta)
+                        institute.save()
+                        instance.affiliations.add(institute)
+                        instance.save(update_fields='affiliations')
+                        print('Success')
+                        x=input()
