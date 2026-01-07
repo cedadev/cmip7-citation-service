@@ -19,6 +19,11 @@ from rest_framework import generics
 
 from rest_framework.exceptions import APIException
 
+from django.views.generic.base import TemplateView
+
+class IntroView(TemplateView):
+    template_name = 'intro.html'
+
 class GenericAPIView(
     mixins.ListModelMixin, mixins.CreateModelMixin, generics.GenericAPIView
     ):

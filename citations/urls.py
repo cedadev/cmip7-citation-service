@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from citations.views import (
+    IntroView,
     InstitutionAPIView,
     AuthorAPIView,
     SpecificAuthorAPIView,
@@ -9,6 +10,7 @@ from citations.views import (
 )
 
 urlpatterns = [
+    path('', IntroView.as_view(), name='intro'),
     path('api/', include('rest_framework.urls')),
     path('api/institute/', InstitutionAPIView.as_view()),
     path('api/author/', AuthorAPIView.as_view()),
