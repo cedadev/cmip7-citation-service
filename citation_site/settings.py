@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     "fwtheme_django_ceda_serv",
     "fwtheme_django",
+    "cookielaw",
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
