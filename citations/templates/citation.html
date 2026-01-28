@@ -1,0 +1,50 @@
+{% extends 'fwtheme_django/layout.html' %}
+
+{% block head_title %}CMIP7 Citation{% endblock %}
+
+{% block page_title %}
+    <h2><b>{{ citation.title }}</b></h2>
+
+    <h3><b>General Information</b></h3>
+    <table class="table table-striped border border-light">
+        <tr>
+            <th>Name</th>
+            <td>{{ citation.title }}</td>
+        </tr>
+        <tr>
+            <th>Abstract</th>
+            <td>{{ citation.abstract }}</td>
+        </tr>
+        <tr>
+            <th>DRS URL</th>
+            <td><a href="{{citation.drs_url}}">{{citation.drs_url}}</a></td>
+        </tr>
+        <tr>
+            <th>Rights</th>
+            <td>{{ citation.rights }}</td>
+        </tr>
+        <tr>
+            <th>License</th>
+            <td>{{ citation.license }}</td>
+        </tr>
+    </table>
+
+    <h3><b>Responsible Parties</b></h3>
+    <table class="table table-striped border border-light">
+    <tr>
+        <th>Name</th>
+        <th>Role</th>
+    </tr>
+    <tr>
+        <td>{{ citation.primary.first_name }}</td>
+        <td>Primary</td>
+    </tr>
+    {% for contact in citation.contacts %}
+    <tr>
+        <td>{{ contact.first_name }}</td>
+        <td>Contact</td>
+    </tr>
+    {% endfor %}
+    </table>
+
+{% endblock %}

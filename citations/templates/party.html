@@ -1,0 +1,59 @@
+{% extends 'fwtheme_django/layout.html' %}
+
+{% block head_title %}CMIP7 Citation{% endblock %}
+
+{% block page_title %}
+    <h1>Party</h1>
+    <table class="table table-striped border border-light">
+        <tr>
+            <th>Name</th>
+            {% if party.middle_names %}
+                <td>{{ party.first_name }} {{ party.middle_names }}{{ party.last_name }}</a></td>
+            {% else %}
+                <td>{{ party.first_name }} {{ party.last_name }}</a></td>
+            {% endif %}
+        </tr>
+        <tr>
+            <th>ORCID</th>
+            <td><a href='https://orcid.org/my-orcid?emailVerified=true&orcid={{ party.orcid }}'>{{ party.orcid }}</a></td>
+        </tr>
+        <tr>
+            <th>Email</th>
+            <td>{{ party.email }}</td>
+        </tr>
+    </table>
+
+    <h2>Affiliations</h2>
+    <table class="table table-striped border border-light">
+        <tr>
+            <th>Name</th>
+            <th>Country</th>
+        </tr>
+        {% for affiliation in party.affiliations %}
+        <tr>
+            <td>{{ affiliation.name }}</td>
+            <td>{{ affiliation.country }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <h2>Citation Contributions</h2>
+    <table class="table table-striped border border-light">
+        <tr>
+            <th>Name</th>
+            <th>Role</th>
+        </tr>
+        {% for citation in primaries %}
+        <tr>
+            <td><a href = "{% url 'citations:citation' pk=citation.id %}">{{ citation.name }}</a></td>
+            <td>Primary</td>
+        </tr>
+        {% endfor %}
+        {% for citation in contacts %}
+        <tr>
+            <td><a href = "{% url 'citations:citation' pk=citation.id %}">{{ citation.name }}</a></td>
+            <td>Contact</td>
+        </tr>
+        {% endfor %}
+    </table>
+{% endblock %}

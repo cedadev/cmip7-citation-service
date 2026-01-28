@@ -1,0 +1,26 @@
+{% extends 'fwtheme_django/layout.html' %}
+
+{% block head_title %}CMIP7 Citation{% endblock %}
+
+{% block page_title %}
+    <h1>Parties</h1>
+    <table class="table table-striped border border-light">
+        <tr>
+            <th>Name</th>
+            <th>ORCID</th>
+            <th>Email</th>
+        </tr>
+        {% for party in parties %}
+        <a href="{% url 'citations:party' pk=party.id %}">
+        <tr>
+            {% if party.middle_names %}
+                <td><a class="nav-link" href="{% url 'citations:party' pk=party.id %}">{{ party.first_name }} {{ party.middle_names }}{{ party.last_name }}</a></td>
+            {% else %}
+                <td><a class="nav-link" href="{% url 'citations:party' pk=party.id %}">{{ party.first_name }} {{ party.last_name }}</a></td>
+            {% endif %}
+            <td><a href='https://orcid.org/my-orcid?emailVerified=true&orcid={{ party.orcid }}'>{{ party.orcid }}</a></td>
+            <td>{{ party.email }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+{% endblock %}
