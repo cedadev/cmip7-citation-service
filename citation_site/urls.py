@@ -37,5 +37,6 @@ router.register(r'users', UserViewSet)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('citations.urls')),
+    path('', include(('citations.urls','citations'), namespace='citations')),
+    path('oidc/', include('mozilla_django_oidc.urls')),
 ]
