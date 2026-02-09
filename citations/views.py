@@ -11,8 +11,13 @@ from citations.serializers import (
     CitationSerializer
 )
 
+from citations.forms import(
+    CitationForm
+)
+
 from rest_framework.authentication import TokenAuthentication
 from django.core import serializers
+from django.shortcuts import redirect
 from rest_framework import permissions
 
 from rest_framework import mixins
@@ -21,10 +26,12 @@ from rest_framework import generics
 from rest_framework.exceptions import APIException
 
 from django.views.generic.base import TemplateView
+from django.views.generic.edit import FormView
 from django.contrib.sites import shortcuts
 from django.http import HttpResponse
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.conf import settings
+from django.db.models import Q, CharField, TextField, ForeignKey
 
 import hashlib
 
@@ -34,6 +41,21 @@ def fullname(party):
             return f"{party['first_name']} {party['middle_names']} {party['last_name']}"
         
     return f"{party['first_name']} {party['last_name']}"
+
+def deep_search(queryset, term):
+    q = Q()
+    model = queryset.model
+
+    for field in model._meta.get_fields():
+        if isinstance(field, (CharField, TextField)):
+            q |= Q(**{f"{field.name}__icontains": term})
+
+        elif isinstance(field, ForeignKey):
+            related = field.name
+            q |= Q(**{f"{related}__{field.target_field.name}__icontains": term})
+
+    return queryset.filter(q)
+
 
 class IntroView(LoginRequiredMixin,TemplateView):
     login_url = settings.LOGIN_URL
@@ -55,8 +77,16 @@ class CitationsView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        print(self.request.GET.get('search'))
+
+        if self.request.GET.get('search','') != '':
+            term = self.request.GET.get('search')
+            search_citations = deep_search(Citations.objects.all(),term)
+        else:
+            search_citations = Citations.objects.all()
+
         citations = []
-        for citation in Citations.objects.all():
+        for citation in search_citations:
             cite = CitationSerializer(citation).data
             cite['primary'] = {
                 'fullname':fullname(cite['primary']),
@@ -191,3 +221,11 @@ class SpecificCitationAPIView(SpecificAPIView):
     model = Citations
     queryset = Citations.objects.all()
     serializer_class = CitationSerializer
+
+class NewCitationFormView(FormView):
+
+    template_name = "new_citation.html"
+    form_class = CitationForm
+    
+    def form_valid(self, form):
+        return super().form_valid(form)

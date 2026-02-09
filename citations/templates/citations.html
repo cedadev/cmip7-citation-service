@@ -3,19 +3,40 @@
 {% block head_title %}CMIP7 Citations{% endblock %}
 
 {% block page_title %}
-    <table class="table table-striped border border-light">
-        <tr>
-            <th>Title</th>
-            <th>Version</th>
-            <th>Primary Contact</th>
-        </tr>
-        {% for citation in citations %}
-        <tr>
-            <th><a href="{% url 'citations:citation' pk=citation.id %}">{{ citation.title }}</a></th>
-            <th>{{ citation.version }}</th>
-            <th><a href="{% url 'citations:party' pk=citation.primary.id %}">{{ citation.primary.fullname }}</a></th>
-        </tr>
-        {% endfor %}
-    </table>
+{% endblock %}
+
+{% block content_main %}
+
+    <div class="row">
+        <div class="col-md-12">
+        <form style="overflow: hidden" method="GET" action="" >
+            <div class="col-12 col-lg-8 offset-lg-2 px-xs-0">
+                <span class="v-centre w-100 mb-2" id="search-wrapper">
+                <div class="input-group input-group-lg mb-0">
+                    <input class="form-control flex-grow-1" placeholder="Input search terms..." type="search" name="search" id="id_q"> 
+                    <input class="btn btn-primary m-0" type="submit" value="Search">
+                </div>
+                </span>
+            </div>
+        </form>
+        </div>
+    </div>
+    <p></p>
+    <div style="display: flex; justify-content: center; align-items: center">
+        <table class="table table-striped border border-light">
+            <tr>
+                <th>Title</th>
+                <th>Version</th>
+                <th>Primary Contact</th>
+            </tr>
+            {% for citation in citations %}
+            <tr>
+                <th><a href="{% url 'citations:citation' pk=citation.id %}">{{ citation.title }}</a></th>
+                <th>{{ citation.version }}</th>
+                <th><a href="{% url 'citations:party' pk=citation.primary.id %}">{{ citation.primary.fullname }}</a></th>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
 
 {% endblock %}

@@ -2,10 +2,11 @@
 
 {% block head_title %}CMIP7 Citation{% endblock %}
 
-{% block page_title %}
+{% block content_main %}
     <h2><b>{{ citation.title }}</b></h2>
-
+    <p></p>
     <h3><b>General Information</b></h3>
+    <p></p>
     <table class="table table-striped border border-light">
         <tr>
             <th>Name</th>
@@ -36,12 +37,12 @@
         <th>Role</th>
     </tr>
     <tr>
-        <td>{{ citation.primary.first_name }}</td>
+        <td><a href="{% url 'citations:party' pk=citation.primary.id %}">{{ citation.primary.first_name }} {{ citation.primary.last_name }}</a></td>
         <td>Primary</td>
     </tr>
     {% for contact in citation.contacts %}
     <tr>
-        <td>{{ contact.first_name }}</td>
+        <td>{{ contact.first_name }} {{ contact.last_name }} </td>
         <td>Contact</td>
     </tr>
     {% endfor %}
