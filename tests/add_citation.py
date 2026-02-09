@@ -2,7 +2,7 @@ import requests
 import json
 
 citation = {
-    'title':'example_citation_yellow_8_blue_6',
+    'title':'example_citation_yellow_8_orange_3',
     "abstract":"this is a test record, created by Daniel Westwood at CEDA",
     "drs_url":"https://google.com",
     "rights":"Example section relating to Rights",
