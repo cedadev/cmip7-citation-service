@@ -28,7 +28,7 @@ from rest_framework.exceptions import APIException
 from django.views.generic.base import TemplateView
 from django.views.generic.edit import FormView
 from django.contrib.sites import shortcuts
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseForbidden
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.conf import settings
 from django.db.models import Q, CharField, TextField, ForeignKey
@@ -56,12 +56,21 @@ def deep_search(queryset, term):
 
     return queryset.filter(q)
 
+class GenericRenderedView(TemplateView):
 
-class IntroView(LoginRequiredMixin,TemplateView):
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if settings.USE_CEDA_BRANDING:
+            context['template_base'] = 'fwtheme_django/layout.html'
+        else:
+            context['template_base'] = 'bases/generic_base.html'
+        return context
+
+class IntroView(LoginRequiredMixin,GenericRenderedView):
     login_url = settings.LOGIN_URL
     template_name = 'intro.html'
 
-class PartiesView(TemplateView):
+class PartiesView(GenericRenderedView):
     template_name = 'parties.html'
 
     def get_context_data(self, **kwargs):
@@ -72,16 +81,16 @@ class PartiesView(TemplateView):
         context['parties'] = parties
         return context
     
-class CitationsView(TemplateView):
+class CitationsView(GenericRenderedView):
     template_name = 'citations.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        print(self.request.GET.get('search'))
 
         if self.request.GET.get('search','') != '':
             term = self.request.GET.get('search')
             search_citations = deep_search(Citations.objects.all(),term)
+            context['search_term'] = term
         else:
             search_citations = Citations.objects.all()
 
@@ -97,16 +106,23 @@ class CitationsView(TemplateView):
         context['citations'] = citations
         return context
     
-class CitationView(TemplateView):
+class CitationView(GenericRenderedView):
     template_name = 'citation.html'
 
-    def get_context_data(self, pk, **kwargs):
+    def get_context_data(self, title, **kwargs):
         context = super().get_context_data(**kwargs)
-        citation = CitationSerializer(Citations.objects.get(id=pk)).data
+
+        if self.request.GET.get('version'):
+            vn = self.request.GET.get('version')
+            citation = CitationSerializer(Citations.objects.get(title=title, version=vn)).data
+        else:
+            citations = Citations.objects.filter(title=title).order_by('version')
+            print(citations)
+            citation = CitationSerializer(citations.last()).data
         context['citation'] = citation
         return context
     
-class PartyView(TemplateView):
+class PartyView(GenericRenderedView):
     template_name = 'party.html'
 
     def get_context_data(self, pk, **kwargs):
@@ -221,6 +237,15 @@ class SpecificCitationAPIView(SpecificAPIView):
     model = Citations
     queryset = Citations.objects.all()
     serializer_class = CitationSerializer
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if not instance.editable:
+            return HttpResponseForbidden(
+                f'Editing the record {instance.id} is forbidden'
+            )
+
+        return super().update(request, *args, **kwargs)
 
 class NewCitationFormView(FormView):
 
