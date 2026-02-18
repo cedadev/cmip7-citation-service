@@ -2,6 +2,7 @@ from django.core.exceptions import ValidationError
 import requests
 import xmltodict
 from typing import Union
+from django.conf import settings
 
 def validate_orcid(orcid: Union[str,None]):
     """
@@ -37,3 +38,42 @@ def validate_country(country: Union[str,None]):
         raise ValidationError(
             f'"{country}" returned no matches'
         )
+    
+def validate_component(component: str, label: str, requested: Union[str,None] = None):
+    """
+    Check mip_era against CVs
+    """
+    r = requests.get(f'{settings.CV_REPO}/{label}/{component}.json')
+    if str(r.status_code) != '200':
+        raise ValidationError(f'{component} not a valid {label}')
+    
+    if requested:
+        return r.json()[requested]
+    
+def validate_title(title: str):
+    """
+    Validate title parameter for CMIP7 citation record
+    """
+
+    try:
+        mip_era, activity_id, institution_id, source_id, experiment_id = title.split('.')
+    except ValueError:
+        raise ValidationError('Title does not have all required components')
+    
+    if settings.CV_REPO is not None:
+        validate_component(mip_era, 'mip_era')
+        validate_component(experiment_id, 'experiment')
+        validate_component(institution_id, 'institution')
+        validate_component(source_id, 'source')
+
+        experiments = validate_component(activity_id, 'activity', requested='experiments')
+        if experiment_id not in experiments:
+            raise ValidationError(f'{experiment_id} not valid for {activity_id}')
+        
+    return {
+        'mip_era':mip_era,
+        'activity_id':activity_id,
+        'institution_id':institution_id,
+        'source_id':source_id,
+        'experiment_id':experiment_id
+    }
