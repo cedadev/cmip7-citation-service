@@ -1,4 +1,4 @@
-{% extends 'fwtheme_django/layout.html' %}
+{% extends 'bases/citation_base.html' %}
 
 {% block head_title %}CMIP7 Citations{% endblock %}
 
@@ -13,7 +13,7 @@
             <div class="col-12 col-lg-8 offset-lg-2 px-xs-0">
                 <span class="v-centre w-100 mb-2" id="search-wrapper">
                 <div class="input-group input-group-lg mb-0">
-                    <input class="form-control flex-grow-1" placeholder="Input search terms..." type="search" name="search" id="id_q"> 
+                    <input class="form-control flex-grow-1" placeholder="Input search terms..." value="{{ search_term }}" type="search" name="search" id="id_q"> 
                     <input class="btn btn-primary m-0" type="submit" value="Search">
                 </div>
                 </span>
@@ -31,7 +31,7 @@
             </tr>
             {% for citation in citations %}
             <tr>
-                <th><a href="{% url 'citations:citation' pk=citation.id %}">{{ citation.title }}</a></th>
+                <th><a href="{% url 'citations:citation' title=citation.title %}?version={{citation.version}}">{{ citation.title }}</a></th>
                 <th>{{ citation.version }}</th>
                 <th><a href="{% url 'citations:party' pk=citation.primary.id %}">{{ citation.primary.fullname }}</a></th>
             </tr>

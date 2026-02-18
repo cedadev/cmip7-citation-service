@@ -1,11 +1,11 @@
 {% extends 'bases/citation_base.html' %}
 
-{% block head_title %}CMIP7 Citation{% endblock %}
+{% block head_title %}CMIP7 Funding Stream{% endblock %}
 
 {% block content_main %}
-    <h2><b>{{ citation.title }} (v{{ citation.version }})</b></h2>
+    <h2><b>{{ stream.name }}</b></h2>
     <p></p>
-    <h3><b>General Information</b></h3>
+    <h3><b>Affiliations</b></h3>
     <p></p>
     <table class="table table-striped border border-light">
         <tr>
@@ -29,32 +29,7 @@
             <td>{{ citation.license }}</td>
         </tr>
     </table>
-    <p></p>
-    <h3><b>Model Documentation (EMD)</b></h3>
-    <p></p>
-    <table class="table table-striped border border-light">
-        <tr>
-            <th>MIP Era</th>
-            <td>{{ citation.mip_era }}</td>
-        </tr>
-        <tr>
-            <th>Activity</th>
-            <td>{{ citation.activity_id }}</td>
-        </tr>
-        <tr>
-            <th>Institution</th>
-            <td>{{ citation.institution_id }}</td>
-        </tr>
-        <tr>
-            <th>Source</th>
-            <td>{{ citation.source_id }}</td>
-        </tr>
-        <tr>
-            <th>Experiment</th>
-            <td>{{ citation.experiment_id }}</td>
-        </tr>
-    </table>
-    <p></p>
+
     <h3><b>Responsible Parties</b></h3>
     <table class="table table-striped border border-light">
     <tr>
