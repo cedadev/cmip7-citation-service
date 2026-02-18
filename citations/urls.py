@@ -21,7 +21,7 @@ urlpatterns = [
     path('parties/', PartiesView.as_view(), name='parties'),
     path('party/<str:pk>', PartyView.as_view(), name='party'),
     path('citations/',CitationsView.as_view(), name='citations'),
-    path('citation/<str:pk>', CitationView.as_view(), name='citation'),
+    path('citation/<str:title>', CitationView.as_view(), name='citation'),
     path('citations/add', NewCitationFormView.as_view(), name='new_citation'),
     path('api/', include('rest_framework.urls')),
     path('api/institutes/', InstitutionAPIView.as_view()),

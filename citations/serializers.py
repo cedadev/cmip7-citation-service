@@ -7,6 +7,8 @@ from citations.models import (
     locate_institute
 )
 
+from citations.validators import validate_title
+
 import hashlib
 import json
 
@@ -41,7 +43,6 @@ class GenericSerializerMixin(serializers.ModelSerializer):
                     self.Meta.model.objects.get(**filter_data),
                     validated_data
                 )
-
 
         return self.Meta.model.objects.create(**validated_data)
     
@@ -167,22 +168,56 @@ class CitationSerializer(GenericSerializerMixin):
             'title', 'abstract', 'drs_url',
             'doi_url', 'rights', 'license',
             'primary', 'contacts', 'institutions',
-            'funders','id'
+            'funders','id', 'version',
+            'mip_era','activity_id','institution_id',
+            'source_id','experiment_id'
         ]
+
+    def validate(self, data):
+        data = super().validate(data)
+        data = dict(data) | validate_title(data['title'])
+        return data
 
     def create(self, validated_data):
         """
-        Create and return an Institution instance given validated data.
+        Create and return a Citation instance given validated data.
         """
-        validated_data = unwrap_request(validated_data)
-        funders      = validated_data.pop('funders',[])
-        institutions = validated_data.pop('institutions',[])
+        funders      = validated_data.pop('funders',[])[0]
+        institutions = validated_data.pop('institutions',[])[0]
 
-        instance = self.Meta.model.objects.create(**validated_data)
+        instance = super().create(validated_data)
+
         for funder in funders:
             instance.funders.add(funder)
         for inst in institutions:
             instance.institutions.add(inst)
+
+        if instance.doi_url is not None:
+            instance.published = True
+
+        instance.save()
+        return instance
+    
+    def update(self, instance, validated_data):
+
+        funders      = validated_data.pop('funders',[])[0]
+        institutions = validated_data.pop('institutions',[])[0]
+
+        instance = super().update(instance, validated_data)
+
+        for funder in funders:
+            instance.funders.add(funder)
+        for inst in institutions:
+            instance.institutions.add(inst)
+
+        # Allow 'publication' by adding doi_url.
+        # If doi_url is removed, record becomes unpublished
+        if instance.published and instance.doi_url is None:
+            instance.published = False
+
+        if instance.doi_url is not None:
+            instance.published = True
+
         instance.save()
         return instance
 
@@ -193,20 +228,17 @@ class CitationSerializer(GenericSerializerMixin):
         Locate or create references based on the provided information.
         """
 
-        if data.get('version') is not None or data.get('identifier') is not None:
-            raise ValueError(
-                'Unsupported for updates via this mechanism'
-            )
-
         data = data.copy()
 
-        # Version is auto-assigned
-        version = len(self.Meta.model.objects.filter(title=data['title'])) + 1
-        data['version'] = version
+        if data.get('version') is None and data.get('id') is None:
+            
+            # Version is auto-assigned
+            version = len(self.Meta.model.objects.filter(title=data['title'])) + 1
+            data['version'] = version
 
-        # Identifier is auto-assigned
-        id = data['title'] + '_v' + str(data['version'])
-        data['id'] = id
+            # Identifier is auto-assigned
+            id = data['title'] + '_v' + str(data['version'])
+            data['id'] = id
 
         optional_party = list(set(PartySerializer.Meta.immutable_fields) - set(PartySerializer.Meta.required_fields))
         # Unpack primaries, contacts
