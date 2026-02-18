@@ -2,7 +2,7 @@ import uuid
 import xmltodict
 import requests
 from django.db import models
-from citations.validators import validate_country, validate_orcid
+from citations.validators import validate_country, validate_orcid, validate_title
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.contrib.postgres.fields import ArrayField
@@ -53,6 +53,7 @@ class FundingStreams(models.Model):
     """
 
     name = models.CharField(max_length=120)
+    # Multiple affiliations per funding stream.
     affiliation = models.ForeignKey(Institutions, on_delete=models.CASCADE, blank=True)
 
     id = models.AutoField(primary_key=True)
@@ -83,7 +84,7 @@ class Citations(models.Model):
     # Still would be good to create citations/parties etc in any order
 
     id        = models.CharField(max_length=300, primary_key=True)
-    title     = models.CharField(max_length=300)
+    title     = models.CharField(max_length=300, validators=[validate_title])
     version   = models.IntegerField()
 
     abstract = models.TextField()
@@ -98,6 +99,15 @@ class Citations(models.Model):
         Parties, related_name='contact_parties', blank=True, null=True)
     institutions = models.ManyToManyField(Institutions, blank=True, null=True)
     funders  = models.ManyToManyField(FundingStreams, blank=True, null=True)
+
+    editable = models.BooleanField(default=True)
+    published = models.BooleanField(default=False)
+
+    mip_era     = models.CharField(max_length=30, default='unknown')
+    activity_id = models.CharField(max_length=30, default='unknown')
+    institution_id = models.CharField(max_length=30, default='unknown')
+    source_id = models.CharField(max_length=30, default='unknown')
+    experiment_id = models.CharField(max_length=30, default='unknown')
 
     # keywords = ArrayField(
     #     models.CharField(max_length=50),
@@ -149,9 +159,15 @@ def locate_institute(inst):
             inst_count += 1
 
     if found:
+
+        acronym = None
+        for n in resp['items'][inst_count]['names']:
+            if 'acronym' in n['types']:
+                acronym = n['value']
+
         return {
             'name':inst,
-            'acronym': ''.join([i[0] for i in inst.split(' ')]),
+            'acronym': acronym or ''.join([i[0] for i in inst.split(' ')]),
             'country': resp['items'][inst_count]['locations'][0]['geonames_details']['country_name']
         }
 
