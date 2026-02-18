@@ -3,6 +3,7 @@ import json
 
 citation = {
     'title':'cmip7.aerchemmip.cccma.canesm6-mr.esm-scen7-h-aer',
+    'version':1,
     "abstract":"This is a test record, created by Daniel Westwood at CEDA",
     "drs_url":"https://google.com",
     "rights":"Example section relating to Rights",
@@ -28,7 +29,7 @@ temp_token = '69cb69a038897da333211f193b564102586889ba'
 SITE_URL = 'http://localhost:8000'
 
 print(
-    requests.post(f'{SITE_URL}/api/citations/', 
+    requests.put(f'{SITE_URL}/api/citation/cmip7.aerchemmip.cccma.canesm6-mr.esm-scen7-h-aer_v1', 
         data=citation, 
         headers={'Authorization':f'Token {temp_token}'},
         verify=False
