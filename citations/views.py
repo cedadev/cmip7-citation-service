@@ -32,6 +32,7 @@ from django.http import HttpResponse, HttpResponseForbidden
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.conf import settings
 from django.db.models import Q, CharField, TextField, ForeignKey
+from django.core.exceptions import PermissionDenied
 
 import hashlib
 
@@ -114,12 +115,19 @@ class CitationView(GenericRenderedView):
 
         if self.request.GET.get('version'):
             vn = self.request.GET.get('version')
-            citation = CitationSerializer(Citations.objects.get(title=title, version=vn)).data
+            citation = Citations.objects.get(title=title, version=vn)
+            citation_data = CitationSerializer(citation).data
         else:
-            citations = Citations.objects.filter(title=title).order_by('version')
-            print(citations)
-            citation = CitationSerializer(citations.last()).data
-        context['citation'] = citation
+            citation = Citations.objects.filter(title=title).order_by('version').last()
+            citation_data = CitationSerializer(citation).data
+
+        latest_version = Citations.objects.filter(title=title).order_by('version').last().version
+
+        context['editable'] = citation.editable
+        if citation.version != latest_version:
+            context['latest_version'] = latest_version
+
+        context['citation'] = citation_data
         return context
     
 class PartyView(GenericRenderedView):
@@ -249,8 +257,73 @@ class SpecificCitationAPIView(SpecificAPIView):
 
 class NewCitationFormView(FormView):
 
-    template_name = "new_citation.html"
+    template_name = "edit_citation.html"
     form_class = CitationForm
     
     def form_valid(self, form):
         return super().form_valid(form)
+    
+class EditCitationFormView(GenericRenderedView, FormView):
+
+    template_name = "edit_citation.html"
+    form_class = CitationForm
+    model = Citations
+
+    # Needs to pre-populate form with existing values
+
+    # Also adds context to either edit the existing record on form submission
+    # Or creates a new record with the given data
+
+    def get_initial(self):
+        title = self.kwargs['title']
+        if self.model.objects.filter(id=title):
+            # Editing existing editable record
+            citation = self.model.objects.get(id=title)
+            citation_data = CitationSerializer(citation).data
+        elif self.model.objects.filter(title=title):
+            # Creating a new version (from the latest version)
+            citation = Citations.objects.filter(title=title).order_by('version').last()
+            citation_data = CitationSerializer(citation).data
+            
+            # On creating a new version, remove the existing DOI but keep everything
+            # else the same
+            citation_data.pop('doi_url')
+
+        initial = super().get_initial() | citation_data
+        return initial
+
+    def get_context_data(self, title, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        version_update, version_increment = False, False
+        if self.model.objects.filter(id=title):
+            # Editing existing editable record
+            version_update = True
+            citation = self.model.objects.get(id=title)
+        elif self.model.objects.filter(title=title):
+            version_increment = True
+            citation = Citations.objects.filter(title=title).order_by('version').last()
+            
+        if version_update and citation.editable:
+            # Allow update of a specific version as it is editable.
+            context['on_submit'] = 'update'
+        elif version_increment:
+            # Creating a new version (from the latest version)
+            context['on_submit'] = 'create'
+            context['new_version'] = len(self.model.objects.filter(title=title)) + 1
+        else:
+            # Attempted to access the update view for a specific non-editable version
+            # Only allowed if the specific version is the latest?
+            if citation.version == Citations.objects.filter(title=citation.title).order_by('version').last():
+                context['on_submit'] = 'create'
+                context['new_version'] = citation.version + 1
+            else:
+                raise PermissionDenied(
+                    f'Unable to update version {citation.version} as there are later versions '
+                    f'already in existence (latest version: v'
+                    f'{Citations.objects.filter(title=citation.title).order_by("version").last().version})'
+                )
+
+        print(context)
+            
+        return context

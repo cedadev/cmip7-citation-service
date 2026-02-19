@@ -13,6 +13,7 @@ from citations.views import (
     CitationAPIView,
     SpecificCitationAPIView,
     NewCitationFormView,
+    EditCitationFormView,
 )
 
 app_name = 'citations'
@@ -23,6 +24,7 @@ urlpatterns = [
     path('citations/',CitationsView.as_view(), name='citations'),
     path('citation/<str:title>', CitationView.as_view(), name='citation'),
     path('citations/add', NewCitationFormView.as_view(), name='new_citation'),
+    path('citation/edit/<str:title>', EditCitationFormView.as_view(), name='edit_citation'),
     path('api/', include('rest_framework.urls')),
     path('api/institutes/', InstitutionAPIView.as_view()),
     path('api/parties/', PartyAPIView.as_view()),
