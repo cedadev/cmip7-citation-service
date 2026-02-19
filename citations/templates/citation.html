@@ -4,6 +4,14 @@
 
 {% block content_main %}
     <h2><b>{{ citation.title }} (v{{ citation.version }})</b></h2>
+    {% if latest_version %}
+    <div class="alert alert-warning">
+        <b>This citation has been superseded. See the 
+            <a href="{% url 'citations:citation' title=citation.title %}?version={{ latest_version }}">latest version</a>
+        </b>
+    </div>
+
+    {% endif %}
     <p></p>
     <h3><b>General Information</b></h3>
     <p></p>
@@ -72,5 +80,29 @@
     </tr>
     {% endfor %}
     </table>
+
+    <p></p>
+    <div>
+        {% if editable %}
+        <a href="{% url 'citations:edit_citation' title=citation.id %}">
+            <input class="btn btn-primary m-0" value="Edit Record">
+        </a>
+        {% else %}
+        <a href="{% url 'citations:edit_citation' title=citation.id %}">
+            <input class="btn btn-primary m-0" value="Edit Record" disabled title="Not editable">
+        </a>
+        {% endif %}
+
+        {% if not latest_version %}
+        <!-- if latest_version is defined then I must NOT be the latest version-->
+        <a href="{% url 'citations:edit_citation' title=citation.title %}">
+            <input class="btn btn-primary m-0" value="Create New Record">
+        </a>
+        {% else %}
+        <a href="{% url 'citations:edit_citation' title=citation.title %}">
+            <input class="btn btn-primary m-0" value="Create New Record" disabled title="Superseded">
+        </a>
+        {% endif %}
+    </div>
 
 {% endblock %}

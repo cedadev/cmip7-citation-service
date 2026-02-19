@@ -1,0 +1,22 @@
+{% extends 'bases/citation_base.html' %}
+
+{% block head_title %}CMIP7 Citation{% endblock %}
+
+{% block content_main %}
+    <h2><b>Add New Citation</b></h2>
+    <p></p>
+    {% if on_submit == 'update' %}
+    <form method="post" action="{% url 'citations:citation_api'}">
+        {% csrf_token %}
+        {{ form }}
+        <input class="btn btn-primary m-0" type="submit" value="Update" title="Update existing version for this record.">
+    </form>
+    {% else %}
+    <form method="post" action="{% url 'citations:citation_api'}">
+        {% csrf_token %}
+        {{ form }}
+        <input class="btn btn-primary m-0" type="submit" value="Create version {{ new_version}}" title="Create new version (v{{ new_version }}) of this record.">
+    </form>
+    {% endif %}
+
+{% endblock %}
