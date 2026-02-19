@@ -7,6 +7,11 @@
 
 {% block content_main %}
 
+    <div>
+        <span class="v-centre w-100 mb-2">
+            <h1>Citation Search</h1>
+        </span>
+    </div>
     <div class="row">
         <div class="col-md-12">
         <form style="overflow: hidden" method="GET" action="" >
@@ -18,7 +23,11 @@
                 </div>
                 </span>
             </div>
+            <input {% if all_versions%} checked {% endif %} type="checkbox" name="legacy_versions" value="yes" type="filter">Show All Versions</input>
         </form>
+        <a href="{% url 'citations:new_citation' %}">
+            <input class="btn btn-primary m-0" value="Add Citation">
+        </a>
         </div>
     </div>
     <p></p>

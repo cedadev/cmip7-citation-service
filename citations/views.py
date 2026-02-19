@@ -34,8 +34,6 @@ from django.conf import settings
 from django.db.models import Q, CharField, TextField, ForeignKey
 from django.core.exceptions import PermissionDenied
 
-import hashlib
-
 def fullname(party):
     if party.get('middle_names'):
         if party['middle_names'] != '':
@@ -43,7 +41,7 @@ def fullname(party):
         
     return f"{party['first_name']} {party['last_name']}"
 
-def deep_search(queryset, term):
+def deep_search(queryset, term, all_versions):
     q = Q()
     model = queryset.model
 
@@ -55,7 +53,20 @@ def deep_search(queryset, term):
             related = field.name
             q |= Q(**{f"{related}__{field.target_field.name}__icontains": term})
 
-    return queryset.filter(q)
+    return filter_versions(model, queryset.filter(q), all_versions)
+
+def filter_versions(model, queryset, all_versions):
+
+    if all_versions:
+        return queryset.all().order_by('-version')
+
+    titles = list(set(queryset.values_list('title', flat=True).distinct()))
+    instances = []
+    for t in titles:
+        instances.append(
+            queryset.filter(title=t).order_by('version').last()
+        )
+    return instances
 
 class GenericRenderedView(TemplateView):
 
@@ -84,16 +95,22 @@ class PartiesView(GenericRenderedView):
     
 class CitationsView(GenericRenderedView):
     template_name = 'citations.html'
+    model = Citations
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
+        show_all_versions=False
+        if self.request.GET.get('legacy_versions','') != '':
+            context['all_versions'] = True
+            show_all_versions=True
+
         if self.request.GET.get('search','') != '':
             term = self.request.GET.get('search')
-            search_citations = deep_search(Citations.objects.all(),term)
+            search_citations = deep_search(self.model.objects.all().order_by('-version'),term, show_all_versions)
             context['search_term'] = term
         else:
-            search_citations = Citations.objects.all()
+            search_citations = filter_versions(self.model, self.model.objects, show_all_versions)
 
         citations = []
         for citation in search_citations:
@@ -254,20 +271,19 @@ class SpecificCitationAPIView(SpecificAPIView):
             )
 
         return super().update(request, *args, **kwargs)
-
-class NewCitationFormView(FormView):
-
-    template_name = "edit_citation.html"
-    form_class = CitationForm
     
-    def form_valid(self, form):
-        return super().form_valid(form)
-    
-class EditCitationFormView(GenericRenderedView, FormView):
+class CitationFormMixin(GenericRenderedView, FormView):
 
     template_name = "edit_citation.html"
     form_class = CitationForm
     model = Citations
+
+class NewCitationFormView(CitationFormMixin):
+    
+    def form_valid(self, form):
+        return super().form_valid(form)
+    
+class EditCitationFormView(CitationFormMixin):
 
     # Needs to pre-populate form with existing values
 
@@ -323,7 +339,5 @@ class EditCitationFormView(GenericRenderedView, FormView):
                     f'already in existence (latest version: v'
                     f'{Citations.objects.filter(title=citation.title).order_by("version").last().version})'
                 )
-
-        print(context)
             
         return context
