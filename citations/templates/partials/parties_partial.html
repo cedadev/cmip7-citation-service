@@ -1,0 +1,25 @@
+{% for party in parties.object_list %}
+<tr>
+    {% if party.middle_names %}
+        <td><a class="nav-link" href="{% url 'citations:party' pk=party.id %}">{{ party.last_name }}, {{ party.first_name }} {{ party.middle_names }}</a></td>
+    {% else %}
+        <td><a class="nav-link" href="{% url 'citations:party' pk=party.id %}">{{ party.last_name }}, {{ party.first_name }} </a></td>
+    {% endif %}
+    <td><a href='https://orcid.org/my-orcid?emailVerified=true&orcid={{ party.orcid }}'>{{ party.orcid }}</a></td>
+    <td>{{ party.email }}</td>
+</tr>
+{% endfor %}
+{% if parties.has_next %}
+<tr id="load-more-row">
+    <td></td>
+    <td colspan="2">
+        <button
+            hx-get="{% url 'citations:parties' %}?page={{ parties.next_page_number }}"
+            hx-target="#load-more-row"
+            hx-swap="outerHTML"
+        >
+            Load More (Showing {{ pagination }} out of {{ total_results }} results)
+        </button>
+    </td>
+</tr>
+{% endif %}

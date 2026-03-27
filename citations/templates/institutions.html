@@ -1,6 +1,6 @@
 {% extends 'bases/citation_base.html' %}
 
-{% block head_title %}CMIP7 Citations{% endblock %}
+{% block head_title %}CMIP7 Institutions{% endblock %}
 
 {% block page_title %}
 {% endblock %}
@@ -9,7 +9,7 @@
 
     <div>
         <span class="v-centre w-100 mb-2">
-            <h1>Citation Search</h1>
+            <h1>Institution Search</h1>
         </span>
     </div>
     <div class="row">
@@ -23,7 +23,6 @@
                 </div>
                 </span>
             </div>
-            <input {% if all_versions%} checked {% endif %} type="checkbox" name="legacy_versions" value="yes" type="submit">Show All Versions</input>
         </form>
         </div>
     </div>
@@ -31,22 +30,22 @@
     <div style="display: flex; justify-content: center; align-items: center">
         <table class="table table-striped border border-light">
             <tr>
-                <th>Title</th>
-                <th>Version</th>
-                <th>Primary Contact</th>
+                <th>Name</th>
+                <th>Acronym</th>
+                <th>Country</th>
             </tr>
-            {% for citation in citations.object_list %}
+            {% for institute in institutions.object_list %}
             <tr>
-                <th><a href="{% url 'citations:citation' title=citation.title %}?version={{ citation.version }}">{{ citation.title }}</a></th>
-                <th>{{ citation.version }}</th>
-                <th><a href="{% url 'citations:party' pk=citation.primary.id %}">{{ citation.primary.fullname }}</a></th>
+                <th><a href="{% url 'citations:institution' pk=institute.id %}">{{ institute.name }}</a></th>
+                <th>{{ institute.acronym }}</th>
+                <th>{{ institute.country }}</th>
             </tr>
             {% endfor %}
-            {% if citations.has_next %}
+            {% if institutions.has_next %}
             <tr id="load-more-row">
                 <td colspan="3">
                     <button
-                        hx-get="{% url 'citations:citations' %}?page={{ citations.next_page_number }}"
+                        hx-get="{% url 'citations:institutions' %}?page={{ institutions.next_page_number }}"
                         hx-target="#load-more-row"
                         hx-swap="outerHTML"
                     >

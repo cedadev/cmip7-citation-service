@@ -1,0 +1,19 @@
+{% for fund in fundingstreams %}
+<tr>
+    <th><a href="{% url 'citations:funding' pk=fund.id %}">{{ fund.name }}</a></th>
+    <th><a href="{% url 'citations:institution' pk=fund.affiliation_id %}">{{ fund.affiliation }}</a></th>
+</tr>
+{% endfor %}
+{% if fundingstreams.has_next %}
+<tr id="load-more-row">
+    <td colspan="2">
+        <button
+            hx-get="{% url 'citations:funding' %}?page={{ page_obj.next_page_number }}"
+            hx-target="#load-more-row"
+            hx-swap="outerHTML"
+        >
+            Load More (Showing {{ pagination }} out of {{ total_results }} results)
+        </button>
+    </td>
+</tr>
+{% endif %}

@@ -1,1 +1,39 @@
 {% extends template_base %}
+
+{% block content_main %}
+    {% block content_main_inner %}
+    {% endblock %}
+
+    {% block back_to_main %}
+        <br>
+        <br>
+        <a href="{% url 'citations:citations' %}">
+                <input class="btn btn-primary m-0" value="← Back to Citations">
+        </a>
+
+    {% endblock %}
+
+{% endblock %}
+
+{% block navbar_options %}
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'citations:citations' %}">Citations</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'citations:parties' %}">Parties</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'citations:institutions' %}">Institutions</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'citations:funders' %}">Funding</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'citations:add_citation' %}">Add Citation</a>
+</li>
+
+{% endblock navbar_options %}
+
+{% block user_status %}
+
+{% endblock user_status %}

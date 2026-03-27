@@ -2,7 +2,7 @@
 
 {% block head_title %}CMIP7 Citation{% endblock %}
 
-{% block content_main %}
+{% block content_main_inner %}
     <h2><b>{{ citation.title }} (v{{ citation.version }})</b></h2>
     {% if latest_version %}
     <div class="alert alert-warning">
@@ -26,7 +26,11 @@
         </tr>
         <tr>
             <th>DRS URL</th>
-            <td><a href="{{citation.drs_url}}">{{citation.drs_url}}</a></td>
+            <td><a href="{{ citation.drs_url }}">{{citation.drs_url}}</a></td>
+        </tr>
+        <tr>
+            <th>DOI URL</th>
+            <td><a href="{{ citation.doi_url }}">{{citation.doi_url}}</a></td>
         </tr>
         <tr>
             <th>Rights</th>
@@ -70,13 +74,51 @@
         <th>Role</th>
     </tr>
     <tr>
-        <td><a href="{% url 'citations:party' pk=citation.primary.id %}">{{ citation.primary.first_name }} {{ citation.primary.last_name }}</a></td>
+        <td>
+            <a href="{% url 'citations:party' pk=citation.primary.id %}">{{ citation.primary.first_name }} {{ citation.primary.last_name }}</a>
+            {% if citation.primary.email %}
+            ({{ citation.primary.email }})
+            {% endif %}
+        </td>
         <td>Primary</td>
     </tr>
     {% for contact in citation.contacts %}
     <tr>
-        <td>{{ contact.first_name }} {{ contact.last_name }} </td>
+        <td>
+            <a href="{% url 'citations:party' pk=contact.id %}">{{ contact.first_name }} {{ contact.last_name }} </a>
+            {% if contact.email %}
+            ({{ contact.email }})
+            {% endif %}
+        </td>
         <td>Contact</td>
+    </tr>
+    {% endfor %}
+    </table>
+
+    <h3><b>Funding Streams</b></h3>
+    <table class="table table-striped border border-light">
+    <tr>
+        <th>Stream Name</th>
+        <th>Affiliation</th>
+    </tr>
+    {% for funder in citation.funders %}
+    <tr>
+        <td><a href="{% url 'citations:funding' pk=funder.id %}">{{ funder.name }}</a></td>
+        <td>{{ funder.affiliation }}</td>
+    </tr>
+    {% endfor %}
+    </table>
+
+    <h3><b>Affiliated Institutions</b></h3>
+    <table class="table table-striped border border-light">
+    <tr>
+        <th>Institution</th>
+        <th>Country</th>
+    </tr>
+    {% for institute in citation.institutions %}
+    <tr>
+        <td><a href="{% url 'citations:institution' pk=institute.id %}">{{ institute.name }}</a></td>
+        <td>{{ institute.country }}</td>
     </tr>
     {% endfor %}
     </table>
@@ -84,22 +126,22 @@
     <p></p>
     <div>
         {% if editable %}
-        <a href="{% url 'citations:edit_citation' title=citation.id %}">
+        <a href="{% url 'citations:edit_citation' title=citation.title %}">
             <input class="btn btn-primary m-0" value="Edit Record">
         </a>
         {% else %}
-        <a href="{% url 'citations:edit_citation' title=citation.id %}">
+        <a href="{% url 'citations:edit_citation' title=citation.title %}">
             <input class="btn btn-primary m-0" value="Edit Record" disabled title="Not editable">
         </a>
         {% endif %}
 
         {% if not latest_version %}
         <!-- if latest_version is defined then I must NOT be the latest version-->
-        <a href="{% url 'citations:edit_citation' title=citation.title %}">
+        <a href="{% url 'citations:add_citation' %}?title={{ citation.title }}">
             <input class="btn btn-primary m-0" value="Create New Record">
         </a>
         {% else %}
-        <a href="{% url 'citations:edit_citation' title=citation.title %}">
+        <a href="{% url 'citations:add_citation' %}?title={{ citation.title }}">
             <input class="btn btn-primary m-0" value="Create New Record" disabled title="Superseded">
         </a>
         {% endif %}

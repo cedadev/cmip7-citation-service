@@ -1,26 +1,54 @@
 {% extends 'bases/citation_base.html' %}
 
-{% block head_title %}CMIP7 Citation{% endblock %}
+{% block head_title %}CMIP7 Parties{% endblock %}
 
-{% block page_title %}
-    <h1>Parties</h1>
+{% block content_main_inner %}
+    <h1>Party Search</h1>
+
+    <div class="col-md-12">
+        <form style="overflow: hidden" method="GET" action="" >
+            <div class="col-12 col-lg-8 offset-lg-2 px-xs-0">
+                <span class="v-centre w-100 mb-2" id="search-wrapper">
+                <div class="input-group input-group-lg mb-0">
+                    <input class="form-control flex-grow-1" placeholder="Input search terms..." value="{{ search_term }}" type="search" name="search" id="id_q"> 
+                    <input class="btn btn-primary m-0" type="submit" value="Search">
+                </div>
+                </span>
+            </div>
+        </form>
+    </div>
+    <br>
     <table class="table table-striped border border-light">
         <tr>
             <th>Name</th>
             <th>ORCID</th>
             <th>Email</th>
         </tr>
-        {% for party in parties %}
-        <a href="{% url 'citations:party' pk=party.id %}">
+        {% for party in parties.object_list %}
         <tr>
             {% if party.middle_names %}
-                <td><a class="nav-link" href="{% url 'citations:party' pk=party.id %}">{{ party.first_name }} {{ party.middle_names }}{{ party.last_name }}</a></td>
+                <td><a class="nav-link" href="{% url 'citations:party' pk=party.id %}">{{ party.last_name }}, {{ party.first_name }} {{ party.middle_names }}</a></td>
             {% else %}
-                <td><a class="nav-link" href="{% url 'citations:party' pk=party.id %}">{{ party.first_name }} {{ party.last_name }}</a></td>
+                <td><a class="nav-link" href="{% url 'citations:party' pk=party.id %}">{{ party.last_name }}, {{ party.first_name }} </a></td>
             {% endif %}
             <td><a href='https://orcid.org/my-orcid?emailVerified=true&orcid={{ party.orcid }}'>{{ party.orcid }}</a></td>
             <td>{{ party.email }}</td>
         </tr>
         {% endfor %}
+        {% if parties.has_next %}
+        <tr id="load-more-row">
+            <td></td>
+            <td colspan="2">
+                <button
+                    hx-get="{% url 'citations:parties' %}?page={{ parties.next_page_number }}"
+                    hx-target="#load-more-row"
+                    hx-swap="outerHTML"
+                >
+                    Load More (Showing {{ pagination }} out of {{ total_results }} results)
+                </button>
+            </td>
+        </tr>
+        {% endif %}
     </table>
+    <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>
 {% endblock %}

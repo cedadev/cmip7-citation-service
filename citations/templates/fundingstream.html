@@ -2,50 +2,21 @@
 
 {% block head_title %}CMIP7 Funding Stream{% endblock %}
 
-{% block content_main %}
-    <h2><b>{{ stream.name }}</b></h2>
+{% block content_main_inner %}
+    <h1><b>{{ stream.name }}</b></h1>
     <p></p>
-    <h3><b>Affiliations</b></h3>
+    <h3><b>Institution: <a href="{% url 'citations:institution' pk=stream.affiliation_id %}">{{ stream.affiliation }}</a></b></h3>
     <p></p>
-    <table class="table table-striped border border-light">
-        <tr>
-            <th>Name</th>
-            <td>{{ citation.title }}</td>
-        </tr>
-        <tr>
-            <th>Abstract</th>
-            <td>{{ citation.abstract }}</td>
-        </tr>
-        <tr>
-            <th>DRS URL</th>
-            <td><a href="{{citation.drs_url}}">{{citation.drs_url}}</a></td>
-        </tr>
-        <tr>
-            <th>Rights</th>
-            <td>{{ citation.rights }}</td>
-        </tr>
-        <tr>
-            <th>License</th>
-            <td>{{ citation.license }}</td>
-        </tr>
-    </table>
-
-    <h3><b>Responsible Parties</b></h3>
-    <table class="table table-striped border border-light">
-    <tr>
-        <th>Name</th>
-        <th>Role</th>
-    </tr>
-    <tr>
-        <td><a href="{% url 'citations:party' pk=citation.primary.id %}">{{ citation.primary.first_name }} {{ citation.primary.last_name }}</a></td>
-        <td>Primary</td>
-    </tr>
-    {% for contact in citation.contacts %}
-    <tr>
-        <td>{{ contact.first_name }} {{ contact.last_name }} </td>
-        <td>Contact</td>
-    </tr>
-    {% endfor %}
-    </table>
+    
+    {% if citations %}
+    <h3><b>Citations</b></h3>
+    <p><i>Citations directly provided via this Funding Stream.</i></p>
+    <ul>
+        {% for cite in citations %}
+        <li><a href="{% url 'citations:citation' title=cite %}">{{ cite }}</a></li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    
 
 {% endblock %}

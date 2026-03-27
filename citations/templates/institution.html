@@ -2,50 +2,34 @@
 
 {% block head_title %}CMIP7 Registered Institutions{% endblock %}
 
-{% block content_main %}
-    <h2><b>{{ institution.name }}</b></h2>
-    <p></p>
-    <h3><b>General Information</b></h3>
-    <p></p>
-    <table class="table table-striped border border-light">
-        <tr>
-            <th>Name</th>
-            <td>{{ citation.title }}</td>
-        </tr>
-        <tr>
-            <th>Abstract</th>
-            <td>{{ citation.abstract }}</td>
-        </tr>
-        <tr>
-            <th>DRS URL</th>
-            <td><a href="{{citation.drs_url}}">{{citation.drs_url}}</a></td>
-        </tr>
-        <tr>
-            <th>Rights</th>
-            <td>{{ citation.rights }}</td>
-        </tr>
-        <tr>
-            <th>License</th>
-            <td>{{ citation.license }}</td>
-        </tr>
-    </table>
+{% block content_main_inner %}
+    <h1><b>{{ institute.name }} ({{ institute.acronym }})</b></h1>
+    {% if institute.country %}
+        <h3>Country: {{ institute.country }}</h3>
+    {% endif %}
 
-    <h3><b>Responsible Parties</b></h3>
-    <table class="table table-striped border border-light">
-    <tr>
-        <th>Name</th>
-        <th>Role</th>
-    </tr>
-    <tr>
-        <td><a href="{% url 'citations:party' pk=citation.primary.id %}">{{ citation.primary.first_name }} {{ citation.primary.last_name }}</a></td>
-        <td>Primary</td>
-    </tr>
-    {% for contact in citation.contacts %}
-    <tr>
-        <td>{{ contact.first_name }} {{ contact.last_name }} </td>
-        <td>Contact</td>
-    </tr>
-    {% endfor %}
-    </table>
+    <p></p>
+
+    {% if funding_contribs %}
+    <h3><b>Funding Stream Associations</b></h3>
+    <p><i>Funding streams directly associated with this institution.</i></p>
+    <ul>
+        {% for fund in funding_contribs %}
+        <li><a href="{% url 'citations:funding' pk=fund.pk %}">{{ fund.name }}</a></li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    <p></p>
+
+    {% if citations %}
+    <h3><b>Citations</b></h3>
+    <p><i>Citations directly provided by this institution.</i></p>
+    <ul>
+        {% for cite in citations %}
+        <li><a href="{% url 'citations:citation' title=cite %}">{{ cite }}</a></li>
+        {% endfor %}
+    </ul>
+    {% endif %}
 
 {% endblock %}

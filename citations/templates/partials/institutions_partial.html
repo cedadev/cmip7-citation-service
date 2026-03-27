@@ -1,0 +1,20 @@
+{% for institute in institutions.object_list %}
+<tr>
+    <th><a href="{% url 'citations:institution' pk=institute.id %}">{{ institute.name }}</a></th>
+    <th>{{ institute.acronym }}</th>
+    <th>{{ institute.country }}</th>
+</tr>
+{% endfor %}
+{% if institutions.has_next %}
+<tr id="load-more-row">
+    <td colspan="3">
+        <button
+            hx-get="{% url 'citations:institutions' %}?page={{ institutions.next_page_number }}"
+            hx-target="#load-more-row"
+            hx-swap="outerHTML"
+        >
+            Load More (Showing {{ pagination }} out of {{ total_results }} results)
+        </button>
+    </td>
+</tr>
+{% endif %}

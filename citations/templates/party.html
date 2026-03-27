@@ -2,7 +2,7 @@
 
 {% block head_title %}CMIP7 Citation{% endblock %}
 
-{% block content_main %}
+{% block content_main_inner %}
     <h1>Party</h1>
     <table class="table table-striped border border-light">
         <tr>
@@ -31,7 +31,8 @@
         </tr>
         {% for affiliation in party.affiliations %}
         <tr>
-            <td>{{ affiliation.name }}</td>
+            <td><a href="{% url 'citations:institution' pk=affiliation.id %}">{{ affiliation.name }} {% if affiliation.acronym %} ({{ affiliation.acronym }}) {% endif %}</a>
+            </td>
             <td>{{ affiliation.country }}</td>
         </tr>
         {% endfor %}
@@ -45,13 +46,13 @@
         </tr>
         {% for citation in primaries %}
         <tr>
-            <td><a href = "{% url 'citations:citation' pk=citation.id %}">{{ citation.name }}</a></td>
+            <td><a href = "{% url 'citations:citation' title=citation.title %}?version={{ citation.version }}">{{ citation.title }} (v{{ citation.version }})</a></td>
             <td>Primary</td>
         </tr>
         {% endfor %}
         {% for citation in contacts %}
         <tr>
-            <td><a href = "{% url 'citations:citation' pk=citation.id %}">{{ citation.name }}</a></td>
+            <td><a href = "{% url 'citations:citation' title=citation.title %}?version={{ citation.version }}">{{ citation.title }} (v{{ citation.version }})</a></td>
             <td>Contact</td>
         </tr>
         {% endfor %}
