@@ -18,6 +18,10 @@ from django.contrib import admin
 from django.urls import path, include
 from django.contrib.auth.models import User
 
+from django.conf.urls import handler404
+from django.conf import settings
+from django.shortcuts import render
+
 from rest_framework import routers, serializers, viewsets
 
 # Serializers define the API representation.
@@ -40,3 +44,18 @@ urlpatterns = [
     path('', include(('citations.urls','citations'), namespace='citations')),
     path('oidc/', include('mozilla_django_oidc.urls')),
 ]
+
+def custom_404(request, exception):
+
+    if settings.USE_CEDA_BRANDING:
+        template_base = 'fwtheme_django/layout.html'
+    else:
+        template_base = 'bases/generic_base.html'
+
+
+    return render(request, "404.html", {
+        "reason": str(exception),
+        "template_base":template_base,
+    }, status=404)
+
+handler404 = custom_404
