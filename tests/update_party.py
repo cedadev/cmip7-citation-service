@@ -1,4 +1,5 @@
 import requests
+import json
 
 def add_party():
 
@@ -6,10 +7,11 @@ def add_party():
         'first_name': 'Daniel',
         'last_name': 'Westwood',
         'orcid': '0009-0007-1866-5843',
-        'email': 'daniel.westwood@ncas.ac.uk'
+        'email': 'daniel.westwood@ncas.ac.uk',
+        'affiliations': json.dumps({'name':'Central Protectorate Revised'})
     }
 
-    temp_token = '8b9377ef005b5fc883af2e88184b8b6275209063'
+    temp_token = '69cb69a038897da333211f193b564102586889ba'
 
     print(
         requests.put('http://localhost:8000/api/party/430d35626d79e8bc0c4525855a173abe10fee261', 

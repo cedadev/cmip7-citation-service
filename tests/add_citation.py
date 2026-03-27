@@ -2,7 +2,7 @@ import requests
 import json
 
 citation = {
-    'title':'cmip7.aerchemmip.cccma.canesm6-mr.esm-scen7-h-aer',
+    'title':'cmip7.aerchemmip.cccma.cnrm_esm2_1e.esm-scen7-h-aer',
     "abstract":"This is a test record, created by Daniel Westwood at CEDA",
     "drs_url":"https://google.com",
     "rights":"Example section relating to Rights",
@@ -13,6 +13,16 @@ citation = {
         'orcid':'0009-0007-1866-5843',
         'email':"daniel.westwood@stfc.ac.uk"
     }),
+    'contacts':json.dumps([{
+        'first_name':'David',
+        'last_name': 'Westwood',
+        'orcid':'0009-0007-1866-5843',
+        'email':"daniel.westwood@stfc.ac.uk"
+    },{
+        'first_name':'Jesse',
+        'last_name': 'Alexander',
+        'orcid':'0009-0006-2877-3197',
+    }]),
     'funders': json.dumps([{
         'name': 'UKRI sect 2',
         'affiliation': 'University of York'
@@ -32,5 +42,5 @@ print(
         data=citation, 
         headers={'Authorization':f'Token {temp_token}'},
         verify=False
-    ).content
+    )
 )
