@@ -2,9 +2,8 @@ import uuid
 import xmltodict
 import requests
 from django.db import models
-from citations.validators import validate_country, validate_orcid, validate_title
+from citations.validators import validate_orcid, validate_title
 from django.db.models.signals import post_save
-from django.dispatch import receiver
 from django.contrib.postgres.fields import ArrayField
 
 # Create your models here.
@@ -20,9 +19,12 @@ class Institutions(models.Model):
     country = models.CharField(max_length=120)
 
 
-    id = models.AutoField(primary_key=True)
+    id = models.CharField(max_length=120, primary_key=True)
     def __str__(self):
-        return f'{self.name} ({self.acronym})' # Country
+        if self.acronym is not None:
+            return f'{self.name} ({self.acronym})'  # Country
+        else:
+            return self.name
 
 class Parties(models.Model):
     """
@@ -54,9 +56,9 @@ class FundingStreams(models.Model):
 
     name = models.CharField(max_length=120)
     # Multiple affiliations per funding stream.
-    affiliation = models.ForeignKey(Institutions, on_delete=models.CASCADE, blank=True)
+    affiliation = models.ForeignKey(Institutions, blank=True, on_delete=models.CASCADE)
 
-    id = models.AutoField(primary_key=True)
+    id = models.CharField(max_length=120, primary_key=True)
     def __str__(self):
         return f'{self.name}'
     
@@ -93,7 +95,7 @@ class Citations(models.Model):
     rights   = models.CharField(max_length=30)
     license  = models.TextField()
     primary  = models.ForeignKey(
-        Parties, on_delete=models.CASCADE,
+        Parties, on_delete=models.PROTECT, # Primary author cannot be deleted.
         related_name='primary_party', blank=True, null=True)
     contacts = models.ManyToManyField(
         Parties, related_name='contact_parties', blank=True, null=True)
@@ -134,7 +136,7 @@ class Citations(models.Model):
     # An endpoint for obtaining a list of ESGF urls that can be rendered
     #data_access = 
 
-def locate_institute(inst):
+def locate_institute(inst: str):
     """
     Use ROR lookup API to find institute-level metadata
     """
@@ -143,7 +145,7 @@ def locate_institute(inst):
     r = requests.get(ROR_api)
     if int(r.status_code) >= 300:
         print('Institute not found')
-        return None
+        return {'name':inst}
     
     resp = r.json()
     found = False
@@ -170,38 +172,29 @@ def locate_institute(inst):
             'acronym': acronym or ''.join([i[0] for i in inst.split(' ')]),
             'country': resp['items'][inst_count]['locations'][0]['geonames_details']['country_name']
         }
+    else:
+        return {'name':inst}
 
+def extract_from_orcid(orcid):
+    r = xmltodict.parse(
+        requests.get(
+            f'https://pub.orcid.org/v3.0/expanded-search/?q=orcid%3A{orcid}'
+        ).text
+    ).get('expanded-search:expanded-search',{}).get('expanded-search:expanded-result',None)
+    
+    # Demo loader for loading ORCID institutions to Party (if already known)
+    if r is None:
+        return None
+    
+    institutions = []
+    for k, v in r.items():
+        if k != 'expanded-search:institution-name':
+            continue
 
-@receiver(post_save, sender=Parties)
-def extract_from_orcid(sender, instance, created, **kwargs):
-    if created:
-        r = xmltodict.parse(
-            requests.get(
-                f'https://pub.orcid.org/v3.0/expanded-search/?q=orcid%3A{instance.orcid}'
-            ).text
-        ).get('expanded-search:expanded-search',{}).get('expanded-search:expanded-result',None)
-        
-        # Demo loader for loading ORCID institutions to Party (if already known)
-        if r is None:
-            return
-        
-        for k, v in r.items():
-            if k != 'expanded-search:institution-name':
-                continue
+        if isinstance(v, str):
+            v = [v]
 
-            if not isinstance(v, list):
-                v = [v]
-            for inst in v:
-                institute = None
-
-                try:
-                    institute = Institutions.objects.get(name=inst)
-                except Institutions.DoesNotExist:
-                    inst_meta = locate_institute(inst)
-                    if inst_meta is not None:
-                        institute = Institutions.objects.create(**inst_meta)
-                        institute.save()
-
-                if institute is not None:
-                    instance.affiliations.add(institute)
-                    instance.save()
+        for inst in v:
+            institutions.append(inst)
+    
+    return institutions

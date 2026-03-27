@@ -4,10 +4,13 @@ from citations.models import (
     Parties, 
     FundingStreams,
     Citations,
-    locate_institute
+    locate_institute,
+    extract_from_orcid
 )
+from django.db import models
 
 from citations.validators import validate_title
+from citations.consumer.write import create_instance, update_instance, chain_new_objects
 
 import hashlib
 import json
@@ -44,7 +47,7 @@ class GenericSerializerMixin(serializers.ModelSerializer):
                     validated_data
                 )
 
-        return self.Meta.model.objects.create(**validated_data)
+        return create_instance(self.Meta.model, required_fields=self.Meta.required_fields, **validated_data)
     
     def update(self, instance, validated_data: dict):
         """
@@ -55,64 +58,56 @@ class GenericSerializerMixin(serializers.ModelSerializer):
         # Need to experiment deleting the old instance.
 
         validated_data = unwrap_request(validated_data)
-        for k, v in validated_data.items():
-            if hasattr(instance, k):
-                setattr(instance, k, v)
-
-        instance.save()
+        instance = update_instance(self.Meta.model, required_fields=self.Meta.required_fields,**validated_data)
         return instance
 
-class InstitutionSerializer(GenericSerializerMixin):
+class InstitutionsSerializer(GenericSerializerMixin):
     class Meta:
         model = Institutions
         required_fields = ['name']
         fields = ['name','acronym','country','id']
+        relations=[]
 
-class PartySerializer(GenericSerializerMixin):
-    affiliations = InstitutionSerializer(required=False, many=True)
+    def to_internal_value(self, data):
+
+        data = data.copy()
+
+        data.update(locate_institute(data['name']))
+
+        data['id'] = hashlib.sha1(data['name'].encode()).hexdigest()
+        return data
+
+class PartiesSerializer(GenericSerializerMixin):
+    affiliations = InstitutionsSerializer(required=False, many=True)
     class Meta:
         model = Parties
         required_fields = ['first_name', 'last_name']
         immutable_fields = ['first_name', 'last_name', 'middle_names']
         fields = immutable_fields + ['email','orcid','affiliations','id']
-
-    def create(self, validated_data):
-        """
-        Create and return an Institution instance given validated data.
-        """
-        validated_data = unwrap_request(validated_data)
-        affiliations = validated_data.pop('affiliations',[])
-        instance = self.Meta.model.objects.create(**validated_data)
-        for aff in affiliations:
-            instance.affiliations.add(aff)
-        return instance
+        relations = ['affiliations']
 
     def to_internal_value(self, data):
 
         data = data.copy()
+
+        affiliation_data = []
+        if data.get('orcid',None):
+            affiliation_data += extract_from_orcid(data['orcid'])
+
         if data.get('affiliations',None) is not None:
             # Properly connect non-blank affiliations
-            affils = []
-            for affiliation in data['affiliations']:
-                inst_exists = Institutions.objects.filter(name=affiliation)
-                inst_meta = locate_institute(affiliation)
-                if inst_meta is None and inst_exists is None:
-                    raise ValueError(
-                        f"Unable to locate data for affiliation {affiliation}"
-                    )
-                
-                if not inst_exists:
-                    institute = Institutions.objects.create(**inst_meta)
-                    institute.save()
-                else:
-                    try:
-                        institute = Institutions.objects.get(name=affiliation)
-                    except Institutions.MultipleObjectsReturned:
-                        raise ValueError(
-                            f"Multiple institutions with the name {affiliation}."
-                        )
-                affils.append(institute)
-            data['affiliations'] = affils
+            affiliation_data += json.loads(data.pop('affiliations')[0])
+
+        if not isinstance(affiliation_data, list):
+            affiliation_data = [affiliation_data]
+
+        if len(affiliation_data) > 0:
+            data['affiliations'] = [chain_new_objects(
+                {'name':a},
+                InstitutionsSerializer,
+                Institutions,
+                filter_kwargs={'name':a},
+            ).pk for a in affiliation_data]
 
         # Add ID from hashed version of first and last names?
         naming_hash = data['first_name'] + data.get('middle_names','') + data.get('last_name')
@@ -122,45 +117,37 @@ class PartySerializer(GenericSerializerMixin):
 
         return data
 
-class FundingStreamSerializer(GenericSerializerMixin):
+class FundingStreamsSerializer(GenericSerializerMixin):
     affiliation = serializers.StringRelatedField(required=False)
     
     class Meta:
         model = FundingStreams
         required_fields = ['name']
-        fields = ['name','affiliation']
+        fields = ['name','affiliation','id']
+        relations=[]
 
     def to_internal_value(self, data):
-        if 'affiliation' in data:
-            affiliation = data['affiliation']
 
-            inst_exists = Institutions.objects.filter(name=affiliation)
-            inst_meta = locate_institute(affiliation)
-            if inst_meta is None and inst_exists is None:
-                raise ValueError(
-                    f"Unable to locate data for affiliation {affiliation}"
-                )
-            
-            if not inst_exists:
-                institute = Institutions.objects.create(**inst_meta)
-                institute.save()
-            else:
-                try:
-                    institute = Institutions.objects.get(name=affiliation)
-                except Institutions.MultipleObjectsReturned:
-                    raise ValueError(
-                        f"Multiple institutions with the name {affiliation}."
-                    )
-            data = data.copy()
-            data['affiliation'] = institute
+        data = data.copy()
+        if 'affiliation' in data:
+            affiliation = data.pop('affiliation')
+
+            data['affiliation_id'] = chain_new_objects(
+                {'name': affiliation}, 
+                InstitutionsSerializer, 
+                Institutions, 
+                filter_kwargs={'name':affiliation}
+            ).pk
+
+        data['id'] = hashlib.sha1(data['name'].encode()).hexdigest()
 
         return data
 
-class CitationSerializer(GenericSerializerMixin):
-    primary      = PartySerializer(required=False)
-    contacts     = PartySerializer(required=False, many=True)
-    institutions = InstitutionSerializer(required=False, many=True)
-    funders      = FundingStreamSerializer(required=False, many=True)
+class CitationsSerializer(GenericSerializerMixin):
+    primary      = PartiesSerializer(required=False)
+    contacts     = PartiesSerializer(required=False, many=True)
+    institutions = InstitutionsSerializer(required=False, many=True)
+    funders      = FundingStreamsSerializer(required=False, many=True)
 
     class Meta:
         model = Citations
@@ -172,56 +159,28 @@ class CitationSerializer(GenericSerializerMixin):
             'mip_era','activity_id','institution_id',
             'source_id','experiment_id'
         ]
+        required_fields=[
+            'title','version'
+        ]
+
+        relations=['contacts','institutions','funders']
 
     def validate(self, data):
         data = super().validate(data)
         data = dict(data) | validate_title(data['title'])
         return data
-
-    def create(self, validated_data):
-        """
-        Create and return a Citation instance given validated data.
-        """
-        funders      = validated_data.pop('funders',[])[0]
-        institutions = validated_data.pop('institutions',[])[0]
-
-        instance = super().create(validated_data)
-
-        for funder in funders:
-            instance.funders.add(funder)
-        for inst in institutions:
-            instance.institutions.add(inst)
-
-        if instance.doi_url is not None:
-            instance.published = True
-
-        instance.save()
-        return instance
     
     def update(self, instance, validated_data):
 
-        funders      = validated_data.pop('funders',[])[0]
-        institutions = validated_data.pop('institutions',[])[0]
-
-        instance = super().update(instance, validated_data)
-
-        for funder in funders:
-            instance.funders.add(funder)
-        for inst in institutions:
-            instance.institutions.add(inst)
-
-        # Allow 'publication' by adding doi_url.
-        # If doi_url is removed, record becomes unpublished
         if instance.published and instance.doi_url is None:
-            instance.published = False
+            validated_data['published'] = False
 
         if instance.doi_url is not None:
-            instance.published = True
+            validated_data['published'] = True
 
-        instance.save()
-        return instance
+        return super().update(instance, validated_data)
 
-    def to_internal_value(self, data):
+    def to_internal_value(self, data: dict):
         """
         Update the data in a POST request.
 
@@ -240,43 +199,45 @@ class CitationSerializer(GenericSerializerMixin):
             id = data['title'] + '_v' + str(data['version'])
             data['id'] = id
 
-        optional_party = list(set(PartySerializer.Meta.immutable_fields) - set(PartySerializer.Meta.required_fields))
+        optional_party = list(set(PartiesSerializer.Meta.immutable_fields) - set(PartiesSerializer.Meta.required_fields))
         # Unpack primaries, contacts
         if data.get('primary'):
-            primary = json.loads(data['primary'])
-            search_primary = chain_new_objects(primary, PartySerializer, Parties, 
-                                               filter_kwargs=PartySerializer.Meta.required_fields,
+            primary = data.pop('primary')[0]
+
+            # This does not correctly create institution objects
+            search_primary = chain_new_objects(primary, PartiesSerializer, Parties, 
+                                               filter_kwargs=PartiesSerializer.Meta.required_fields,
                                                optionals=optional_party)
-            data['primary'] = search_primary
+            data['primary_id'] = search_primary.pk
 
         if data.get('contacts'):
             contacts = []
-            for contact in json.loads(data['contacts']):
-                search_contact = chain_new_objects(contact, PartySerializer, Parties,
-                                                    filter_kwargs=PartySerializer.Meta.required_fields,
+            for contact in data.pop('contacts')[0]:
+                search_contact = chain_new_objects(contact, PartiesSerializer, Parties,
+                                                    filter_kwargs=PartiesSerializer.Meta.required_fields,
                                                     optionals=optional_party)
                 contacts.append(search_contact)
-            data['contacts'] = contacts
+            data['contacts'] = [c.pk for c in contacts]
 
         # Unpack funders
         if data.get('funders'):
             funders = []
-            for funder in json.loads(data['funders']):
-                search_funder = chain_new_objects(funder, FundingStreamSerializer, FundingStreams,
-                                                  filter_kwargs=FundingStreamSerializer.Meta.required_fields,
+            for funder in data.pop('funders')[0]:
+                search_funder = chain_new_objects(funder, FundingStreamsSerializer, FundingStreams,
+                                                  filter_kwargs=FundingStreamsSerializer.Meta.required_fields,
                 )#onward_chain=['affiliation'])
                 funders.append(search_funder)
-            data['funders'] = funders
+            data['funders'] = [f.pk for f in funders]
 
         # Unpack institutions
         if data.get('institutions'):
             institutions = []
-            for institution in json.loads(data['institutions']):
-                search_institution = chain_new_objects(institution, InstitutionSerializer, Institutions,
-                                                       filter_kwargs=InstitutionSerializer.Meta.required_fields,
+            for institution in data.pop('institutions')[0]:
+                search_institution = chain_new_objects(institution, InstitutionsSerializer, Institutions,
+                                                       filter_kwargs=InstitutionsSerializer.Meta.required_fields,
                                                        )
                 institutions.append(search_institution)
-            data['institutions'] = institutions
+            data['institutions'] = [i.pk for i in institutions]
 
         # Unpack references
 
@@ -284,28 +245,8 @@ class CitationSerializer(GenericSerializerMixin):
 
         #    print(reference)
 
+        data['published'] = False
+        if data.get('doi_url',None) is not None:
+            data['published'] = True
+
         return data
-
-def chain_new_objects(
-        data: dict, 
-        serializer: GenericSerializerMixin, 
-        model, 
-        filter_kwargs: list, 
-        optionals: list = None
-    ):
-    optionals = optionals or []
-    filters = {k: data[k] for k in filter_kwargs}
-    for opt in optionals:
-        if data.get(opt):
-            filters[opt] = data[opt]
-    search = model.objects.filter(**filters)
-
-    # Create instance if not specified.
-    if not search:
-        serial = serializer(data=data)
-        serial.is_valid(raise_exception=True)
-        instance = model.objects.create(**serial.validated_data)
-        instance.save()
-    # Should return newly created instance or existing one
-    instance = model.objects.get(**filters)
-    return instance
