@@ -125,6 +125,7 @@
 
     <p></p>
     <div>
+        <!-- ONLY SHOW If User Is Authenticated-->
         {% if editable %}
         <a href="{% url 'citations:edit_citation' title=citation.title %}">
             <input class="btn btn-primary m-0" value="Edit Record">
@@ -143,6 +144,16 @@
         {% else %}
         <a href="{% url 'citations:add_citation' %}?title={{ citation.title }}">
             <input class="btn btn-primary m-0" value="Create New Record" disabled title="Superseded">
+        </a>
+        {% endif %}
+
+        {% if editable %}
+        <a href="{% url 'citations:delete_citation' pk=citation.id %}">
+            <input class="btn btn-danger btn-md" value="Delete Record">
+        </a>
+        {% else %}
+        <a href="{% url 'citations:delete_citation' pk=citation.id %}">
+            <input class="btn btn-danger btn-md" value="Delete Record" disabled title="Not editable">
         </a>
         {% endif %}
     </div>

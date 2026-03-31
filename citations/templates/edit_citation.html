@@ -61,18 +61,25 @@
                 </tbody>
             </table>
         </div>
-
-        <input class="btn btn-primary m-0" type="submit"
-            {% if on_submit == 'create' %} 
-                value="Create" title="Create New Record">
-            {% else %}
-                value="Update version {{ new_version }}" title="Update version (v{{ new_version }}).">
-            {% endif %}
-        {% if publishable %}
-            <input type="checkbox" id="publish" name="publish" value="Publish on Save">
-            <label for="publish">Publish on Save</label><br>
-        {% endif %}
         <input class="btn btn-primary m-0" id="add-contact" value="+ Add Contact" title="New Contact">
+        <table>
+            <tr>
+                <td>
+                    <input class="btn btn-primary m-0" type="submit"
+                {% if on_submit == 'create' %} 
+                    value="Create" title="Create New Record">
+                {% else %}
+                    value="Update version {{ new_version }}" title="Update version (v{{ new_version }}).">
+                {% endif %}
+                </td>
+                {% if publishable %}
+                <td>
+                    <input type="checkbox" id="publish" name="publish" value="Publish on Save">
+                    <label for="publish">Publish on Save</label><br>
+                </td>
+                {% endif %}
+            </tr>
+        </table>
     </form>
 
 <script>
