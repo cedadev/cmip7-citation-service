@@ -4,11 +4,7 @@ import json
 def add_party():
 
     party_info = {
-        'first_name': 'Daniel',
-        'last_name': 'Westwood',
-        'orcid': '0009-0007-1866-5843',
-        'email': 'daniel.westwood@ncas.ac.uk',
-        'affiliations': json.dumps({'name':'Central Protectorate Revised'})
+        'email':'daniel.westwood@stfc.ac.uk',
     }
 
     temp_token = '69cb69a038897da333211f193b564102586889ba'

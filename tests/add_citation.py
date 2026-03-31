@@ -24,11 +24,11 @@ citation = {
         'orcid':'0009-0006-2877-3197',
     }]),
     'funders': json.dumps([{
-        'name': 'UKRI sect 2',
-        'affiliation': 'University of York'
+        'name': 'UKRI sect 3',
+        'affiliation': 'York University'
     }]),
     'institutions': json.dumps([{
-        'name': 'University of York'
+        'name': 'York University'
     }])
 
 }
