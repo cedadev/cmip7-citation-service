@@ -17,13 +17,15 @@ from citations.forms import(
     ContactFormSet
 )
 
-from citations.consumer.write import chain_new_objects
+from citations.consumer.write import chain_new_objects, delete_instance
 
 from rest_framework.authentication import TokenAuthentication
+from rest_framework import status
+from rest_framework.response import Response
 from django.core import serializers
 from django.core.paginator import Paginator
 from django.urls import reverse
-from django.http import HttpResponseRedirect, Http404
+from django.http import HttpResponseRedirect, HttpResponseNotFound
 from rest_framework import permissions
 
 from rest_framework import mixins
@@ -157,7 +159,7 @@ class PartiesView(PaginatedListView):
     partial_template = 'partials/parties_partial.html'
     model = Parties
     serializer_class = PartiesSerializer
-    paginate_by = 3
+    paginate_by = 10
     order_by = 'last_name'
     
 class InstitutionsView(PaginatedListView):
@@ -165,7 +167,7 @@ class InstitutionsView(PaginatedListView):
     partial_template = 'partials/institutions_partial.html'
     model = Institutions
     serializer_class = InstitutionsSerializer
-    paginate_by = 20
+    paginate_by = 10
     order_by = Lower('name')
 
 class FundingStreamsView(PaginatedListView):
@@ -173,7 +175,7 @@ class FundingStreamsView(PaginatedListView):
     partial_template = 'partials/streams_partial.html'
     model = FundingStreams
     serializer_class = FundingStreamsSerializer
-    paginate_by = 20
+    paginate_by = 10
     order_by = Lower('name')
 
     def adjust_for_UI_render(self, queryset) -> list:
@@ -189,7 +191,7 @@ class CitationsView(PaginatedListView):
     partial_template = 'partials/citations_partial.html'
     model = Citations
     serializer_class = CitationsSerializer
-    paginate_by = 1
+    paginate_by = 10
     order_by = '-version'
 
     def get_context_data(self, *args,**kwargs):
@@ -234,7 +236,7 @@ class CitationView(GenericRenderedView):
         context = super().get_context_data(**kwargs)
 
         if not Citations.objects.filter(title=title):
-            raise Http404('The requested citation title does not yet exist.')
+            raise HttpResponseNotFound('The requested citation title does not yet exist.')
 
         if self.request.GET.get('version'):
             vn = self.request.GET.get('version')
@@ -308,7 +310,9 @@ class PartyView(GenericRenderedView):
         return context
 
 class GenericAPIView(
-    mixins.ListModelMixin, mixins.CreateModelMixin, generics.GenericAPIView
+        mixins.ListModelMixin, 
+        mixins.CreateModelMixin, 
+        generics.GenericAPIView
     ):
     """
     Generic Method Additions to the API View
@@ -349,13 +353,16 @@ class GenericAPIView(
     
 class SpecificAPIView(
     mixins.CreateModelMixin, mixins.RetrieveModelMixin, 
-    mixins.UpdateModelMixin, generics.GenericAPIView):
+    mixins.UpdateModelMixin, generics.GenericAPIView,
+    mixins.DestroyModelMixin):
     """
     Specific View Methods
     """
 
     authentication_classes = [TokenAuthentication]
     permission_classes = [permissions.IsAuthenticated]
+
+    json_fields = []
 
     def get_permissions(self):
         if self.request.method == 'GET' or self.request.method == 'OPTIONS':
@@ -370,9 +377,27 @@ class SpecificAPIView(
     def put(self, request, *args, **kwargs):
         return self.update(request, *args, **kwargs)
     
-    def post(self, request, *args, **kwargs):
-        # Cannot post to the specific API endpoint.
-        raise ValueError
+    def delete(self, request, *args, **kwargs):
+        instance = self.get_object()
+        delete_instance(
+            model=self.model,
+            id=instance.id)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
+    def initialize_request(self, request, *args, **kwargs):
+        """
+        Decode Information Given to POST requests
+        """
+        req = super().initialize_request(request, *args, **kwargs)
+
+        # Modify req.data here
+        mutable = req.data.copy()
+        for field in self.json_fields:
+            if mutable.get(field,'') != '' and isinstance(mutable.get(field),str):
+                mutable[field] = json.loads(mutable[field])
+        req._full_data = mutable  # override parsed data
+
+        return req
 
 class InstitutionAPIView(GenericAPIView):
     """
@@ -423,6 +448,8 @@ class SpecificCitationAPIView(SpecificAPIView):
     model = Citations
     queryset = Citations.objects.all()
     serializer_class = CitationsSerializer
+
+    json_fields = ['primary','funders','institutions','contacts']
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -523,8 +550,7 @@ class NewCitationFormView(CitationFormMixin):
         context = super().get_context_data(**kwargs)
         context['publishable'] = True
         return context
-
-        
+    
 class EditCitationFormView(CitationFormMixin):
 
     form_class = EditCitationForm
@@ -574,14 +600,6 @@ class EditCitationFormView(CitationFormMixin):
     def get_context_data(self, title, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # version_update, version_increment = False, False
-        # if self.model.objects.filter(title=title):
-        #     # Editing existing editable record
-        #     version_update = True
-        #     citation = self.model.objects.get(title=title)
-        # elif self.model.objects.filter(title=title):
-        #     version_increment = True
-
         if self.request.method == "POST":
             context["contact_formset"] = ContactFormSet(self.request.POST)
         else:
@@ -609,25 +627,23 @@ class EditCitationFormView(CitationFormMixin):
         # - Already determined as un-published as it's editable.
         if Citations.objects.get(title=title, version=context['new_version']).doi_url == '':
             context['publishable'] = True
-    
-        # if version_update and citation.editable:
-        #     # Allow update of a specific version as it is editable.
-        #     context['on_submit'] = 'update'
-        # elif version_increment:
-        #     # Creating a new version (from the latest version)
-        #     context['on_submit'] = 'create'
-        #     context['new_version'] = len(self.model.objects.filter(title=title)) + 1
-        # else:
-        #     # Attempted to access the update view for a specific non-editable version
-        #     # Only allowed if the specific version is the latest?
-        #     if citation.version == Citations.objects.filter(title=citation.title).order_by('version').last():
-        #         context['on_submit'] = 'create'
-        #         context['new_version'] = citation.version + 1
-        #     else:
-        #         raise PermissionDenied(
-        #             f'Unable to update version {citation.version} as there are later versions '
-        #             f'already in existence (latest version: v'
-        #             f'{Citations.objects.filter(title=citation.title).order_by("version").last().version})'
-        #         )
             
         return context
+    
+class ConfirmDeleteCitationView(GenericRenderedView):
+    template_name = 'delete_citation.html'
+    model = Citations
+    serializer_class = CitationsSerializer
+
+    def get_context_data(self, pk, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['citation'] = self.get_instance(pk=pk)
+
+        return context
+    
+    def post(self, request, pk, *args, **kwargs):
+        delete_instance(
+            model=self.model,
+            id=pk
+        )
+        return HttpResponseRedirect(reverse('citations:citations'))

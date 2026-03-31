@@ -9,7 +9,11 @@
 <tr id="load-more-row">
     <td colspan="2">
         <button
+        {% if all_versions %}
+            hx-get="{% url 'citations:citations' %}?page={{ citations.next_page_number }}&legacy_versions=yes"
+        {% else %}
             hx-get="{% url 'citations:citations' %}?page={{ citations.next_page_number }}"
+        {% endif %}
             hx-target="#load-more-row"
             hx-swap="outerHTML"
         >

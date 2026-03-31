@@ -96,7 +96,7 @@ class Citations(models.Model):
     license  = models.TextField()
     primary  = models.ForeignKey(
         Parties, on_delete=models.PROTECT, # Primary author cannot be deleted.
-        related_name='primary_party', blank=True, null=True)
+        related_name='primary_party')
     contacts = models.ManyToManyField(
         Parties, related_name='contact_parties', blank=True, null=True)
     institutions = models.ManyToManyField(Institutions, blank=True, null=True)

@@ -8,6 +8,7 @@ from citations.models import (
     extract_from_orcid
 )
 from django.db import models
+from rest_framework.exceptions import MethodNotAllowed
 
 from citations.validators import validate_title
 from citations.consumer.write import create_instance, update_instance, chain_new_objects
@@ -33,21 +34,53 @@ def unwrap_request(data: dict, pk: str = None) -> dict:
 
 class GenericSerializerMixin(serializers.ModelSerializer):
 
+    def to_internal_value(self, data):
+
+        data = data.copy()
+        if self.context.get('view'):
+            if 'pk' in self.context['view'].kwargs:
+                data['id'] = self.context['view'].kwargs['pk']
+        return data
+
+    def filter_data(self, validated_data: dict) -> dict:
+        filtered_data = {}
+        for k in list(validated_data.keys()):
+            if k in self.Meta.fields:
+                filtered_data[k] = validated_data[k]
+        
+        return filtered_data
+    
+    def replace_id_relations(self, validated_data: dict) -> dict:
+
+        for k in getattr(self.Meta, 'id_relations',[]):
+            if k in validated_data:
+                validated_data[k+'_id'] = validated_data.pop(k)
+        return validated_data
+
     def create(self, validated_data):
         """
         Create and return an Institution instance given validated data.
         """
-        validated_data = unwrap_request(validated_data)
-        filter_data    = unwrap_request(validated_data, pk=self.Meta.model._meta.pk.name)
-        if len(filter_data.keys()) != 0:
-            # Entry supplied with primary key, check against existing models
-            if self.Meta.model.objects.filter(**filter_data):
-                return self.update(
-                    self.Meta.model.objects.get(**filter_data),
-                    validated_data
-                )
 
-        return create_instance(self.Meta.model, required_fields=self.Meta.required_fields, **validated_data)
+        validated_data = unwrap_request(validated_data)
+
+        filtered_data  = self.filter_data(validated_data)
+
+        for k in self.Meta.required_fields:
+            if k not in filtered_data:
+                raise MethodNotAllowed(f'The field "{k}" is required')
+
+        pk    = filtered_data[self.Meta.model._meta.pk.name]
+
+        filtered_data = self.replace_id_relations(filtered_data)
+
+        if self.Meta.model.objects.filter(pk=pk):
+            return self.update(
+                self.Meta.model.objects.get(pk=pk),
+                filtered_data
+            )
+
+        return create_instance(self.Meta.model, required_fields=self.Meta.required_fields, **filtered_data)
     
     def update(self, instance, validated_data: dict):
         """
@@ -56,9 +89,20 @@ class GenericSerializerMixin(serializers.ModelSerializer):
 
         # "Quirky behaviour" allows creation of a new instance via this mechanism.
         # Need to experiment deleting the old instance.
-
         validated_data = unwrap_request(validated_data)
-        instance = update_instance(self.Meta.model, required_fields=self.Meta.required_fields,**validated_data)
+
+        filtered_data  = self.filter_data(validated_data)
+        filtered_data  = self.replace_id_relations(filtered_data)
+        filtered_data.pop('id')
+
+        if len(filtered_data.keys()) == 0:
+            raise MethodNotAllowed('No updates supplied')
+
+        for field in getattr(self.Meta,'immutable_fields',[]):
+            if filtered_data.get(field) != getattr(instance, field) and filtered_data.get(field,None):
+                raise MethodNotAllowed(f'The field "{field}" is immutable')
+
+        instance = update_instance(self.Meta.model, id=instance.id, **filtered_data)
         return instance
 
 class InstitutionsSerializer(GenericSerializerMixin):
@@ -70,7 +114,7 @@ class InstitutionsSerializer(GenericSerializerMixin):
 
     def to_internal_value(self, data):
 
-        data = data.copy()
+        super().to_internal_value(data)
 
         data.update(locate_institute(data['name']))
 
@@ -88,7 +132,7 @@ class PartiesSerializer(GenericSerializerMixin):
 
     def to_internal_value(self, data):
 
-        data = data.copy()
+        data = super().to_internal_value(data)
 
         affiliation_data = []
         if data.get('orcid',None):
@@ -109,11 +153,12 @@ class PartiesSerializer(GenericSerializerMixin):
                 filter_kwargs={'name':a},
             ).pk for a in affiliation_data]
 
-        # Add ID from hashed version of first and last names?
-        naming_hash = data['first_name'] + data.get('middle_names','') + data.get('last_name')
-        party_id = hashlib.sha1(naming_hash.encode()).hexdigest()
+        if 'id' not in data:
+            # Add ID from hashed version of first and last names?
+            naming_hash = data['first_name'] + data.get('middle_names','') + data.get('last_name')
+            party_id = hashlib.sha1(naming_hash.encode()).hexdigest()
 
-        data['id'] = party_id
+            data['id'] = party_id
 
         return data
 
@@ -125,10 +170,11 @@ class FundingStreamsSerializer(GenericSerializerMixin):
         required_fields = ['name']
         fields = ['name','affiliation','id']
         relations=[]
+        id_relations = ['affiliation']
 
     def to_internal_value(self, data):
 
-        data = data.copy()
+        data = super().to_internal_value(data)
         if 'affiliation' in data:
             affiliation = data.pop('affiliation')
 
@@ -139,7 +185,8 @@ class FundingStreamsSerializer(GenericSerializerMixin):
                 filter_kwargs={'name':affiliation}
             ).pk
 
-        data['id'] = hashlib.sha1(data['name'].encode()).hexdigest()
+        if 'id' not in data:
+            data['id'] = hashlib.sha1(data['name'].encode()).hexdigest()
 
         return data
 
@@ -160,14 +207,16 @@ class CitationsSerializer(GenericSerializerMixin):
             'source_id','experiment_id'
         ]
         required_fields=[
-            'title','version'
+            'title','version', 'primary'
         ]
+        id_relations = ['primary']
 
         relations=['contacts','institutions','funders']
 
     def validate(self, data):
         data = super().validate(data)
-        data = dict(data) | validate_title(data['title'])
+        if 'title' in data:
+            data = dict(data) | validate_title(data['title'])
         return data
     
     def update(self, instance, validated_data):
@@ -187,7 +236,7 @@ class CitationsSerializer(GenericSerializerMixin):
         Locate or create references based on the provided information.
         """
 
-        data = data.copy()
+        data = super().to_internal_value(data)
 
         if data.get('version') is None and data.get('id') is None:
             
@@ -208,7 +257,7 @@ class CitationsSerializer(GenericSerializerMixin):
             search_primary = chain_new_objects(primary, PartiesSerializer, Parties, 
                                                filter_kwargs=PartiesSerializer.Meta.required_fields,
                                                optionals=optional_party)
-            data['primary_id'] = search_primary.pk
+            data['primary'] = search_primary.pk
 
         if data.get('contacts'):
             contacts = []

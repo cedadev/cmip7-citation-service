@@ -53,7 +53,7 @@ def create_instance(model: models.Model, required_fields: list, **kwargs):
     # Get newly created model from the table. Wait until it has been created.
     return model.objects.get(**id_kwargs)
 
-def update_instance(model: models.Model, required_fields: list, **kwargs):
+def update_instance(model: models.Model, id: str, **kwargs):
     """
     Send message to consumer to update existing instance
     """
@@ -66,10 +66,26 @@ def update_instance(model: models.Model, required_fields: list, **kwargs):
     consumer.write_request(
         table=model._meta.label.split('.')[-1],
         method='update',
-        content=kwargs
+        content=kwargs | {'id': id}
     )
 
-    id_kwargs = {k:v for k,v in kwargs.items() if k in required_fields}
-
     # Await update confirmation
-    return model.objects.get(**id_kwargs)
+    return model.objects.get(pk=id)
+
+def delete_instance(model: models.Model, id: str, **kwargs):
+    """
+    Send message to consumer to update existing instance
+    """
+    
+    consumer = KafkaConsumer(
+        settings.CONSUMER_CONFIG,
+        settings.CONSUMER_TOPICS,
+    )
+
+    consumer.write_request(
+        table=model._meta.label.split('.')[-1],
+        method='delete',
+        content={'id':id}
+    )
+
+    # Await model deletion
