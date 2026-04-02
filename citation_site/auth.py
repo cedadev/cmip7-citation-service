@@ -1,5 +1,6 @@
-from mozilla_django_oidc.auth import OIDCAuthenticationBackend \
-    as BaseOIDCAuthenticationBackend
+from mozilla_django_oidc.auth import \
+    OIDCAuthenticationBackend as BaseOIDCAuthenticationBackend
+
 
 class UsernameOIDCAuthenticationBackend(BaseOIDCAuthenticationBackend):
     """ Extends the mozilla-django-oidc OIDC authentication backend to handle 
