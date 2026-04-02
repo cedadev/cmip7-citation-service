@@ -4,21 +4,17 @@ import json
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.sites import shortcuts
-from django.core import serializers
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db.models import CharField, ForeignKey, Q, TextField
 from django.db.models.functions import Lower
-from django.http import (HttpResponse, HttpResponseForbidden,
+from django.http import (HttpResponseForbidden,
                          HttpResponseNotFound, HttpResponseRedirect)
 from django.urls import reverse
-from django.views.generic import ListView
 from django.views.generic.base import TemplateView
 from django.views.generic.edit import FormView
 from rest_framework import generics, mixins, permissions, status
 from rest_framework.authentication import TokenAuthentication
-from rest_framework.exceptions import APIException
 from rest_framework.response import Response
 
 from citations.consumer.write import chain_new_objects, delete_instance
