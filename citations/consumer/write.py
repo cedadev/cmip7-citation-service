@@ -1,22 +1,27 @@
+from typing import Union
+
+from django.conf import settings
 from django.db import models
 from rest_framework import serializers
+
 from citations.consumer import KafkaConsumer
-from django.conf import settings
-from typing import Union
+
 
 def chain_new_objects(
         data: dict, 
         serializer: serializers.ModelSerializer, 
         model: type[models.Model], 
         filter_kwargs: list, 
-        optionals: list = None
-    ) -> models.Model:
+        optionals: list = None,
+        allow_update: bool = False,
+        fill_data_parameters: bool = False,
+    ) -> str:
     """
     Validate new model instances.
     """
 
     optionals = optionals or []
-    filters = {k: data[k] for k in filter_kwargs}
+    filters = {k: data.get(k) for k in filter_kwargs if k in data}
     for opt in optionals:
         if data.get(opt):
             filters[opt] = data[opt]
@@ -26,12 +31,25 @@ def chain_new_objects(
     if not instance:
         serial = serializer(data=data)
         serial.is_valid(raise_exception=True)
-        instance = create_instance(model, required_fields=serializer.Meta.required_fields, **dict(serial.validated_data))
+        serial.save()
+        inst_pk = serial.validated_data['id']
     else:
         instance = instance[0]
+        serial = serializer(data=data, instance=instance)
+
+        serial.is_valid(raise_exception=True)
+        update = False
+        if allow_update:
+            for k,v in data.items():
+                if v != getattr(instance, k):
+                    update = True
+
+        if update:
+            serial.save()
+        inst_pk = serial.validated_data.get('id',instance.pk)
 
     # Should return newly created instance or existing one
-    return instance
+    return inst_pk
 
 def create_instance(model: models.Model, required_fields: list, **kwargs):
     """
@@ -46,12 +64,6 @@ def create_instance(model: models.Model, required_fields: list, **kwargs):
         method='create',
         content=kwargs
     )
-
-    # Use settings.QUEUE_AWAIT_TIMEOUT
-    id_kwargs = {k:v for k,v in kwargs.items() if k in required_fields}
-
-    # Get newly created model from the table. Wait until it has been created.
-    return model.objects.get(**id_kwargs)
 
 def update_instance(model: models.Model, id: str, **kwargs):
     """
@@ -69,9 +81,6 @@ def update_instance(model: models.Model, id: str, **kwargs):
         content=kwargs | {'id': id}
     )
 
-    # Await update confirmation
-    return model.objects.get(pk=id)
-
 def delete_instance(model: models.Model, id: str, **kwargs):
     """
     Send message to consumer to update existing instance
@@ -87,5 +96,3 @@ def delete_instance(model: models.Model, id: str, **kwargs):
         method='delete',
         content={'id':id}
     )
-
-    # Await model deletion

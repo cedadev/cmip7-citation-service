@@ -1,36 +1,16 @@
-from rest_framework import serializers
-from citations.models import (
-    Institutions, 
-    Parties, 
-    FundingStreams,
-    Citations,
-    locate_institute,
-    extract_from_orcid
-)
-from django.db import models
-from rest_framework.exceptions import MethodNotAllowed
-
-from citations.validators import validate_title
-from citations.consumer.write import create_instance, update_instance, chain_new_objects
-
 import hashlib
 import json
 
-def unwrap_request(data: dict, pk: str = None) -> dict:
-    ndata = {}
-    for k, v in data.items():
+from django.db import models
+from rest_framework import serializers
+from rest_framework.exceptions import MethodNotAllowed
 
-        if pk is not None and pk != k:
-            continue
+from citations.consumer.write import (chain_new_objects, create_instance,
+                                      update_instance)
+from citations.models import (Citations, FundingStreams, Institutions, Parties,
+                              extract_from_orcid, locate_institute)
+from citations.validators import validate_title
 
-        if isinstance(v,list) and len(v) == 1:
-            ndata[k] = v[0]
-        elif isinstance(v,dict):
-            ndata[k] = unwrap_request(v)
-        else:
-            ndata[k] = v
-
-    return ndata
 
 class GenericSerializerMixin(serializers.ModelSerializer):
 
@@ -40,13 +20,15 @@ class GenericSerializerMixin(serializers.ModelSerializer):
         if self.context.get('view'):
             if 'pk' in self.context['view'].kwargs:
                 data['id'] = self.context['view'].kwargs['pk']
+
         return data
 
     def filter_data(self, validated_data: dict) -> dict:
         filtered_data = {}
+        validated_data = self.fill_data_parameters(validated_data)
         for k in list(validated_data.keys()):
-            if k in self.Meta.fields:
-                filtered_data[k] = validated_data[k]
+            if k in self.Meta.fields or k.replace('_id','') in self.Meta.id_relations:
+                filtered_data[k] = validated_data.get(k,None)
         
         return filtered_data
     
@@ -62,13 +44,16 @@ class GenericSerializerMixin(serializers.ModelSerializer):
         Create and return an Institution instance given validated data.
         """
 
-        validated_data = unwrap_request(validated_data)
-
         filtered_data  = self.filter_data(validated_data)
 
         for k in self.Meta.required_fields:
-            if k not in filtered_data:
-                raise MethodNotAllowed(f'The field "{k}" is required')
+            if k in getattr(self.Meta,'id_relations',[]):
+                if k+'_id' not in filtered_data:
+                    raise MethodNotAllowed(f'Submission without "{k}" field')
+                continue
+
+            if k not in filtered_data :
+                raise MethodNotAllowed(f'Submission without "{k}" field')
 
         pk    = filtered_data[self.Meta.model._meta.pk.name]
 
@@ -80,7 +65,8 @@ class GenericSerializerMixin(serializers.ModelSerializer):
                 filtered_data
             )
 
-        return create_instance(self.Meta.model, required_fields=self.Meta.required_fields, **filtered_data)
+        create_instance(self.Meta.model, required_fields=self.Meta.required_fields, **filtered_data)
+        return filtered_data
     
     def update(self, instance, validated_data: dict):
         """
@@ -89,7 +75,6 @@ class GenericSerializerMixin(serializers.ModelSerializer):
 
         # "Quirky behaviour" allows creation of a new instance via this mechanism.
         # Need to experiment deleting the old instance.
-        validated_data = unwrap_request(validated_data)
 
         filtered_data  = self.filter_data(validated_data)
         filtered_data  = self.replace_id_relations(filtered_data)
@@ -102,8 +87,8 @@ class GenericSerializerMixin(serializers.ModelSerializer):
             if filtered_data.get(field) != getattr(instance, field) and filtered_data.get(field,None):
                 raise MethodNotAllowed(f'The field "{field}" is immutable')
 
-        instance = update_instance(self.Meta.model, id=instance.id, **filtered_data)
-        return instance
+        update_instance(self.Meta.model, id=instance.id, **filtered_data)
+        return filtered_data
 
 class InstitutionsSerializer(GenericSerializerMixin):
     class Meta:
@@ -112,11 +97,10 @@ class InstitutionsSerializer(GenericSerializerMixin):
         fields = ['name','acronym','country','id']
         relations=[]
 
-    def to_internal_value(self, data):
+    def fill_data_parameters(self, data):
 
-        super().to_internal_value(data)
-
-        data.update(locate_institute(data['name']))
+        if not data.get('acronym',None) and not data.get('country',None):
+            data.update(locate_institute(data['name']))
 
         data['id'] = hashlib.sha1(data['name'].encode()).hexdigest()
         return data
@@ -130,9 +114,7 @@ class PartiesSerializer(GenericSerializerMixin):
         fields = immutable_fields + ['email','orcid','affiliations','id']
         relations = ['affiliations']
 
-    def to_internal_value(self, data):
-
-        data = super().to_internal_value(data)
+    def fill_data_parameters(self, data):
 
         affiliation_data = []
         if data.get('orcid',None):
@@ -151,7 +133,7 @@ class PartiesSerializer(GenericSerializerMixin):
                 InstitutionsSerializer,
                 Institutions,
                 filter_kwargs={'name':a},
-            ).pk for a in affiliation_data]
+            ) for a in affiliation_data]
 
         if 'id' not in data:
             # Add ID from hashed version of first and last names?
@@ -159,7 +141,6 @@ class PartiesSerializer(GenericSerializerMixin):
             party_id = hashlib.sha1(naming_hash.encode()).hexdigest()
 
             data['id'] = party_id
-
         return data
 
 class FundingStreamsSerializer(GenericSerializerMixin):
@@ -172,9 +153,8 @@ class FundingStreamsSerializer(GenericSerializerMixin):
         relations=[]
         id_relations = ['affiliation']
 
-    def to_internal_value(self, data):
+    def fill_data_parameters(self, data):
 
-        data = super().to_internal_value(data)
         if 'affiliation' in data:
             affiliation = data.pop('affiliation')
 
@@ -183,7 +163,7 @@ class FundingStreamsSerializer(GenericSerializerMixin):
                 InstitutionsSerializer, 
                 Institutions, 
                 filter_kwargs={'name':affiliation}
-            ).pk
+            )
 
         if 'id' not in data:
             data['id'] = hashlib.sha1(data['name'].encode()).hexdigest()
@@ -209,15 +189,21 @@ class CitationsSerializer(GenericSerializerMixin):
         required_fields=[
             'title','version', 'primary'
         ]
+        non_replicating_fields=['experiment_id']
         id_relations = ['primary']
 
         relations=['contacts','institutions','funders']
 
-    def validate(self, data):
-        data = super().validate(data)
-        if 'title' in data:
-            data = dict(data) | validate_title(data['title'])
-        return data
+    def create(self, validated_data):
+        # Only run if the data title is new
+        if 'title' in validated_data:
+            facets = validate_title(validated_data['title'])
+            for k in facets.keys():
+
+                # Fill if not overridden by input.
+                if validated_data.get(k,None) is None:
+                    validated_data[k] = facets[k]
+        return super().create(validated_data)
     
     def update(self, instance, validated_data):
 
@@ -229,14 +215,12 @@ class CitationsSerializer(GenericSerializerMixin):
 
         return super().update(instance, validated_data)
 
-    def to_internal_value(self, data: dict):
+    def fill_data_parameters(self, data: dict):
         """
         Update the data in a POST request.
 
         Locate or create references based on the provided information.
         """
-
-        data = super().to_internal_value(data)
 
         if data.get('version') is None and data.get('id') is None:
             
@@ -251,42 +235,52 @@ class CitationsSerializer(GenericSerializerMixin):
         optional_party = list(set(PartiesSerializer.Meta.immutable_fields) - set(PartiesSerializer.Meta.required_fields))
         # Unpack primaries, contacts
         if data.get('primary'):
-            primary = data.pop('primary')[0]
-
-            # This does not correctly create institution objects
-            search_primary = chain_new_objects(primary, PartiesSerializer, Parties, 
-                                               filter_kwargs=PartiesSerializer.Meta.required_fields,
-                                               optionals=optional_party)
-            data['primary'] = search_primary.pk
+            primary = data.pop('primary')
+            if isinstance(primary,dict):
+                # This does not correctly create institution objects
+                search_primary = chain_new_objects(primary, PartiesSerializer, Parties, 
+                                                filter_kwargs=PartiesSerializer.Meta.required_fields,
+                                                optionals=optional_party)
+                primary = search_primary
+            data['primary_id'] = primary
 
         if data.get('contacts'):
             contacts = []
-            for contact in data.pop('contacts')[0]:
-                search_contact = chain_new_objects(contact, PartiesSerializer, Parties,
-                                                    filter_kwargs=PartiesSerializer.Meta.required_fields,
-                                                    optionals=optional_party)
-                contacts.append(search_contact)
-            data['contacts'] = [c.pk for c in contacts]
+            for contact in data.pop('contacts'):
+                if isinstance(contact,dict):
+                    search_contact = chain_new_objects(contact, PartiesSerializer, Parties,
+                                                        filter_kwargs=PartiesSerializer.Meta.required_fields,
+                                                        optionals=optional_party)
+                    contacts.append(search_contact)
+                else:
+                    contacts.append(contact)
+            data['contacts'] = contacts
 
         # Unpack funders
         if data.get('funders'):
             funders = []
-            for funder in data.pop('funders')[0]:
-                search_funder = chain_new_objects(funder, FundingStreamsSerializer, FundingStreams,
-                                                  filter_kwargs=FundingStreamsSerializer.Meta.required_fields,
-                )#onward_chain=['affiliation'])
-                funders.append(search_funder)
-            data['funders'] = [f.pk for f in funders]
+            for funder in data.pop('funders'):
+                if isinstance(funder, dict):
+                    search_funder = chain_new_objects(funder, FundingStreamsSerializer, FundingStreams,
+                                                    filter_kwargs=FundingStreamsSerializer.Meta.required_fields,
+                    )
+                    funders.append(search_funder)
+                else:
+                    funders.append(funder)
+            data['funders'] = funders
 
         # Unpack institutions
         if data.get('institutions'):
             institutions = []
-            for institution in data.pop('institutions')[0]:
-                search_institution = chain_new_objects(institution, InstitutionsSerializer, Institutions,
-                                                       filter_kwargs=InstitutionsSerializer.Meta.required_fields,
-                                                       )
-                institutions.append(search_institution)
-            data['institutions'] = [i.pk for i in institutions]
+            for institution in data.pop('institutions'):
+                if isinstance(institution, dict):
+                    search_institution = chain_new_objects(institution, InstitutionsSerializer, Institutions,
+                                                        filter_kwargs=InstitutionsSerializer.Meta.required_fields,
+                                                        )
+                    institutions.append(search_institution)
+                else:
+                    institutions.append(institution)
+            data['institutions'] = institutions
 
         # Unpack references
 

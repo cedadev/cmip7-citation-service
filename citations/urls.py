@@ -1,25 +1,14 @@
 from django.contrib import admin
-from django.urls import path, include
-from citations.views import (
-    IntroView,
-    PartyView,
-    CitationView,
-    ConfirmDeleteCitationView,
-    InstitutionView,
-    FundingStreamView,
-    CitationsView,
-    PartiesView,
-    InstitutionsView,
-    FundingStreamsView,
-    InstitutionAPIView,
-    PartyAPIView,
-    SpecificPartyAPIView,
-    FundingStreamAPIView,
-    CitationAPIView,
-    SpecificCitationAPIView,
-    NewCitationFormView,
-    EditCitationFormView,
-)
+from django.urls import include, path
+
+from citations.views import (CitationAPIView, CitationsView, CitationView,
+                             ConfirmDeleteCitationView, EditCitationFormView,
+                             FundingStreamAPIView, FundingStreamsView,
+                             FundingStreamView, InstitutionAPIView,
+                             InstitutionsView, InstitutionView, IntroView,
+                             NewCitationFormView, PartiesView, PartyAPIView,
+                             PartyView, SpecificCitationAPIView,
+                             SpecificPartyAPIView)
 
 app_name = 'citations'
 urlpatterns = [

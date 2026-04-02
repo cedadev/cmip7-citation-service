@@ -4,13 +4,14 @@ __copyright__ = "Copyright 2026 United Kingdom Research and Innovation"
 
 ## Consumer Unit for Kafka queues, able to utilise the ORM directly
 
-from confluent_kafka import Consumer, Producer, KafkaException
+import logging
 from typing import Union
 
-from citations.utils import logstream
+from confluent_kafka import Consumer, KafkaException, Producer
+
 import citations.models as tables
 import citations.serializers as serializers
-import logging
+from citations.utils import logstream
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logstream)
@@ -105,6 +106,9 @@ class KafkaConsumer:
         If any formal message checks are required beyond the validation of data
         through the Views, here is where they should go.
         """
+
+        if self.producer is None:
+            raise KafkaException("No configuration provided")
 
         message = {"table": table, "method": method, "content": content}
 

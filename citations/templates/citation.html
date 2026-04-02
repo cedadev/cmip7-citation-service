@@ -3,6 +3,15 @@
 {% block head_title %}CMIP7 Citation{% endblock %}
 
 {% block content_main_inner %}
+    {% if messages %}
+    <div class="alert alert-success">
+        <ul class="messages">
+            {% for message in messages %}
+            <li>{{ message }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
     <h2><b>{{ citation.title }} (v{{ citation.version }})</b></h2>
     {% if latest_version %}
     <div class="alert alert-warning">
@@ -128,32 +137,32 @@
         <!-- ONLY SHOW If User Is Authenticated-->
         {% if editable %}
         <a href="{% url 'citations:edit_citation' title=citation.title %}">
-            <input class="btn btn-primary m-0" value="Edit Record">
+            <input id="edit" class="btn btn-primary m-0" value="Edit Record" type="button" readonly>
         </a>
         {% else %}
         <a href="{% url 'citations:edit_citation' title=citation.title %}">
-            <input class="btn btn-primary m-0" value="Edit Record" disabled title="Not editable">
+            <input id="edit" class="btn btn-primary m-0" value="Edit Record" readonly type="button" disabled title="Not editable">
         </a>
         {% endif %}
 
         {% if not latest_version %}
         <!-- if latest_version is defined then I must NOT be the latest version-->
         <a href="{% url 'citations:add_citation' %}?title={{ citation.title }}">
-            <input class="btn btn-primary m-0" value="Create New Record">
+            <input id="create" class="btn btn-primary m-0" value="Create New Record" type="button" readonly>
         </a>
         {% else %}
         <a href="{% url 'citations:add_citation' %}?title={{ citation.title }}">
-            <input class="btn btn-primary m-0" value="Create New Record" disabled title="Superseded">
+            <input id="create" class="btn btn-primary m-0" value="Create New Record" type="button" disabled title="Superseded" readonly>
         </a>
         {% endif %}
 
         {% if editable %}
         <a href="{% url 'citations:delete_citation' pk=citation.id %}">
-            <input class="btn btn-danger btn-md" value="Delete Record">
+            <input id="delete" class="btn btn-danger btn-md" value="Delete Record" type="button" readonly>
         </a>
         {% else %}
         <a href="{% url 'citations:delete_citation' pk=citation.id %}">
-            <input class="btn btn-danger btn-md" value="Delete Record" disabled title="Not editable">
+            <input id="delete" class="btn btn-danger btn-md" value="Delete Record" type="button" disabled title="Not editable" readonly>
         </a>
         {% endif %}
     </div>

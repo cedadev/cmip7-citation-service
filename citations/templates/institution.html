@@ -3,7 +3,7 @@
 {% block head_title %}CMIP7 Registered Institutions{% endblock %}
 
 {% block content_main_inner %}
-    <h1><b>{{ institute.name }} ({{ institute.acronym }})</b></h1>
+    <h1><b>{{ institute.name }} {% if institute.acronym %}({{ institute.acronym }}){% endif %}</b></h1>
     {% if institute.country %}
         <h3>Country: {{ institute.country }}</h3>
     {% endif %}

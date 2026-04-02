@@ -9,59 +9,241 @@
     <h2><b>Edit Citation Record</b></h2>
     {% endif %}
     <p></p>
+    {% if extra_errors.errors %}
+        <div class="success">
+            {{ extra_errors.errors }} error(s) found in the citation:
+            <ul>
+                {% for err in extra_errors.contact %} <li>{{ err }}</li> {% endfor %}
+                {% for err in extra_errors.institution%} <li>{{ err }}</li> {% endfor %}
+                {% for err in extra_errors.funder %} <li>{{ err }}</li> {% endfor %}
+                {% for err in extra_errors.replica %} <li>{{ err }}</li> {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
     <form method="post">
         {% csrf_token %}
-        <table class="table table-striped border border-light">
-            {% for field in form %}
-            <tr>
-                <td>{{ field.label }} {% if field.label in required_fields %}<span style="color: red;">*</span>{% endif %}</td>
-                <td>{{ field }}</td>
-            </tr>
-            {% endfor %}
-        </table>
+        {% for title, fields in form.field_groups.items %}
+            <h3>{{ title }}</h3>
+            <table class="table table-striped border border-light">
+                {% for field in form %}
+                    {% if field.label in fields %}
+                        <tr>
+                            <td>{{ field.label }} {% if field.label in required_fields %}<span style="color: red;">*</span>{% endif %}</td>
+                            <td>{{ field }}</td>
+                        </tr>
+                    {% endif %}
+                {% endfor %}
+            </table>
+        {% endfor %}
 
         <h2>Contacts</h2>
+        <p><i>If the person already exists as part of another citation record, you are only required to enter their full name information (including middle names) to match to the existing record.</i></p>
 
-        <div id="formset-area">
+        <div id="contact-formset-div">
+            {% for err in extra_errors.contact %}
+                <div class="alert alert-warning">
+                    {{ err }}
+                </div>
+            {% endfor %}
+            <div id="formset-area">
 
-            <table class="table table-striped border border-light">
-                <thead>
-                    <tr>
-                        {% for field in contact_formset.empty_form %}
-                        <td>{{ field.label }} {% if field.label in required_fields %}<span style="color: red;">*</span>{% endif %}</td>
+                <table class="table table-striped border border-light">
+                    <thead>
+                        <tr>
+                            {% for field in contact_formset.empty_form %}
+                            <td>{{ field.label }} {% if field.label in required_fields %}<span style="color: red;">*</span>{% endif %}</td>
+                            {% endfor %}
+                            <td>Primary</td>
+                            <td><b>Remove</b></td>
+
+                        </tr>
+                    </thead>
+                    <tbody id="contact-formset-body">
+                        {{ contact_formset.management_form }}
+
+                        {% for form in contact_formset %}
+                        <tr class="contact-row">
+                            {% for field in form %}
+                                <td>{{ field }}</td>
+                            {% endfor %}
+                            <td>
+
+                                <input type="radio"
+                                    name="primary_contact"
+                                    value="{{ forloop.counter0 }}"
+                                    class="primary-radio"
+                                    {% if forloop.first %}checked{% endif %}>
+                            </td>
+                            <td>
+                                <button type="button" class="remove-contact btn btn-danger btn-sm">
+                                    ✕
+                                </button>
+                            </td>
+                        </tr>
                         {% endfor %}
-                        <td>Primary</td>
-                        <td><b>Remove</b></td>
-
-                    </tr>
-                </thead>
-                <tbody id="contact-formset-body">
-                    {{ contact_formset.management_form }}
-
-                    {% for form in contact_formset %}
-                    <tr class="contact-row">
-                        {% for field in form %}
-                            <td>{{ field }}</td>
-                        {% endfor %}
-                        <td>
-
-                            <input type="radio"
-                                name="primary_contact"
-                                value="{{ forloop.counter0 }}"
-                                class="primary-radio"
-                                {% if forloop.first %}checked{% endif %}>
-                        </td>
-                        <td>
-                            <button type="button" class="remove-contact btn btn-danger btn-sm">
-                                ✕
-                            </button>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                        <tr id="add_contact_row">
+                            <td colspan="2"></td>
+                            <td colspan="3">
+                                <input type="button" class="btn btn-primary m-0" id="add-contact" readonly value="+ Add Contact" title="New Contact">
+                            </td>
+                            <td colspan="2"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
-        <input class="btn btn-primary m-0" id="add-contact" value="+ Add Contact" title="New Contact">
+
+        <h2>Affiliated Institutions</h2>
+        <p><i>If the institution already exists as part of another citation record, you are only required to enter the institution name to match to existing records.</i></p>
+        <p><i>Note: This interface cannot be used to edit acronym or country fields for existing institutions.</i></p>
+        <div id="institution-formset-div">
+            {% for err in extra_errors.institution %}
+                <div class="alert alert-warning">
+                    {{ err }}
+                </div>
+            {% endfor %}
+            <div id="formset-area">
+
+                <table class="table table-striped border border-light">
+                    <thead>
+                        <tr>
+                            {% for field in institution_formset.empty_form %}
+                            <td>{{ field.label }} {% if field.label in required_fields %}<span style="color: red;">*</span>{% endif %}</td>
+                            {% endfor %}
+                            <td><b>Remove</b></td>
+
+                        </tr>
+                    </thead>
+                    <tbody id="institution-formset-body">
+                        {{ institution_formset.management_form }}
+
+                        {% for form in institution_formset %}
+                        <tr class="institution-row">
+                            {% for field in form %}
+                                <td>{{ field }}</td>
+                            {% endfor %}
+                            <td>
+                                <button type="button" class="remove-institution btn btn-danger btn-sm">
+                                    ✕
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        <tr id="add_institution_row">
+                            <td></td>
+                            <td colspan="2">
+                                <input type="button" class="btn btn-primary m-0" id="add-institution" readonly value="+ Add Institution" title="New Institution">
+                            </td>
+                            <td></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <h2>Funding Streams</h2>
+        <p><i>If the funding stream already exists as part of another citation record, you are only required to enter the name to match to existing records.</i></p>
+        <p><i>Note: This interface cannot be used to edit the affiliation of existing funding streams.</i></p>
+
+        <div id="funders-formset-div">
+            {% for err in extra_errors.funder %}
+                <div class="alert alert-warning">
+                    {{ err }}
+                </div>
+            {% endfor %}
+            <div id="formset-area">
+
+                <table class="table table-striped border border-light">
+                    <thead>
+                        <tr>
+                            {% for field in funder_formset.empty_form %}
+                            <td>{{ field.label }} {% if field.label in required_fields %}<span style="color: red;">*</span>{% endif %}</td>
+                            {% endfor %}
+                            <td><b>Remove</b></td>
+
+                        </tr>
+                    </thead>
+                    <tbody id="funder-formset-body">
+                        {{ funder_formset.management_form }}
+
+                        {% for form in funder_formset %}
+                        <tr class="funder-row">
+                            {% for field in form %}
+                                <td>{{ field }}</td>
+                            {% endfor %}
+                            <td>
+                                <button type="button" class="remove-funder btn btn-danger btn-sm">
+                                    ✕
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        <tr id="add_funder_row">
+                            <td></td>
+                            <td>
+                                <input type="button" class="btn btn-primary m-0" id="add-funder" readonly value="+ Add Funder" title="New Funder">
+                            </td>
+                            <td></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div> 
+        <h2>Replicate Citation Records</h2>
+        <table>
+            <tr>
+                <p><i>If you wish to apply the above data to multiple citation records, tick the box below to replicate data, and enter the titles of records where this information applies.</i></p>
+            </tr>
+            <tr>
+                <input type="checkbox" id="replicate" name="replicate" value="Replicate Info">
+                <label for="replicate">Replicate Info</label><br>
+            </tr>
+        </table>
+        <div hidden id="replication-div">
+            <h3>Replications</h3>
+            <p><i>Enter here the titles of other citation records to be created/updated with the above content. These changes will be applied to the latest version in all cases.</i></p>
+            {% for err in extra_errors.replica %}
+                <div class="alert alert-warning">
+                    {{ err }}
+                </div>
+            {% endfor %}
+            <div id="replicas-formset-div">
+                <div id="formset-area">
+
+                    <table class="table table-striped border border-light">
+                        <thead>
+                            <tr>
+                                <td>Record Title</td>
+                                <td><b>Remove</b></td>
+                            </tr>
+                        </thead>
+                        <tbody id="replica-formset-body">
+                            {{ replica_formset.management_form }}
+
+                            {% for form in replica_formset %}
+                            <tr class="replica-row">
+                                {% for field in form %}
+                                    <td>{{ field }}</td>
+                                {% endfor %}
+                                <td>
+                                    <button type="button" class="remove-replica btn btn-danger btn-sm">
+                                        ✕
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            <tr id="add_replica_row">
+                                <td colspan="2">
+                                    <input type="button" class="btn btn-primary m-0" id="add-replica" readonly value="+ Add Record ID" title="Add Record">
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <br>
+        <br>
         <table>
             <tr>
                 <td>
@@ -84,18 +266,19 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    const tbody = document.getElementById("contact-formset-body");
-    const addBtn = document.getElementById("add-contact");
+    // Contacts Form Syntax
+    const tbodyContacts = document.getElementById("contact-formset-body");
+    const addContact = document.getElementById("add-contact");
 
-    addBtn.addEventListener("click", function () {
-        const totalForms = document.getElementById("id_form-TOTAL_FORMS");
+    addContact.addEventListener("click", function () {
+        const totalForms = tbodyContacts.querySelector('#id_contact-TOTAL_FORMS');
         const formCount = parseInt(totalForms.value);
 
         // Clone the first row
-        const newRow = tbody.querySelector(".contact-row").cloneNode(true);
+        const newRow = tbodyContacts.querySelector(".contact-row").cloneNode(true);
 
         // Update form index in HTML
-        newRow.innerHTML = newRow.innerHTML.replace(/form-\d+/g, `form-${formCount}`);
+        newRow.innerHTML = newRow.innerHTML.replace(/contact-\d+/g, `contact-${formCount}`);
 
         // Clear input values
         newRow.querySelectorAll("input").forEach(input => input.value = "");
@@ -107,25 +290,160 @@ document.addEventListener("DOMContentLoaded", function () {
         radio.value = formCount;
         radio.checked = false;
 
-        tbody.appendChild(newRow);
+        tbodyContacts.insertBefore(newRow, tbodyContacts.querySelector("#add_contact_row"));
         totalForms.value = formCount + 1;
     });
 
     // Remove row
-    tbody.addEventListener("click", function (e) {
+    tbodyContacts.addEventListener("click", function (e) {
         if (e.target.classList.contains("remove-contact")) {
-            const rows = tbody.querySelectorAll(".contact-row");
+            const rows = tbodyContacts.querySelectorAll(".contact-row");
 
             // Prevent removing the last remaining row
             if (rows.length > 1) {
                 e.target.closest("tr").remove();
 
                 // Update TOTAL_FORMS count
-                const totalForms = document.getElementById("id_form-TOTAL_FORMS");
+                const totalForms =  tbodyContacts.querySelector('#id_contact-TOTAL_FORMS');
                 totalForms.value = rows.length - 1;
             }
         }
     });
+
+    // Institutions Form Syntax
+    const tbodyInstitutions = document.getElementById("institution-formset-body");
+    const addInst = document.getElementById("add-institution");
+
+    addInst.addEventListener("click", function () {
+        const totalForms = tbodyInstitutions.querySelector('#id_institution-TOTAL_FORMS');
+        const formCount = parseInt(totalForms.value);
+
+        // Clone the first row
+        const newRow = tbodyInstitutions.querySelector(".institution-row").cloneNode(true);
+
+        // Update form index in HTML
+        newRow.innerHTML = newRow.innerHTML.replace(/institution-\d+/g, `institution-${formCount}`);
+        newRow.querySelectorAll("input").forEach(input => {
+            input.removeAttribute("readonly");
+            input.removeAttribute("style");
+        });
+
+
+        // Clear input values
+        newRow.querySelectorAll("input").forEach(input => input.value = "");
+
+        tbodyInstitutions.insertBefore(newRow, tbodyInstitutions.querySelector('#add_institution_row'));
+        totalForms.value = formCount + 1;
+    });
+
+    // Remove row
+    tbodyInstitutions.addEventListener("click", function (e) {
+        if (e.target.classList.contains("remove-institution")) {
+            const rows = tbodyInstitutions.querySelectorAll(".institution-row");
+
+            // Prevent removing the last remaining row
+            if (rows.length > 1) {
+                e.target.closest("tr").remove();
+
+                // Update TOTAL_FORMS count
+                const totalForms = tbodyInstitutions.querySelector('#id_institution-TOTAL_FORMS');
+                totalForms.value = rows.length - 1;
+            }
+        }
+    });
+
+    // Funder Form Syntax
+    const tbodyFunders = document.getElementById("funder-formset-body");
+    const addFund = document.getElementById("add-funder");
+
+    addFund.addEventListener("click", function () {
+        const totalForms = tbodyFunders.querySelector('#id_funder-TOTAL_FORMS');
+        const formCount = parseInt(totalForms.value);
+
+        // Clone the first row
+        const newRow = tbodyFunders.querySelector(".funder-row").cloneNode(true);
+
+        // Update form index in HTML
+        newRow.innerHTML = newRow.innerHTML.replace(/funder-\d+/g, `funder-${formCount}`);
+        newRow.querySelectorAll("input").forEach(input => {
+            input.removeAttribute("readonly");
+            input.removeAttribute("style");
+        });
+
+
+        // Clear input values
+        newRow.querySelectorAll("input").forEach(input => input.value = "");
+
+        tbodyFunders.insertBefore(newRow, tbodyFunders.querySelector('#add_funder_row'));
+        totalForms.value = formCount + 1;
+    });
+
+    // Remove row
+    tbodyFunders.addEventListener("click", function (e) {
+        if (e.target.classList.contains("remove-funder")) {
+            const rows = tbodyFunders.querySelectorAll(".funder-row");
+
+            // Prevent removing the last remaining row
+            if (rows.length > 1) {
+                e.target.closest("tr").remove();
+
+                // Update TOTAL_FORMS count
+                const totalForms = tbodyFunders.querySelector('#id_funder-TOTAL_FORMS');
+                totalForms.value = rows.length - 1;
+            }
+        }
+    });
+
+    const replicaCheckbox = document.getElementById("replicate");
+    replicaCheckbox.addEventListener("change", () => {
+        const replicaDiv = document.getElementById("replication-div");
+        replicaDiv.hidden = !replicaCheckbox.checked;
+    })
+
+    // Replicas Syntax
+    const tbodyReplicas = document.getElementById("replica-formset-body");
+    const addReplica = document.getElementById("add-replica");
+
+    addReplica.addEventListener("click", function () {
+        const totalForms = tbodyReplicas.querySelector('#id_replica-TOTAL_FORMS');
+        const formCount = parseInt(totalForms.value);
+
+        // Clone the first row
+        const newRow = tbodyReplicas.querySelector(".replica-row").cloneNode(true);
+
+        // Update form index in HTML
+        newRow.innerHTML = newRow.innerHTML.replace(/replica-\d+/g, `replica-${formCount}`);
+        newRow.querySelectorAll("input").forEach(input => {
+            input.removeAttribute("readonly");
+            input.style.backgroundColor = "";
+        });
+
+
+        // Clear input values
+        newRow.querySelectorAll("input").forEach(input => input.value = "");
+
+        tbodyReplicas.insertBefore(newRow, tbodyReplicas.querySelector('#add_replica_row'));
+        totalForms.value = formCount + 1;
+    });
+
+    // Remove row
+    tbodyReplicas.addEventListener("click", function (e) {
+        if (e.target.classList.contains("remove-replica")) {
+            const rows = tbodyReplicas.querySelectorAll(".replica-row");
+
+            // Prevent removing the last remaining row
+            if (rows.length > 1) {
+                e.target.closest("tr").remove();
+
+                // Update TOTAL_FORMS count
+                const totalForms = tbodyReplicas.querySelector('#id_replica-TOTAL_FORMS');
+                totalForms.value = rows.length - 1;
+            }
+        }
+    });
+
+
+
 });
 </script>
 

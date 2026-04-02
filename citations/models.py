@@ -1,10 +1,13 @@
 import uuid
-import xmltodict
+
 import requests
-from django.db import models
-from citations.validators import validate_orcid, validate_title
-from django.db.models.signals import post_save
+import xmltodict
 from django.contrib.postgres.fields import ArrayField
+from django.db import models
+from django.db.models.signals import post_save
+
+from citations.validators import validate_orcid, validate_title
+
 
 # Create your models here.
 class Institutions(models.Model):
@@ -21,10 +24,7 @@ class Institutions(models.Model):
 
     id = models.CharField(max_length=120, primary_key=True)
     def __str__(self):
-        if self.acronym is not None:
-            return f'{self.name} ({self.acronym})'  # Country
-        else:
-            return self.name
+        return self.name
 
 class Parties(models.Model):
     """
@@ -140,7 +140,6 @@ def locate_institute(inst: str):
     """
     Use ROR lookup API to find institute-level metadata
     """
-
     ROR_api = 'https://api.ror.org/v2/organizations?query=' + '%20'.join(inst.split(' '))
     r = requests.get(ROR_api)
     if int(r.status_code) >= 300:

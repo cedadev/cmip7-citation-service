@@ -1,8 +1,10 @@
-from django.core.exceptions import ValidationError
+from typing import Union
+
 import requests
 import xmltodict
-from typing import Union
 from django.conf import settings
+from django.core.exceptions import ValidationError
+
 
 def validate_orcid(orcid: Union[str,None]):
     """
@@ -39,18 +41,21 @@ def validate_country(country: Union[str,None]):
             f'"{country}" returned no matches'
         )
     
-def validate_component(component: str, label: str, requested: Union[str,None] = None):
+def validate_component(component: str, label: str, requested: Union[str,None] = None, raise_exception: bool = False):
     """
     Check mip_era against CVs
     """
     r = requests.get(f'{settings.CV_REPO}/{label}/{component}.json')
     if str(r.status_code) != '200':
-        raise ValidationError(f'{component} not a valid {label}')
+        if raise_exception:
+            raise ValidationError(f'{component} not a valid {label}')
+        else:
+            return None
     
     if requested:
         return r.json()[requested]
     
-def validate_title(title: str):
+def validate_title(title: str, raise_exceptions = False):
     """
     Validate title parameter for CMIP7 citation record
     """
@@ -58,17 +63,22 @@ def validate_title(title: str):
     try:
         mip_era, activity_id, institution_id, source_id, experiment_id = title.split('.')
     except ValueError:
-        raise ValidationError('Title does not have all required components')
+        if raise_exceptions:
+            raise ValidationError('Title does not have all required components')
+        return {}
     
     if settings.CV_REPO is not None:
-        validate_component(mip_era, 'mip_era')
-        validate_component(experiment_id, 'experiment')
-        validate_component(institution_id, 'institution')
-        validate_component(source_id, 'source')
+        validate_component(mip_era, 'mip_era', raise_exception=raise_exceptions)
+        validate_component(experiment_id, 'experiment',raise_exception=raise_exceptions)
+        validate_component(institution_id, 'institution',raise_exception=raise_exceptions)
+        validate_component(source_id, 'source',raise_exception=raise_exceptions)
 
-        experiments = validate_component(activity_id, 'activity', requested='experiments')
+        experiments = validate_component(activity_id, 'activity', requested='experiments') or []
         if experiment_id not in experiments:
-            raise ValidationError(f'{experiment_id} not valid for {activity_id}')
+            if raise_exceptions:
+                raise ValidationError(f'{experiment_id} not valid for {activity_id}')
+            else:
+                experiment_id = ''
         
     return {
         'mip_era':mip_era,

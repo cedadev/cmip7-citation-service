@@ -2,6 +2,7 @@
 
 from django.db import migrations, models
 
+
 def extract_component(apps, schema_editor):
     Citations = apps.get_model('citations','Citations')
     for citation in Citations.objects.all().iterator():
