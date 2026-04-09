@@ -2,7 +2,7 @@ import requests
 import json
 
 citation = {
-    'title':'cmip7.aerchemmip.cccma.cnrm_esm2_1e.esm-scen7-h-aer',
+    'title':'cmip7.aerchemmip.cccma.cnrm_esm2_1e.esm-scen7-h-aob',
     "abstract":"This is a test record, created by Daniel Westwood at CEDA",
     "drs_url":"https://google.com",
     "rights":"Example section relating to Rights",
@@ -29,6 +29,10 @@ citation = {
     }]),
     'institutions': json.dumps([{
         'name': 'York University'
+    }]),
+    'cites':json.dumps([{
+        'title':'A very long way to a small angry title, with additional bits and a lengthy description (2026)',
+        'citeas':"A very long way to a small angry title, with additional bits and a lengthy description (2026). Westwood, D.; Alexander, J.; Sykes, E. doi.org/1j2rthf", 'id':'doi.org/1j2rthf'
     }])
 
 }
@@ -42,5 +46,5 @@ print(
         data=citation, 
         headers={'Authorization':f'Token {temp_token}'},
         verify=False
-    )
+    ).content
 )
