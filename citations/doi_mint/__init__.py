@@ -1,0 +1,1 @@
+from .minting import mint_doi_for_record
