@@ -1,0 +1,21 @@
+{% extends 'bases/citation_base.html' %}
+
+{% block head_title %}CMIP7 Citation{% endblock %}
+
+{% block content_main_inner %}
+
+    <h1>Request Reviewer permission</h1>
+    <br>
+    <p>Requesting Reviewer Privileges for user <b>{{ user.username }}</b></p>
+    <p>This will grant access to the following pages:</p>
+    <ul>
+        <li>Create a citation record</li>
+        <li>Edit an existing citation record</li>
+        <li>Delete a citation record</li>
+    </ul>
+    <form method="post">
+        {% csrf_token %}
+        <input type="submit" class="btn btn-primary m-0" value="Continue">
+    </form>
+
+{% endblock %}

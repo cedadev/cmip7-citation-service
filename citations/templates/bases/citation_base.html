@@ -1,5 +1,8 @@
 {% extends template_base %}
 
+{% block cookielaw_banner %}
+{% endblock %}
+
 {% block content_main %}
     {% block content_main_inner %}
     {% endblock %}
@@ -35,5 +38,13 @@
 {% endblock navbar_options %}
 
 {% block user_status %}
+<div class="dropdown">
+{% if user.username %}
+    <a href=""><i class="fa fa-user fa-fw"></i>{{ user.username }}</a>
+{% else %}
+    <a href="/accounts/login"><i class="fa fa-fw fa-sign-in-alt"></i> Sign in</a> <!-- sign in -->
+</div>
+{% endif %}
+</div>
 
 {% endblock user_status %}

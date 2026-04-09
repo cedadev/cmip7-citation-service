@@ -12,158 +12,232 @@
         </ul>
     </div>
     {% endif %}
-    <h2><b>{{ citation.title }} (v{{ citation.version }})</b></h2>
+    <div>
+        <h3>
+        {% if published %}
+        <span class="badge bg-primary" style="color:white;">Published</span>
+        {% else %}
+        <span class="badge bg-secondary" style="color:white;">Unpublished</span>
+        {% endif %}
+        <b>{{ citation.title }} (v{{ citation.version }})</b></h3>
+    </div>
     {% if latest_version %}
     <div class="alert alert-warning">
         <b>This citation has been superseded. See the 
             <a href="{% url 'citations:citation' title=citation.title %}?version={{ latest_version }}">latest version</a>
         </b>
     </div>
-
     {% endif %}
     <p></p>
-    <h3><b>General Information</b></h3>
-    <p></p>
-    <table class="table table-striped border border-light">
-        <tr>
-            <th>Name</th>
-            <td>{{ citation.title }}</td>
-        </tr>
-        <tr>
-            <th>Abstract</th>
-            <td>{{ citation.abstract }}</td>
-        </tr>
-        <tr>
-            <th>DRS URL</th>
-            <td><a href="{{ citation.drs_url }}">{{citation.drs_url}}</a></td>
-        </tr>
-        <tr>
-            <th>DOI URL</th>
-            <td><a href="{{ citation.doi_url }}">{{citation.doi_url}}</a></td>
-        </tr>
-        <tr>
-            <th>Rights</th>
-            <td>{{ citation.rights }}</td>
-        </tr>
-        <tr>
-            <th>License</th>
-            <td>{{ citation.license }}</td>
-        </tr>
-    </table>
-    <p></p>
-    <h3><b>Model Documentation (EMD)</b></h3>
-    <p></p>
-    <table class="table table-striped border border-light">
-        <tr>
-            <th>MIP Era</th>
-            <td>{{ citation.mip_era }}</td>
-        </tr>
-        <tr>
-            <th>Activity</th>
-            <td>{{ citation.activity_id }}</td>
-        </tr>
-        <tr>
-            <th>Institution</th>
-            <td>{{ citation.institution_id }}</td>
-        </tr>
-        <tr>
-            <th>Source</th>
-            <td>{{ citation.source_id }}</td>
-        </tr>
-        <tr>
-            <th>Experiment</th>
-            <td>{{ citation.experiment_id }}</td>
-        </tr>
-    </table>
-    <p></p>
-    <h3><b>Responsible Parties</b></h3>
-    <table class="table table-striped border border-light">
-    <tr>
-        <th>Name</th>
-        <th>Role</th>
-    </tr>
-    <tr>
-        <td>
-            <a href="{% url 'citations:party' pk=citation.primary.id %}">{{ citation.primary.first_name }} {{ citation.primary.last_name }}</a>
-            {% if citation.primary.email %}
-            ({{ citation.primary.email }})
-            {% endif %}
-        </td>
-        <td>Primary</td>
-    </tr>
-    {% for contact in citation.contacts %}
-    <tr>
-        <td>
-            <a href="{% url 'citations:party' pk=contact.id %}">{{ contact.first_name }} {{ contact.last_name }} </a>
-            {% if contact.email %}
-            ({{ contact.email }})
-            {% endif %}
-        </td>
-        <td>Contact</td>
-    </tr>
-    {% endfor %}
-    </table>
 
-    <h3><b>Funding Streams</b></h3>
-    <table class="table table-striped border border-light">
-    <tr>
-        <th>Stream Name</th>
-        <th>Affiliation</th>
-    </tr>
-    {% for funder in citation.funders %}
-    <tr>
-        <td><a href="{% url 'citations:funding' pk=funder.id %}">{{ funder.name }}</a></td>
-        <td>{{ funder.affiliation }}</td>
-    </tr>
-    {% endfor %}
-    </table>
+    <ul class="nav nav-tabs" id="myTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabA" type="button" role="tab">
+            General Information & Facets
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabB" type="button" role="tab">
+            Responsible Parties
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabC" type="button" role="tab">
+            Funding Streams
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabD" type="button" role="tab">
+            Institutions
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabE" type="button" role="tab">
+            References
+            </button>
+        </li>
+    </ul>
 
-    <h3><b>Affiliated Institutions</b></h3>
-    <table class="table table-striped border border-light">
-    <tr>
-        <th>Institution</th>
-        <th>Country</th>
-    </tr>
-    {% for institute in citation.institutions %}
-    <tr>
-        <td><a href="{% url 'citations:institution' pk=institute.id %}">{{ institute.name }}</a></td>
-        <td>{{ institute.country }}</td>
-    </tr>
-    {% endfor %}
-    </table>
+    <div class="tab-content mt-3">
+        <div class="tab-pane fade show active" id="tabA" role="tabpanel">
+            <h3><b>General Information</b></h3>
+            <br>
+            <table class="table table-striped border border-light">
+                <tr>
+                    <th>Name</th>
+                    <td>{{ citation.title }}</td>
+                </tr>
+                <tr>
+                    <th>Abstract</th>
+                    <td>{{ citation.abstract }}</td>
+                </tr>
+                <tr>
+                    <th>DRS URL</th>
+                    <td><a href="{{ citation.drs_url }}">{{citation.drs_url}}</a></td>
+                </tr>
+                {% if cite_as %}
+                <tr>
+                    <th>Cite As</th>
+                    <td><b>{{ cite_as.title }}.</b> {{ cite_as.rotc }}.<a href="{{ citation.doi_url }}"> {{ citation.doi_url }}</a></td>
+                {% endif %}
+                <tr>
+                    <th>Rights</th>
+                    <td>{{ citation.rights }}</td>
+                </tr>
+                <tr>
+                    <th>License</th>
+                    <td>{{ citation.license }}</td>
+                </tr>
+            </table>
+            <br>
+            <h3><b>CMIP7 Facets</b></h3>
+            <br>
+            <table class="table table-striped border border-light">
+                <tr>
+                    <th>MIP Era</th>
+                    <td>{{ citation.mip_era }}</td>
+                </tr>
+                <tr>
+                    <th>Activity</th>
+                    <td>{{ citation.activity_id }}</td>
+                </tr>
+                <tr>
+                    <th>Institution</th>
+                    <td>{{ citation.institution_id }}</td>
+                </tr>
+                <tr>
+                    <th>Source</th>
+                    <td>{{ citation.source_id }}</td>
+                </tr>
+                <tr>
+                    <th>Experiment</th>
+                    <td>{{ citation.experiment_id }}</td>
+                </tr>
+            </table>
+        </div>
+        <div class="tab-pane fade" id="tabB" role="tabpanel">
+            <h3><b>Responsible Parties</b></h3>
+            <br>
+            <table class="table table-striped border border-light">
+                <tr>
+                    <th>Name</th>
+                    <th>Role</th>
+                </tr>
+                <tr>
+                    <td>
+                        <a href="{% url 'citations:party' pk=citation.primary.id %}">{{ citation.primary.first_name }} {{ citation.primary.last_name }}</a>
+                        {% if citation.primary.email %}
+                        ({{ citation.primary.email }})
+                        {% endif %}
+                    </td>
+                    <td>Primary</td>
+                </tr>
+                {% for contact in citation.contacts %}
+                <tr>
+                    <td>
+                        <a href="{% url 'citations:party' pk=contact.id %}">{{ contact.first_name }} {{ contact.last_name }} </a>
+                        {% if contact.email %}
+                        ({{ contact.email }})
+                        {% endif %}
+                    </td>
+                    <td>Contact</td>
+                </tr>
+            {% endfor %}
+            </table>
+        </div>
+        <div class="tab-pane fade" id="tabC" role="tabpanel">
+            <h3><b>Funding Streams</b></h3>
+            <br>
+            <table class="table table-striped border border-light">
+                <tr>
+                    <th>Stream Name</th>
+                    <th>Affiliation</th>
+                </tr>
+                {% for funder in citation.funders %}
+                <tr>
+                    <td><a href="{% url 'citations:funding' pk=funder.id %}">{{ funder.name }}</a></td>
+                    <td>{{ funder.affiliation }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+        <div class="tab-pane fade" id="tabD" role="tabpanel">
+            <h3><b>Affiliated Institutions</b></h3>
+            <br>
+            <table class="table table-striped border border-light">
+                <tr>
+                    <th>Institution</th>
+                    <th>Country</th>
+                </tr>
+                {% for institute in citation.institutions %}
+                <tr>
+                    <td><a href="{% url 'citations:institution' pk=institute.id %}">{{ institute.name }}</a></td>
+                    <td>{{ institute.country }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+        <div class="tab-pane fade" id="tabE" role="tabpanel">
+            {% for reference in citation.cites %}
+            <div>
+            <span class="badge bg-primary" style="color:white;">Cites</span>
+            {{ reference.citeas |safe }}
+            </div>
+            {% endfor %}
 
-    <p></p>
+            {% for reference in citation.is_referenced_by %}
+            <div>
+            <span class="badge bg-primary" style="color:white;">IsReferencedBy</span>
+            {{ reference.citeas |safe }}
+            </div>
+            {% endfor %}
+
+            {% for reference in citation.is_cited_by %}
+            <div>
+            <span class="badge bg-primary" style="color:white;">IsCitedBy</span>
+            {{ reference.citeas |safe }}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    <br>
     <div>
-        <!-- ONLY SHOW If User Is Authenticated-->
-        {% if editable %}
-        <a href="{% url 'citations:edit_citation' title=citation.title %}">
-            <input id="edit" class="btn btn-primary m-0" value="Edit Record" type="button" readonly>
-        </a>
-        {% else %}
-        <a href="{% url 'citations:edit_citation' title=citation.title %}">
-            <input id="edit" class="btn btn-primary m-0" value="Edit Record" readonly type="button" disabled title="Not editable">
-        </a>
-        {% endif %}
+        {% if is_reviewer %}
+            <!-- ONLY SHOW If User Is Authenticated-->
+            {% if editable %}
+            <a href="{% url 'citations:edit_citation' title=citation.title %}">
+                <input id="edit" class="btn btn-primary m-0" value="Edit Record" type="button" readonly>
+            </a>
+            {% else %}
+            <a href="{% url 'citations:edit_citation' title=citation.title %}">
+                <input id="edit" class="btn btn-primary m-0" value="Edit Record" readonly type="button" disabled title="Not editable">
+            </a>
+            {% endif %}
 
-        {% if not latest_version %}
-        <!-- if latest_version is defined then I must NOT be the latest version-->
-        <a href="{% url 'citations:add_citation' %}?title={{ citation.title }}">
-            <input id="create" class="btn btn-primary m-0" value="Create New Record" type="button" readonly>
-        </a>
-        {% else %}
-        <a href="{% url 'citations:add_citation' %}?title={{ citation.title }}">
-            <input id="create" class="btn btn-primary m-0" value="Create New Record" type="button" disabled title="Superseded" readonly>
-        </a>
-        {% endif %}
+            {% if not latest_version %}
+            <!-- if latest_version is defined then I must NOT be the latest version-->
+            <a href="{% url 'citations:add_citation' %}?title={{ citation.title }}">
+                <input id="create" class="btn btn-primary m-0" value="Create New Record" type="button" readonly>
+            </a>
+            {% else %}
+            <a href="{% url 'citations:add_citation' %}?title={{ citation.title }}">
+                <input id="create" class="btn btn-primary m-0" value="Create New Record" type="button" disabled title="Superseded" readonly>
+            </a>
+            {% endif %}
 
-        {% if editable %}
-        <a href="{% url 'citations:delete_citation' pk=citation.id %}">
-            <input id="delete" class="btn btn-danger btn-md" value="Delete Record" type="button" readonly>
-        </a>
+            {% if editable %}
+            <a href="{% url 'citations:delete_citation' pk=citation.id %}">
+                <input id="delete" class="btn btn-danger btn-md" value="Delete Record" type="button" readonly>
+            </a>
+            {% else %}
+            <a href="{% url 'citations:delete_citation' pk=citation.id %}">
+                <input id="delete" class="btn btn-danger btn-md" value="Delete Record" type="button" disabled title="Not editable" readonly>
+            </a>
+            {% endif %}
         {% else %}
-        <a href="{% url 'citations:delete_citation' pk=citation.id %}">
-            <input id="delete" class="btn btn-danger btn-md" value="Delete Record" type="button" disabled title="Not editable" readonly>
-        </a>
+            <a href="{% url 'citations:reviewer_request' %}">
+                <input id="reviewer" class="btn btn-primary m-0" value="Request Reviewer Access" type="button">
+            </a>
         {% endif %}
     </div>
 
