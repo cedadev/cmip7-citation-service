@@ -70,8 +70,8 @@ class References(models.Model):
     """
 
     title = models.CharField(max_length=300)
-    partieset = models.TextField()
-    DOI = models.CharField(max_length=50, primary_key=True)
+    citeas = models.TextField()
+    id = models.CharField(max_length=50, primary_key=True)
 
     def __str__(self):
         return f'{self.title}'
@@ -88,6 +88,8 @@ class Citations(models.Model):
     id        = models.CharField(max_length=300, primary_key=True)
     title     = models.CharField(max_length=300, validators=[validate_title])
     version   = models.IntegerField()
+
+    publication_year = models.IntegerField(null=True, blank=True)
 
     abstract = models.TextField()
     drs_url  = models.CharField()
@@ -118,19 +120,16 @@ class Citations(models.Model):
     # )
 
     # References
-    is_cited_by = models.ForeignKey(
-        References, on_delete=models.CASCADE,
-        related_name='is_cited_by',blank=True, null=True
+    is_cited_by = models.ManyToManyField(
+        References, blank=True, null=True, related_name='is_cited_by'
     )
 
-    cites = models.ForeignKey(
-        References, on_delete=models.CASCADE,
-        related_name='cites', blank=True, null=True
+    cites = models.ManyToManyField(
+        References, blank=True, null=True, related_name='cites'
     )
 
-    is_referenced_by = models.ForeignKey(
-        References, on_delete=models.CASCADE,
-        related_name='is_referenced_by',blank=True, null=True
+    is_referenced_by = models.ManyToManyField(
+        References, blank=True, null=True, related_name='is_referenced_by'
     )
 
     # An endpoint for obtaining a list of ESGF urls that can be rendered

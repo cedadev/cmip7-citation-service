@@ -1,18 +1,18 @@
 from django.contrib import admin
 from django.urls import include, path
-
+from django.views.generic import RedirectView
 from citations.views import (CitationAPIView, CitationsView, CitationView,
                              ConfirmDeleteCitationView, EditCitationFormView,
                              FundingStreamAPIView, FundingStreamsView,
                              FundingStreamView, InstitutionAPIView,
-                             InstitutionsView, InstitutionView, IntroView,
+                             InstitutionsView, InstitutionView,
                              NewCitationFormView, PartiesView, PartyAPIView,
                              PartyView, SpecificCitationAPIView,
-                             SpecificPartyAPIView)
+                             SpecificPartyAPIView, ReviewerRequestView)
 
 app_name = 'citations'
 urlpatterns = [
-    path('', IntroView.as_view(), name='intro'),
+    path('', RedirectView.as_view(url='citations/')),
     path('parties/', PartiesView.as_view(), name='parties'),
     path('citations/',CitationsView.as_view(), name='citations'),
     path('institutions/',InstitutionsView.as_view(), name='institutions'),
@@ -29,8 +29,7 @@ urlpatterns = [
     path('api/parties/', PartyAPIView.as_view()),
     path('api/party/<str:pk>', SpecificPartyAPIView.as_view()),
     path('api/fundings/', FundingStreamAPIView.as_view()),
-    path('api/citations/', CitationAPIView.as_view(), name='citation_ap'),
+    path('api/citations/', CitationAPIView.as_view(), name='citation_api'),
     path('api/citation/<str:pk>', SpecificCitationAPIView.as_view()),
-    #path('/authors') # List all authors alphabetically by last name
-    #path('/authors/<id>') # Specific author entry
+    path('reviewer_request/', ReviewerRequestView.as_view(), name='reviewer_request')
 ]

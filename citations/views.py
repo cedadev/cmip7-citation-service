@@ -1,9 +1,9 @@
 import copy
 import json
-
+from datetime import datetime
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import PermissionRequiredMixin, LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db.models import CharField, ForeignKey, Q, TextField
@@ -17,14 +17,47 @@ from rest_framework import generics, mixins, permissions, status
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.response import Response
 
-from citations.consumer.write import chain_new_objects, delete_instance
+from citations.consumer.write import delete_instance
 from citations.forms import (ContactFormSet, EditCitationForm, FunderFormSet,
                              InstitutionFormSet, NewCitationForm,
-                             ReplicaFormSet)
-from citations.models import Citations, FundingStreams, Institutions, Parties
+                             ReplicaFormSet, ReferenceFormSet, reference_options)
+from citations.models import Citations, FundingStreams, Institutions, Parties, References
 from citations.serializers import (CitationsSerializer,
                                    FundingStreamsSerializer,
-                                   InstitutionsSerializer, PartiesSerializer)
+                                   InstitutionsSerializer, PartiesSerializer,
+                                   ReferencesSerializer, 
+                                   chain_new_objects, handle_update)
+from citations.doi_mint import mint_doi_for_record
+from slack_sdk import WebClient
+
+def get_citable_party(party: Parties):
+    if party.middle_names:
+        return f'{party.last_name}, {party.first_name} {party.middle_names}'
+    else:
+        return f'{party.last_name}, {party.first_name}'
+    
+def get_cite_as(citation: Citations):
+    primary = get_citable_party(citation.primary) + '; '
+
+    return {
+        'title': f'{citation.title} ({getattr(citation,"publication_year", "2026")})',
+        'rotc': primary + '; '.join([
+            get_citable_party(contact)
+            for contact in citation.contacts.all()
+        ])
+    }
+
+def render_reference_html(ref: dict) -> dict:
+
+    if ref['title'][-1] != '.':
+        ref['title'] += '.'
+
+    cite_core = ref['citeas'].replace(ref["title"],"").replace(ref["id"],"") or '.'
+    if cite_core[-1] != '.':
+        cite_core += '.'
+
+    ref['citeas'] = f'<b>{ref["title"]} </b>{cite_core} <a href={ref["id"]}>{ref["id"]}.</a>' 
+    return ref
 
 
 def fullname(party):
@@ -133,10 +166,6 @@ class PaginatedListView(GenericRenderedView):
 
     def adjust_for_UI_render(self, queryset) -> list:
         return [self.serializer_class(q).data for q in queryset]
-    
-class IntroView(LoginRequiredMixin,GenericRenderedView):
-    login_url = settings.LOGIN_URL
-    template_name = 'intro.html'
 
 class PartiesView(PaginatedListView):
     template_name = 'parties.html'
@@ -232,9 +261,24 @@ class CitationView(GenericRenderedView):
 
         latest_version = Citations.objects.filter(title=title).order_by('version').last().version
 
+        reviewer = self.request.user
+        if reviewer.has_perm('citations.add_citations'):
+            context['is_reviewer'] = True
+
+        # Invisible properties
         context['editable'] = citation.editable
+        context['published'] = citation.published
+
         if citation.version != latest_version:
             context['latest_version'] = latest_version
+
+        if citation.published:
+            context['cite_as'] = get_cite_as(citation)
+
+        for reference_type in CitationsSerializer.Meta.citation_types:
+            if citation_data.get(reference_type):
+                for ref in citation_data[reference_type]:
+                    ref = render_reference_html(ref)
 
         context['citation'] = citation_data
         return context
@@ -371,6 +415,7 @@ class SpecificAPIView(
     def delete(self, request, *args, **kwargs):
         instance = self.get_object()
         delete_instance(
+            update_handler=handle_update,
             model=self.model,
             id=instance.id)
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -430,7 +475,7 @@ class CitationAPIView(GenericAPIView):
     model = Citations
     queryset = Citations.objects.all()
     serializer_class = CitationsSerializer
-    json_fields = ['primary','funders','institutions','contacts']
+    json_fields = ['primary','funders','institutions','contacts', 'is_cited_by', 'is_referenced_by','cites']
 
 class SpecificCitationAPIView(SpecificAPIView):
     """
@@ -440,7 +485,7 @@ class SpecificCitationAPIView(SpecificAPIView):
     queryset = Citations.objects.all()
     serializer_class = CitationsSerializer
 
-    json_fields = ['primary','funders','institutions','contacts']
+    json_fields = ['primary','funders','institutions','contacts', 'is_cited_by','is_referenced_by', 'cites']
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -458,8 +503,10 @@ def check_changes(instance, data):
             changed_data[attr] = value
     return changed_data
 
-class CitationFormMixin(GenericRenderedView, FormView):
+class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
 
+    permission_required='citations.add_citations'
+    raise_exception=True
     template_name = "edit_citation.html"
     model = Citations
     serializer_class = CitationsSerializer
@@ -478,7 +525,27 @@ class CitationFormMixin(GenericRenderedView, FormView):
         messages.success(self.request, 'Your citations have been submitted and will appear here when they have been processed.')
         return HttpResponseRedirect(reverse('citations:citations'))
     
-    def get_context_data(self, **kwargs):
+    def initial_formset_values(self, context) -> dict:
+        context['contact_formset'] = ContactFormSet()
+        context['institution_formset'] = InstitutionFormSet()
+        context['funder_formset'] = FunderFormSet()
+        context['replica_formset'] = ReplicaFormSet()
+        context['reference_formset'] = ReferenceFormSet()
+        return context
+
+    def new_version(self, **kwargs):
+        if self.request.GET.get('title'):
+            # Create from Previous
+            new_version = Citations.objects.filter(title=self.request.GET.get('title')).order_by('version').last().version + 1
+        elif self.kwargs.get('title'):
+            # Edit Current
+            new_version = Citations.objects.filter(title=self.kwargs.get('title')).order_by('version').last().version
+        else:
+            # Create New
+            new_version = 1
+        return new_version
+    
+    def get_context_data(self, title: str = None, **kwargs):
         context = super().get_context_data(**kwargs)
 
         if self.request.POST:
@@ -486,37 +553,28 @@ class CitationFormMixin(GenericRenderedView, FormView):
             context['institution_formset'] = InstitutionFormSet(self.request.POST)
             context['funder_formset'] = FunderFormSet(self.request.POST)
             context['replica_formset'] = ReplicaFormSet(self.request.POST)
+            context['reference_formset'] = ReferenceFormSet(self.request.POST)
         else:
-            context['contact_formset'] = ContactFormSet()
-            context['institution_formset'] = InstitutionFormSet()
-            context['funder_formset'] = FunderFormSet()
-            context['replica_formset'] = ReplicaFormSet()
+            context = self.initial_formset_values(context)
 
         context['on_submit'] = self.on_submit
         
-        if self.request.GET.get('title'):
-            # Create from Previous
-            context['new_version'] = Citations.objects.filter(title=self.request.GET.get('title')).order_by('version').last().version + 1
-        elif self.kwargs.get('title'):
-            # Edit Current
-            context['new_version'] = Citations.objects.filter(title=self.kwargs.get('title')).order_by('version').last().version
-        else:
-            # Create New
-            context['new_version'] = 1
+        context['new_version'] = self.new_version(title=title)
 
         required_fields = []
         for serializer in [
             InstitutionsSerializer,
             PartiesSerializer,
             FundingStreamsSerializer,
-            CitationsSerializer
+            CitationsSerializer,
+            ReferencesSerializer,
         ]:
             required_fields += [
                 f[0].upper() + f[1:].replace('_',' ') for f in serializer.Meta.required_fields
             ]
 
         context['required_fields'] = list(set(required_fields))
-        context['publishable'] = False
+        context['publishable'] = True
         return context
 
     def clean_formset_data(self, formset: dict, serializer, model, allow_update: bool = False) -> list:
@@ -538,42 +596,86 @@ class CitationFormMixin(GenericRenderedView, FormView):
             if inst:
                 inst = inst[0]
                 changed_data = check_changes(inst, formdata)
+                inst_pk = inst.pk
             else:
                 changed_data = formdata
 
             if changed_data:
-                inst = chain_new_objects(
+                inst_pk = chain_new_objects(
                     data=changed_data | filter_kwargs,
                     serializer=serializer,
                     model=model,
                     filter_kwargs=serializer.Meta.required_fields,
                     allow_update=allow_update,
                     fill_data_parameters=True) # Allowed updates from citation form directly to contacts
-            pks.append(inst.pk)
+            pks.append(inst_pk)
         return pks
+    
+    def process_references(self, formset) -> dict:
+        ref_data = {}
+        ref_data['is_cited_by']      = []
+        ref_data['is_referenced_by'] = []
+        ref_data['cites']            = []
 
+        for form in formset:
+
+            if not form:
+                continue
+            formdata = dict(getattr(form,'cleaned_data',{}))
+            if not formdata:
+                continue
+            if len(formdata.keys()) < 3:
+                continue
+
+            formdata['id'] = formdata.pop('DOI')
+            rel_id = formdata.pop('relation')
+            relation = [r[1] for r in reference_options if str(r[0]) == str(rel_id)][0]
+
+            inst = References.objects.filter(id=formdata['id'])
+            if inst:
+                inst = inst[0]
+                changed_data = check_changes(inst, formdata)
+                inst_pk = inst.pk
+            else:
+                changed_data = formdata
+
+            if changed_data:
+                inst_pk = chain_new_objects(
+                    data=changed_data | {'id':formdata['id']},
+                    serializer=ReferencesSerializer,
+                    model=References,
+                    filter_kwargs=['id'],
+                    allow_update=True,
+                    fill_data_parameters=True)
+            ref_data[relation].append(inst_pk)
+        return ref_data
+             
     def create_from_formsets(self, form, **kwargs) -> dict:
 
         contact_formset     = ContactFormSet(self.request.POST)
         institution_formset = InstitutionFormSet(self.request.POST)
         funder_formset      = FunderFormSet(self.request.POST)
+        reference_formset   = ReferenceFormSet(self.request.POST)
 
         errors = 0
 
         error_map = {}
-        for formset in [contact_formset, institution_formset, funder_formset]:
+        for formset in [contact_formset, institution_formset, funder_formset, reference_formset]:
             for form_pt in formset:
-                if not form_pt.is_valid():
-                    error_map[formset.prefix] = form.errors
-                    errors += 1
+                if not form_pt.is_valid() and not form_pt.empty_permitted:
+                    err_msgs = []
+                    for err, msg in form_pt.errors.items():
+                        err_msgs.append(f'{err}: {msg[0]}')
+                        errors += 1
+                    error_map[formset.prefix] = err_msgs
 
-        if errors > 1:
+        if errors > 0:
             return self.render_to_response(self.get_context_data(form=form, **kwargs) | {'extra_errors':error_map, 'errors': errors})
         
         main_data = {}
-        main_data['contacts'] = []
+        main_data['contacts']     = []
         main_data['institutions'] = []
-        main_data['funders'] = []
+        main_data['funders']      = []
         
         primary_index = int(self.request.POST.get("primary_contact"))
         contacts = self.clean_formset_data(
@@ -601,6 +703,10 @@ class CitationFormMixin(GenericRenderedView, FormView):
 
         main_data['funders'] = self.clean_formset_data(
             funder_formset, FundingStreamsSerializer, FundingStreams
+        )
+
+        main_data.update(
+            self.process_references(reference_formset)
         )
 
         return main_data
@@ -631,12 +737,30 @@ class CitationFormMixin(GenericRenderedView, FormView):
         for v, k in self.label_mappings.items():
             data[k] = data.pop(v,None)
 
+        # Activate publication workflow here if needed
+        if self.request.POST.get('publish'):
+            data['doi_url'] = mint_doi_for_record(data)
+            if data['doi_url']:
+                data['publication_year'] = int(datetime.now().year)
+
         serializer = self.serializer_class(
             instance=instance,
             data=data)
         
         serializer.is_valid(raise_exception=True)
         obj = serializer.save()
+
+        # Activate publication workflow here if needed
+        if self.request.POST.get('publish'):
+            mint_inst = self.model.objects.get(id=data['id'])
+            mint_data = self.serializer_class(mint_inst).data
+            mint_data['doi_url'] = mint_doi_for_record(mint_data)
+
+            serializer = self.serializer_class(
+                instance=mint_inst,
+                data=mint_data)
+            serializer.is_valid()
+            obj = serializer.save()
 
         # Determine replicas
         replica_formset = ReplicaFormSet(self.request.POST)
@@ -661,7 +785,7 @@ class CitationFormMixin(GenericRenderedView, FormView):
                 return self.redirect_on_success()
             
         return self.redirect_on_success(title=obj['title'])
-
+    
 class NewCitationFormView(CitationFormMixin):
 
     form_class = NewCitationForm
@@ -698,7 +822,7 @@ class NewCitationFormView(CitationFormMixin):
         context = super().get_context_data(**kwargs)
         context['publishable'] = True
         return context
-    
+
 class EditCitationFormView(CitationFormMixin):
 
     form_class = EditCitationForm
@@ -732,7 +856,6 @@ class EditCitationFormView(CitationFormMixin):
 
         return self.replicate_data(instance=instance, data=data)
         
-
     def get_initial(self):
 
         if self.request.GET.get('version'):
@@ -750,25 +873,27 @@ class EditCitationFormView(CitationFormMixin):
 
         initial = super().get_initial() | citation_data
         return initial
+    
+    def initial_formset_values(self, context):
+        init = self.get_initial()
+        initial_contacts = [init['primary']]
+        initial_contacts += init.get("contacts", [])
 
-    def get_context_data(self, title, **kwargs):
-        context = super().get_context_data(**kwargs)
+        references = []
+        for relation in self.serializer_class.Meta.citation_types:
+            for v in init.get(relation):
+                v['relation'] = relation
+                v['DOI'] = v['id']
+                references.append(v)
+        
+        context["contact_formset"] = ContactFormSet(initial=initial_contacts)
+        context['institution_formset'] = InstitutionFormSet(initial=init['institutions'])
+        context['funder_formset']      = FunderFormSet(initial=init['funders'])
+        context['reference_formset']   = ReferenceFormSet(initial=references)
+        context['replica_formset']     = ReplicaFormSet()
+        return context
 
-        if self.request.method == "POST":
-            context['contact_formset']     = ContactFormSet(self.request.POST)    
-            context['institution_formset'] = InstitutionFormSet(self.request.POST)
-            context['funder_formset']      = FunderFormSet(self.request.POST)
-            context['replica_formset']     = ReplicaFormSet(self.request.POST)
-        else:
-            # Pull the initial list you created in get_initial()
-            init = self.get_initial()
-            initial_contacts = [init['primary']]
-            initial_contacts += init.get("contacts", [])
-            context["contact_formset"] = ContactFormSet(initial=initial_contacts)
-            context['institution_formset'] = InstitutionFormSet(initial=init['institutions'])
-            context['funder_formset']      = FunderFormSet(initial=init['funders'])
-            context['replica_formset']     = ReplicaFormSet()
-
+    def new_version(self, title: str, **kwargs):
         version_requested = self.request.GET.get('version')
         latest = Citations.objects.filter(title=title).order_by('version').last().version
 
@@ -779,8 +904,10 @@ class EditCitationFormView(CitationFormMixin):
                 f'Unable to update version {version_requested} as there are later versions '
                 f'already in existence (latest version: v{latest}'
             )
+        return version_requested
 
-        context['new_version'] = version_requested
+    def get_context_data(self, title, **kwargs):
+        context = super().get_context_data(title=title, **kwargs)
 
         # In order to be publishable, a record must have an empty DOI URL slot
         # - Already determined as editable if we're at this stage.
@@ -803,7 +930,33 @@ class ConfirmDeleteCitationView(GenericRenderedView):
     
     def post(self, request, pk, *args, **kwargs):
         delete_instance(
+            update_handler=handle_update,
             model=self.model,
             id=pk
         )
+        return HttpResponseRedirect(reverse('citations:citations'))
+    
+class ReviewerRequestView(LoginRequiredMixin, GenericRenderedView):
+    template_name='reviewer_request.html'
+
+    def post(self, request, *args, **kwargs):
+
+        if not self.request.user.has_perm('citations.add_citations'):
+
+            request_text = f':bell: Github user: {request.user.username} ({request.user.first_name} {request.user.last_name}) ' \
+                'is requesting Reviewer access (Create/Update/Delete).'
+            
+            if settings.DEBUG:
+                request_text += ' This is a test message'
+
+            slack_client = WebClient(token=settings.SLACK_OAUTH_TOKEN)
+            slack_client.chat_postMessage(
+                channel=settings.SLACK_ESGF_CHANNEL,
+                text=request_text,
+                username='CEDA Citation SVC'
+            )
+            messages.success(self.request, 'Your request for permission to review Citation records has been submitted.')
+        else:
+            messages.success(self.request, 'You have already been granted reviewer permissions.')
+
         return HttpResponseRedirect(reverse('citations:citations'))

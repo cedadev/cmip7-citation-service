@@ -10,6 +10,11 @@ alphanumeric = RegexValidator(
     r"^[0-9a-zA-Z-_.]*$",
     "Only alphanumeric characters and hyphens/underscores are allowed.",
 )
+reference_options = (
+    (1, 'is_cited_by'),
+    (2, 'is_referenced_by'),
+    (3, 'cites')
+)
 
 class PartyForm(forms.Form):
     first_name = forms.CharField(required=True)
@@ -61,6 +66,34 @@ class FunderForm(forms.Form):
         'affiliation'
     ]
 
+class ReferenceForm(forms.Form):
+    title    = forms.CharField(
+        max_length=300,
+        required=True, 
+        widget=forms.TextInput(attrs={'placeholder':"Reference Title"})
+    )
+    citeas   = forms.CharField(
+        label='Cite As',
+        required=False,
+        widget=forms.Textarea(attrs={'placeholder':"Reference Citation in full"})
+    )
+    DOI      = forms.CharField(label='DOI', max_length=50, required=True, widget=forms.TextInput(attrs={'placeholder':"Reference DOI"}))
+    relation = forms.ChoiceField(choices=reference_options)
+
+    field_order = [
+        'title',
+        'Cite As',
+        'DOI'
+    ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        for field in self.fields.values():
+            field.widget.attrs.update({
+                "style": "width: 100%;"
+            })
+
 class ReplicaForm(forms.Form):
     title = forms.CharField(
         max_length=300,
@@ -72,7 +105,7 @@ class PrefixFormSet(BaseFormSet):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, prefix=self.prefix, **kwargs)
 
-        if self.prefix == 'contact':
+        if self.prefix == 'contact' or self.prefix == 'reference':
             return
 
         for form in self.forms:
@@ -91,8 +124,21 @@ class ContactBaseFormSet(PrefixFormSet, OneRequiredFormSet):
     prefix='contact'
 class ReplicaBaseFormSet(PrefixFormSet):
     prefix='replica'
+class ReferenceBaseFormSet(PrefixFormSet):
+    prefix='reference'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        for form in self.forms:
+            if not form.initial:
+                continue
+
+            form.fields['DOI'].widget.attrs['readonly'] = True
+            form.fields['DOI'].widget.attrs['style']    = 'background-color: #adadad;'
 
 InstitutionFormSet = formset_factory(InstitutionForm, formset=InstitutionBaseFormSet, extra=1)
+ReferenceFormSet = formset_factory(ReferenceForm, formset=ReferenceBaseFormSet, extra=1)
 FunderFormSet = formset_factory(FunderForm, formset=FunderBaseFormSet, extra=1)
 ContactFormSet = formset_factory(PartyForm, formset=ContactBaseFormSet, extra=1)
 ReplicaFormSet = formset_factory(ReplicaForm, formset=ReplicaBaseFormSet, extra=1)

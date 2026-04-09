@@ -5,12 +5,54 @@ from django.db import models
 from rest_framework import serializers
 from rest_framework.exceptions import MethodNotAllowed
 
-from citations.consumer.write import (chain_new_objects, create_instance,
-                                      update_instance)
-from citations.models import (Citations, FundingStreams, Institutions, Parties,
+from citations.consumer.write import (create_instance, update_instance)
+from citations.models import (Citations, FundingStreams, Institutions, Parties, References,
                               extract_from_orcid, locate_institute)
 from citations.validators import validate_title
 
+def chain_new_objects(
+        data: dict, 
+        serializer: serializers.ModelSerializer, 
+        model: type[models.Model], 
+        filter_kwargs: list, 
+        optionals: list = None,
+        allow_update: bool = False,
+        fill_data_parameters: bool = False,
+    ) -> str:
+    """
+    Validate new model instances.
+    """
+
+    optionals = optionals or []
+    filters = {k: data.get(k) for k in filter_kwargs if k in data}
+    for opt in optionals:
+        if data.get(opt):
+            filters[opt] = data[opt]
+    instance = model.objects.filter(**filters)
+
+    # Create instance if not specified.
+    if not instance:
+        serial = serializer(data=data)
+        serial.is_valid(raise_exception=True)
+        serial.save()
+        inst_pk = serial.validated_data['id']
+    else:
+        instance = instance[0]
+        serial = serializer(data=data, instance=instance)
+
+        serial.is_valid(raise_exception=True)
+        update = False
+        if allow_update:
+            for k,v in data.items():
+                if v != getattr(instance, k):
+                    update = True
+
+        if update:
+            serial.save()
+        inst_pk = serial.validated_data.get('id',instance.pk)
+
+    # Should return newly created instance or existing one
+    return inst_pk
 
 class GenericSerializerMixin(serializers.ModelSerializer):
 
@@ -27,7 +69,7 @@ class GenericSerializerMixin(serializers.ModelSerializer):
         filtered_data = {}
         validated_data = self.fill_data_parameters(validated_data)
         for k in list(validated_data.keys()):
-            if k in self.Meta.fields or k.replace('_id','') in self.Meta.id_relations:
+            if k in self.Meta.fields or k.replace('_id','') in self.Meta.id_relations or k in self.Meta.internal_fields:
                 filtered_data[k] = validated_data.get(k,None)
         
         return filtered_data
@@ -52,7 +94,7 @@ class GenericSerializerMixin(serializers.ModelSerializer):
                     raise MethodNotAllowed(f'Submission without "{k}" field')
                 continue
 
-            if k not in filtered_data :
+            if k not in filtered_data and getattr(self.Meta,'field_mappings',dict()).get(k) not in filtered_data:
                 raise MethodNotAllowed(f'Submission without "{k}" field')
 
         pk    = filtered_data[self.Meta.model._meta.pk.name]
@@ -65,7 +107,7 @@ class GenericSerializerMixin(serializers.ModelSerializer):
                 filtered_data
             )
 
-        create_instance(self.Meta.model, required_fields=self.Meta.required_fields, **filtered_data)
+        create_instance(self.Meta.model, update_handler=handle_update, required_fields=self.Meta.required_fields, **filtered_data)
         return filtered_data
     
     def update(self, instance, validated_data: dict):
@@ -78,7 +120,7 @@ class GenericSerializerMixin(serializers.ModelSerializer):
 
         filtered_data  = self.filter_data(validated_data)
         filtered_data  = self.replace_id_relations(filtered_data)
-        filtered_data.pop('id')
+        filtered_data.pop('id',None)
 
         if len(filtered_data.keys()) == 0:
             raise MethodNotAllowed('No updates supplied')
@@ -87,7 +129,7 @@ class GenericSerializerMixin(serializers.ModelSerializer):
             if filtered_data.get(field) != getattr(instance, field) and filtered_data.get(field,None):
                 raise MethodNotAllowed(f'The field "{field}" is immutable')
 
-        update_instance(self.Meta.model, id=instance.id, **filtered_data)
+        update_instance(self.Meta.model, update_handler=handle_update, id=instance.id, **filtered_data)
         return filtered_data
 
 class InstitutionsSerializer(GenericSerializerMixin):
@@ -96,6 +138,7 @@ class InstitutionsSerializer(GenericSerializerMixin):
         required_fields = ['name']
         fields = ['name','acronym','country','id']
         relations=[]
+        internal_fields=[]
 
     def fill_data_parameters(self, data):
 
@@ -113,6 +156,7 @@ class PartiesSerializer(GenericSerializerMixin):
         immutable_fields = ['first_name', 'last_name', 'middle_names']
         fields = immutable_fields + ['email','orcid','affiliations','id']
         relations = ['affiliations']
+        internal_fields=[]
 
     def fill_data_parameters(self, data):
 
@@ -152,6 +196,7 @@ class FundingStreamsSerializer(GenericSerializerMixin):
         fields = ['name','affiliation','id']
         relations=[]
         id_relations = ['affiliation']
+        internal_fields=[]
 
     def fill_data_parameters(self, data):
 
@@ -170,29 +215,53 @@ class FundingStreamsSerializer(GenericSerializerMixin):
 
         return data
 
+class ReferencesSerializer(GenericSerializerMixin):
+
+    class Meta:
+        model = References
+        fields = ['title','citeas','id']
+        required_fields = ['DOI']
+        relations = []
+        id_relations = []
+        field_mappings = {
+            'DOI':'id'
+        }
+        internal_fields=[]
+
+    def fill_data_parameters(self, data):
+        return data
+
 class CitationsSerializer(GenericSerializerMixin):
     primary      = PartiesSerializer(required=False)
     contacts     = PartiesSerializer(required=False, many=True)
     institutions = InstitutionsSerializer(required=False, many=True)
     funders      = FundingStreamsSerializer(required=False, many=True)
+    is_cited_by        = ReferencesSerializer(required=False, many=True)
+    is_referenced_by   = ReferencesSerializer(required=False, many=True)
+    cites              = ReferencesSerializer(required=False, many=True)
 
     class Meta:
         model = Citations
+        citation_types = ['is_cited_by', 'is_referenced_by','cites']
         fields = [
             'title', 'abstract', 'drs_url',
             'doi_url', 'rights', 'license',
             'primary', 'contacts', 'institutions',
-            'funders','id', 'version',
+            'funders','id', 'version', 'publication_year',
             'mip_era','activity_id','institution_id',
-            'source_id','experiment_id'
+            'source_id','experiment_id', 'cites', 'is_cited_by', 'is_referenced_by'
         ]
         required_fields=[
             'title','version', 'primary'
         ]
-        non_replicating_fields=['experiment_id']
+        non_replicating_fields=['experiment_id','doi_url', 'publication_year']
         id_relations = ['primary']
 
-        relations=['contacts','institutions','funders']
+        relations = [
+            'contacts','institutions','funders',
+            'is_cited_by','is_referenced_by','cites'
+        ]
+        internal_fields=['editable', 'published']
 
     def create(self, validated_data):
         # Only run if the data title is new
@@ -210,7 +279,9 @@ class CitationsSerializer(GenericSerializerMixin):
         if instance.published and instance.doi_url is None:
             validated_data['published'] = False
 
-        if instance.doi_url is not None:
+        if validated_data.get('doi_url'):
+            if instance.doi_url is not None or True:
+                validated_data['editable'] = False
             validated_data['published'] = True
 
         return super().update(instance, validated_data)
@@ -283,13 +354,70 @@ class CitationsSerializer(GenericSerializerMixin):
             data['institutions'] = institutions
 
         # Unpack references
-
-        #for reference in data.get('references'):
-
-        #    print(reference)
+        for citation_type in self.Meta.citation_types:
+            if not data.get(citation_type):
+                continue
+            references = []
+            for ref in data.pop(citation_type):
+                if isinstance(ref, dict):
+                    reference = chain_new_objects(ref, ReferencesSerializer, References, 
+                                                  filter_kwargs=ReferencesSerializer.Meta.required_fields)
+                    references.append(reference)
+                else:
+                    references.append(ref)
+            data[citation_type] = references
 
         data['published'] = False
         if data.get('doi_url',None) is not None:
             data['published'] = True
 
         return data
+
+dj_tables = {
+    'citations':Citations,
+    'institutions': Institutions,
+    'fundingstreams': FundingStreams,
+    'parties': Parties,
+    'references': References,
+}
+
+dj_serializers = {
+    'citations': CitationsSerializer,
+    'institutions': InstitutionsSerializer,
+    'fundingstreams': FundingStreamsSerializer,
+    'parties': PartiesSerializer,
+    'references': ReferencesSerializer
+}
+    
+def handle_update(table: str, method: str, content: dict):
+    """
+    Handle ANY ORM Request updates here."""
+
+    model      = dj_tables[table.lower()]
+    serializer = dj_serializers[table.lower()]
+    pk = model._meta.pk.name
+
+    match method:
+        case "create":
+            instance = model.objects.create(
+                **{c:v for c,v in content.items() if c not in serializer.Meta.relations}
+            )
+            for r in serializer.Meta.relations:
+                if r in content:
+                    getattr(instance, r).set(content[r])
+            instance.save()
+
+        case "update":
+            # Must have already validated that the primary key exists and does not change - frontend
+            instance = model.objects.get(**{pk: content[pk]})
+            content.pop(pk)
+            for attr, value in content.items():
+                if attr in serializer.Meta.relations:
+                    attr_i = getattr(instance, attr)
+                    attr_i.set(value)
+                else:
+                    setattr(instance, attr, value)
+            instance.save()
+
+        case "delete":
+            model.objects.get(**{pk: content[pk]}).delete()

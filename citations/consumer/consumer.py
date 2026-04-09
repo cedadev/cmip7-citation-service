@@ -5,12 +5,10 @@ __copyright__ = "Copyright 2026 United Kingdom Research and Innovation"
 ## Consumer Unit for Kafka queues, able to utilise the ORM directly
 
 import logging
-from typing import Union
+from typing import Union, Callable
 
 from confluent_kafka import Consumer, KafkaException, Producer
 
-import citations.models as tables
-import citations.serializers as serializers
 from citations.utils import logstream
 
 logger = logging.getLogger(__name__)
@@ -21,6 +19,7 @@ logger.propagate = False
 class KafkaConsumer:
     def __init__(
         self,
+        update_handler: Callable,
         config: Union[dict, None] = None,
         topics: Union[list, None] = None,
         timeout: Union[int, None] = None,
@@ -36,6 +35,7 @@ class KafkaConsumer:
             self.consumer = None
             self.producer = None
 
+        self.handle_update = update_handler
         self.timeout = timeout or 5000  # ms
         self.topics = topics
 
@@ -137,35 +137,3 @@ class KafkaConsumer:
         """
         self.handle_update(**dict(message.value))
 
-    def handle_update(self, table: str, method: str, content: dict):
-        """
-        Handle ANY ORM Request updates here."""
-
-        model = getattr(tables, table)
-        serializer = getattr(serializers, table+'Serializer')
-        pk = model._meta.pk.name
-
-        match method:
-            case "create":
-                instance = model.objects.create(
-                    **{c:v for c,v in content.items() if c not in serializer.Meta.relations}
-                )
-                for r in serializer.Meta.relations:
-                    if r in content:
-                        getattr(instance, r).set(content[r])
-                instance.save()
-
-            case "update":
-                # Must have already validated that the primary key exists and does not change - frontend
-                instance = model.objects.get(**{pk: content[pk]})
-                content.pop(pk)
-                for attr, value in content.items():
-                    if attr in serializer.Meta.relations:
-                        attr_i = getattr(instance, attr)
-                        attr_i.set(value)
-                    else:
-                        setattr(instance, attr, value)
-                instance.save()
-
-            case "delete":
-                model.objects.get(**{pk: content[pk]}).delete()
