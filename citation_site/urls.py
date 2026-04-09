@@ -15,12 +15,13 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.conf import settings
-from django.conf.urls import handler404
+from django.conf.urls import handler404, handler403
 from django.contrib import admin
 from django.contrib.auth.models import User
 from django.shortcuts import render
 from django.urls import include, path
 from rest_framework import routers, serializers, viewsets
+from allauth.socialaccount.providers.github.views import oauth2_login
 
 
 # Serializers define the API representation.
@@ -41,7 +42,8 @@ router.register(r'users', UserViewSet)
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include(('citations.urls','citations'), namespace='citations')),
-    path('oidc/', include('mozilla_django_oidc.urls')),
+    path("accounts/login/", oauth2_login, name="account_login"),
+    path('accounts/', include('allauth.urls')),
 ]
 
 def custom_404(request, exception):
@@ -57,4 +59,18 @@ def custom_404(request, exception):
         "template_base":template_base,
     }, status=404)
 
+def custom_403(request, exception):
+
+    if settings.USE_CEDA_BRANDING:
+        template_base = 'fwtheme_django/layout.html'
+    else:
+        template_base = 'bases/generic_base.html'
+
+    return render(request, "403.html", {
+        "reason": str(exception),
+        "template_base":template_base,
+    }, status=403)
+
 handler404 = custom_404
+
+handler403 = custom_403
