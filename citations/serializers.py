@@ -9,6 +9,11 @@ from citations.consumer.write import (create_instance, update_instance)
 from citations.models import (Citations, FundingStreams, Institutions, Parties, References,
                               extract_from_orcid, locate_institute)
 from citations.validators import validate_title
+from citations.external import post_stac_esgf
+
+def title_from_facets(data: dict):
+
+    return f'{data["mip_era"]}.{data["activity_id"]}.{data["institution_id"]}.{data["source_id"]}.{data["experiment_id"]}'
 
 def chain_new_objects(
         data: dict, 
@@ -17,7 +22,6 @@ def chain_new_objects(
         filter_kwargs: list, 
         optionals: list = None,
         allow_update: bool = False,
-        fill_data_parameters: bool = False,
     ) -> str:
     """
     Validate new model instances.
@@ -292,6 +296,12 @@ class CitationsSerializer(GenericSerializerMixin):
 
         Locate or create references based on the provided information.
         """
+        if data.get('title') is None:
+            # Facet-only title construction
+            try:
+                data['title'] = title_from_facets(data)
+            except KeyError:
+                raise MethodNotAllowed("Submission must include title or all CMIP7 facets")
 
         if data.get('version') is None and data.get('id') is None:
             
@@ -406,6 +416,8 @@ def handle_update(table: str, method: str, content: dict):
                 if r in content:
                     getattr(instance, r).set(content[r])
             instance.save()
+
+            post_stac_esgf(instance.title)
 
         case "update":
             # Must have already validated that the primary key exists and does not change - frontend

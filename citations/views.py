@@ -26,8 +26,8 @@ from citations.serializers import (CitationsSerializer,
                                    FundingStreamsSerializer,
                                    InstitutionsSerializer, PartiesSerializer,
                                    ReferencesSerializer, 
-                                   chain_new_objects, handle_update)
-from citations.doi_mint import mint_doi_for_record
+                                   chain_new_objects, handle_update, title_from_facets)
+from citations.external import mint_doi_for_record
 from slack_sdk import WebClient
 
 def get_citable_party(party: Parties):
@@ -476,6 +476,28 @@ class CitationAPIView(GenericAPIView):
     queryset = Citations.objects.all()
     serializer_class = CitationsSerializer
     json_fields = ['primary','funders','institutions','contacts', 'is_cited_by', 'is_referenced_by','cites']
+
+    def create(self, request, *args, **kwargs):
+        data=unwrap_request(request.data)
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        title = serializer.validated_data.get('title', title_from_facets(serializer.validated_data))
+
+        if 'version' in request.data:
+            version = request.data['version']
+        else:
+            version = None
+            inst = self.model.objects.filter(title=title).order_by('-version')
+            if inst:
+                version = inst.last().version
+
+        latest = self.model.objects.filter(title=title, version=version)
+        if latest:
+            if latest[0].editable:
+                return Response(serializer.validated_data, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+        serializer.save()
+        return Response(serializer.validated_data, status=status.HTTP_201_CREATED)
 
 class SpecificCitationAPIView(SpecificAPIView):
     """
