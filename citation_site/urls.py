@@ -22,6 +22,7 @@ from django.shortcuts import render
 from django.urls import include, path
 from rest_framework import routers, serializers, viewsets
 from allauth.socialaccount.providers.github.views import oauth2_login
+from django.views.generic import RedirectView
 
 
 # Serializers define the API representation.
@@ -43,6 +44,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include(('citations.urls','citations'), namespace='citations')),
     path("accounts/login/", oauth2_login, name="account_login"),
+    path("accounts/profile/", RedirectView.as_view(pattern_name="citations:citations", permanent=True)),
     path('accounts/', include('allauth.urls')),
 ]
 
