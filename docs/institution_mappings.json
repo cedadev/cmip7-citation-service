@@ -1,0 +1,22 @@
+{
+    "cccma": {
+        "name": "Canadian Centre for Climate Modelling and Analysis",
+        "acronym": "CCCMA",
+        "country": "Canada"
+    },
+    "cnrm-cerfacs": {
+        "name": "National Center for Meteorological Research",
+        "acronym": "CNRM-CERFACS",
+        "country": "France"
+    },
+    "ipsl": {
+        "name": "Institut Pierre-Simon Laplace",
+        "acronym": "IPSL",
+        "country": "France"
+    },
+    "mohc": {
+        "name": "Met Office Hadley Centre",
+        "acronym": "MOHC",
+        "country": "United Kingdom"
+    }
+}
