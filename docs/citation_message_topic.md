@@ -91,8 +91,14 @@ Other fields of a citation `create` message are below. Any fields not included i
 - contacts - List of IDs of the party records to attach as contacts (NOT party information)
 - institutions - List of institution IDs
 - funders - List of funder IDs
+- publication_year
 
 Note that the above message contains ALL information to create the low-level record. No further determination of information is necessary, from the above list of information.
+
+The following logic applies to all citations:
+- All citations start with `editable=True`. Citations with a DOI have `published=True` otherwise `published=False`. 
+- A citation that is not editable SHOULD NOT be allowed to send update requests. This is implementation-specific and will be down to the service node to ensure does not happen.
+- The `publication_year` property is set along with the `doi_url` on DOI minting. If the citation is created with a `doi_url` already, the publication year should be supplied.
 
 #### Parties Content Fields
 
