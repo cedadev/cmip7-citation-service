@@ -36,7 +36,7 @@ class Parties(models.Model):
     first_name = models.CharField(max_length=30, editable=False)
     last_name = models.CharField(max_length=30, editable=False)
     middle_names = models.CharField(max_length=60, blank=True, editable=False)
-    email = models.CharField(max_length=100)
+    email = models.CharField(max_length=100, editable=True)
     orcid = models.CharField(max_length=19, blank=True, validators=[validate_orcid])
     affiliations = models.ManyToManyField(Institutions, blank=True)
 
