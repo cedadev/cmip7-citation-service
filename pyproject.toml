@@ -36,3 +36,6 @@ packages = [
     { include = 'citation_site' },
     { include = 'citations' }
 ]
+
+[project.scripts]
+backend_listen = "citations.listener:main"
