@@ -2,6 +2,7 @@ import hashlib
 import json
 
 from django.db import models
+from django.contrib.auth.models import Permission
 from rest_framework import serializers
 from rest_framework.exceptions import MethodNotAllowed
 
@@ -11,6 +12,19 @@ from citations.models import (Citations, FundingStreams, Institutions, Parties, 
 from citations.validators import validate_title
 from citations.external import post_stac_esgf
 
+from django.contrib.contenttypes.models import ContentType
+from django.conf import settings
+import requests
+
+def institution_mappings(institution_id: str) -> str:
+    try:
+        mappings = requests.get(settings.INSTITUTION_MAPPINGS_URL).json()
+        return mappings[institution_id.lower()]
+    except Exception as e:
+        # Unreachable or no mapping available
+        return {'name': institution_id, 'acronym': institution_id}
+    
+    
 def title_from_facets(data: dict):
 
     return f'{data["mip_era"]}.{data["activity_id"]}.{data["institution_id"]}.{data["source_id"]}.{data["experiment_id"]}'
@@ -39,7 +53,7 @@ def chain_new_objects(
         serial = serializer(data=data)
         serial.is_valid(raise_exception=True)
         serial.save()
-        inst_pk = serial.validated_data['id']
+        inst_pk = serial.instance['id']
     else:
         instance = instance[0]
         serial = serializer(data=data, instance=instance)
@@ -276,11 +290,22 @@ class CitationsSerializer(GenericSerializerMixin):
                 # Fill if not overridden by input.
                 if validated_data.get(k,None) is None:
                     validated_data[k] = facets[k]
+
+        content_type_citation = ContentType.objects.get_for_model(Citations)
+
+        # Create permission for new institution
+        if 'institution_id' in validated_data:
+            if not Permission.objects.filter(codename=f'edit_{validated_data["institution_id"]}').exists():
+                Permission.objects.create(
+                    codename=f'edit_{validated_data["institution_id"]}', 
+                    name=f'Can edit {validated_data["institution_id"]} citations',
+                    content_type=content_type_citation)
+
         return super().create(validated_data)
     
     def update(self, instance, validated_data):
 
-        if instance.published and instance.doi_url is None:
+        if instance.published and not instance.doi_url:
             validated_data['published'] = False
 
         if validated_data.get('doi_url'):
@@ -302,6 +327,20 @@ class CitationsSerializer(GenericSerializerMixin):
                 data['title'] = title_from_facets(data)
             except KeyError:
                 raise MethodNotAllowed("Submission must include title or all CMIP7 facets")
+            
+        if data.get('institution_id'):
+            # Create new institution as below, and add to the main affiliated institutions
+
+            inst_data = institution_mappings(data['institution_id'])
+
+            institution = chain_new_objects(
+                inst_data,
+                InstitutionsSerializer,
+                Institutions,
+                filter_kwargs={'name': inst_data['name']}
+            )
+
+            data['institutions'].append(institution)
 
         if data.get('version') is None and data.get('id') is None:
             
@@ -378,7 +417,7 @@ class CitationsSerializer(GenericSerializerMixin):
             data[citation_type] = references
 
         data['published'] = False
-        if data.get('doi_url',None) is not None:
+        if data.get('doi_url',None):
             data['published'] = True
 
         return data
@@ -416,8 +455,6 @@ def handle_update(table: str, method: str, content: dict):
                 if r in content:
                     getattr(instance, r).set(content[r])
             instance.save()
-
-            post_stac_esgf(instance.title)
 
         case "update":
             # Must have already validated that the primary key exists and does not change - frontend
