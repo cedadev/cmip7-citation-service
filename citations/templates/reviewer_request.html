@@ -9,12 +9,27 @@
     <p>Requesting Reviewer Privileges for user <b>{{ user.username }}</b></p>
     <p>This will grant access to the following pages:</p>
     <ul>
-        <li>Create a citation record</li>
-        <li>Edit an existing citation record</li>
-        <li>Delete a citation record</li>
+        <li>Create citation records</li>
+        <li>Edit/Delete existing records for specific institutions</li>
     </ul>
+
+    {% if user_permissions %}
+        <h4>Your Current Permissions:</h4>
+        <ul>
+        {% for perm in user_permissions %}
+            <li><b>{{ perm }}</b></li>
+        {% endfor %}
+        </ul>
+    {% endif %}
+
+    <h4>Apply to Review Records for Specific Institutions:</h4>
     <form method="post">
         {% csrf_token %}
+        <ul>
+        {% for institution_id in form %}
+            <li><b>Edit {{ institution_id.label }}</b> {{ institution_id }}</li>
+        {% endfor %}
+        </ul>
         <input type="submit" class="btn btn-primary m-0" value="Continue">
     </form>
 
