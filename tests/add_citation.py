@@ -2,9 +2,9 @@ import requests
 import json
 
 citation = {
-    'title':'cmip7.aerchemmip.cccma.cnrm_esm2_1e.esm-scen7-h-aob',
+    'title':'cmip7.aerchemmip.cccmb.cnrm_esm2_1e.esm-scen7-h-aob',
     "abstract":"This is a test record, created by Daniel Westwood at CEDA",
-    "drs_url":"https://google.com",
+    "drs_url":"",
     "rights":"Example section relating to Rights",
     "license":"License for this dataset",
     'primary':json.dumps({
@@ -36,8 +36,7 @@ citation = {
     }])
 
 }
-temp_token = '7f50f7e592902b23bef32e9a630d040e6e229685'
-temp_token = '69cb69a038897da333211f193b564102586889ba'
+temp_token = '28bc6982e9c901052bf5c9c874f838a6b9c75a83'
 #SITE_URL = 'https://cmip7-citations-main.rancher2.130.246.130.221.nip.io'
 SITE_URL = 'http://localhost:8000'
 
@@ -46,5 +45,5 @@ print(
         data=citation, 
         headers={'Authorization':f'Token {temp_token}'},
         verify=False
-    ).content
+    )
 )
