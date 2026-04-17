@@ -16,6 +16,30 @@ reference_options = (
     (3, 'cites')
 )
 
+class InstitutionIdForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        
+        institution_ids = kwargs.pop('institution_ids', None)
+        preselect = kwargs.pop('preselect', None)
+        id_labels = kwargs.pop('id_labels', {})
+        
+        super().__init__(*args, **kwargs)
+
+        if institution_ids is None:
+            return
+        
+        preselect = preselect or []
+
+        for inst in institution_ids:
+            label = inst 
+            if id_labels.get(inst):
+                label = f'{inst} ({id_labels.get(inst)})'
+            self.fields[f"inst_{inst}"] = forms.BooleanField(
+                label=label,
+                required=False,
+                initial=(inst in preselect),
+            )
+
 class PartyForm(forms.Form):
     first_name = forms.CharField(required=True)
     middle_names = forms.CharField(required=False)
