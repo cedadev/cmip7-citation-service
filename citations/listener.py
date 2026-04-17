@@ -1,6 +1,7 @@
 from citations.consumer import KafkaConsumer
 from citations.serializers import handle_update
 from django.conf import settings
+import os
 
 def main():
     consumer = KafkaConsumer(
@@ -9,7 +10,12 @@ def main():
         topics=settings.CONSUMER_TOPICS
         )
     
-    consumer.start()
+    try:
+        os.system(f'touch {settings.HEALTHPROBE}')
+        consumer.start()
+
+    finally:
+        os.system(f'rm {settings.HEALTHPROBE}')
 
 
 if __name__ == '__main__':
