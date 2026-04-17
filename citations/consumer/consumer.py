@@ -15,6 +15,24 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logstream)
 logger.propagate = False
 
+class MessageProcessor:
+
+    def __init__(self, handler: Callable):
+        self.handler = handler
+
+    def ingest(self, message):
+        self.handler(**dict(message))
+
+class CitationKafkaConsumer: # ESGF Kafka Base
+
+    def __init__(self, update_handler: str, *args, **kwargs):
+        message_processor = MessageProcessor(update_handler)
+        super().__init__(*args, message_processor=message_processor, **kwargs)
+
+    # write request
+
+    # send message
+
 
 class KafkaConsumer:
     def __init__(
