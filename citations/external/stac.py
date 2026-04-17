@@ -4,7 +4,7 @@ def post_stac_esgf(title):
     """
     Post STAC update via STAC API or esgadd tool
     """
-
+    return
     href = settings.SERVICE_URL + '/citation/' + title
 
     link = {
