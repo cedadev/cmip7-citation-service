@@ -16,10 +16,11 @@ from django.views.generic.edit import FormView
 from rest_framework import generics, mixins, permissions, status
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.response import Response
+from django.contrib.auth.models import Permission
 
 from citations.consumer.write import delete_instance
 from citations.forms import (ContactFormSet, EditCitationForm, FunderFormSet,
-                             InstitutionFormSet, NewCitationForm,
+                             InstitutionFormSet, NewCitationForm, InstitutionIdForm,
                              ReplicaFormSet, ReferenceFormSet, reference_options)
 from citations.models import Citations, FundingStreams, Institutions, Parties, References
 from citations.serializers import (CitationsSerializer,
@@ -27,7 +28,7 @@ from citations.serializers import (CitationsSerializer,
                                    InstitutionsSerializer, PartiesSerializer,
                                    ReferencesSerializer, 
                                    chain_new_objects, handle_update, title_from_facets)
-from citations.external import mint_doi_for_record
+from citations.external import publish_record
 from slack_sdk import WebClient
 
 def get_citable_party(party: Parties):
@@ -481,7 +482,9 @@ class CitationAPIView(GenericAPIView):
         data=unwrap_request(request.data)
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
-        title = serializer.validated_data.get('title', title_from_facets(serializer.validated_data))
+        title = serializer.validated_data.get('title')
+        if not title:
+            title = title_from_facets(serializer.validated_data)
 
         if 'version' in request.data:
             version = request.data['version']
@@ -493,7 +496,7 @@ class CitationAPIView(GenericAPIView):
 
         latest = self.model.objects.filter(title=title, version=version)
         if latest:
-            if latest[0].editable:
+            if not latest[0].editable:
                 return Response(serializer.validated_data, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
         serializer.save()
@@ -518,6 +521,24 @@ class SpecificCitationAPIView(SpecificAPIView):
 
         return super().update(request, *args, **kwargs)
     
+    def get(self, request, *args, **kwargs):
+
+        # Determine ID here
+        pk = kwargs['pk']
+        if self.model.objects.filter(title=pk):
+            self.kwargs['pk'] = self.model.objects.filter(title=pk).order_by('-version').last().pk
+
+        return self.retrieve(request, *args, **kwargs)
+    
+    def put(self, request, *args, **kwargs):
+
+        # Determine ID here
+        pk = kwargs['pk']
+        if self.model.objects.filter(title=pk):
+            self.kwargs['pk'] = self.model.objects.filter(title=pk).order_by('-version').last().pk
+            
+        return self.update(request, *args, **kwargs)
+    
 def check_changes(instance, data):
     changed_data = {}
     for attr, value in data.items():
@@ -540,12 +561,21 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
         'institution': 'institution_id'
     }
 
-    def redirect_on_success(self, title: str = None):
-        if title is not None:
-            messages.success(self.request, 'Your citation updates have been submitted and will appear here when they have been processed.')
-            return HttpResponseRedirect(reverse('citations:citation', args=[title]))
-        messages.success(self.request, 'Your citations have been submitted and will appear here when they have been processed.')
-        return HttpResponseRedirect(reverse('citations:citations'))
+    def redirect_on_success(self, title: str = None, status: bool = True):
+        
+        args = [title]
+        msg = 'Your citation updates have been submitted and will appear here when they have been processed.'
+        
+        if title is None:
+            args = None
+            msg = 'Your citations have been submitted and will appear here when they have been processed.'
+
+        if not status:
+            messages.error(self.request, 'DOI Minting has not been completed. The record will remain unpublished until the above issue is resolved.')
+
+        messages.success(self.request, msg)
+
+        return HttpResponseRedirect(reverse('citations:citation', args=args))
     
     def initial_formset_values(self, context) -> dict:
         context['contact_formset'] = ContactFormSet()
@@ -567,6 +597,15 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
             new_version = 1
         return new_version
     
+    def dispatch(self, request, *args, **kwargs):
+        title = kwargs.get('title') or request.GET.get('title')
+        if title:
+            institute = self.model.objects.filter(title=title).order_by('-version').last().institution_id
+            if institute:
+                if not request.user.user_permissions.filter(codename=f'edit_{institute}'):
+                    return HttpResponseRedirect(reverse('citations:reviewer_request'))
+        return super().dispatch(request, *args, **kwargs)
+
     def get_context_data(self, title: str = None, **kwargs):
         context = super().get_context_data(**kwargs)
 
@@ -754,34 +793,43 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
 
         return ndata, instance
     
+    def mint_doi_for_data(self, data):
+        """
+        Attempt to mint a DOI for this data
+        """
+        mint_inst = self.model.objects.filter(id=data['id'])
+        if mint_inst:
+            mint_inst = mint_inst[0]
+            mint_data = self.serializer_class(mint_inst).data
+        else:
+            mint_data = data
+            mint_inst = None
+
+        status, ndata = publish_record(self.request, data)
+        data.update(ndata)
+
+        serializer = self.serializer_class(
+            instance=mint_inst,
+            data=mint_data)
+        serializer.is_valid()
+        obj = serializer.save()
+        return status, obj
+
     def replicate_data(self, instance=None, data=None):
 
         for v, k in self.label_mappings.items():
             data[k] = data.pop(v,None)
 
+        status = True
         # Activate publication workflow here if needed
         if self.request.POST.get('publish'):
-            data['doi_url'] = mint_doi_for_record(data)
-            if data['doi_url']:
-                data['publication_year'] = int(datetime.now().year)
-
-        serializer = self.serializer_class(
-            instance=instance,
-            data=data)
-        
-        serializer.is_valid(raise_exception=True)
-        obj = serializer.save()
-
-        # Activate publication workflow here if needed
-        if self.request.POST.get('publish'):
-            mint_inst = self.model.objects.get(id=data['id'])
-            mint_data = self.serializer_class(mint_inst).data
-            mint_data['doi_url'] = mint_doi_for_record(mint_data)
-
+            status, obj = self.mint_doi_for_data(data)
+        else:
             serializer = self.serializer_class(
-                instance=mint_inst,
-                data=mint_data)
-            serializer.is_valid()
+                instance=instance,
+                data=data)
+            
+            serializer.is_valid(raise_exception=True)
             obj = serializer.save()
 
         # Determine replicas
@@ -797,16 +845,20 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
 
                 ndata, inst = self.clean_replica_data(serializer.validated_data, r)
 
-                serializer = self.serializer_class(
-                    instance=inst,
-                    data=ndata)
-            
-                serializer.is_valid(raise_exception=True)
-                serializer.save()
+                if self.request.POST.get('publish'):
+                    rstatus, _ = self.mint_doi_for_data(data)
+                    status = status and rstatus
+                else:
+                    serializer = self.serializer_class(
+                        instance=inst,
+                        data=ndata)
+                
+                    serializer.is_valid(raise_exception=True)
+                    serializer.save()
             if len(replicas) > 0:
-                return self.redirect_on_success()
+                return self.redirect_on_success(status=status)
             
-        return self.redirect_on_success(title=obj['title'])
+        return self.redirect_on_success(title=obj['title'], status=status)
     
 class NewCitationFormView(CitationFormMixin):
 
@@ -958,15 +1010,55 @@ class ConfirmDeleteCitationView(GenericRenderedView):
         )
         return HttpResponseRedirect(reverse('citations:citations'))
     
-class ReviewerRequestView(LoginRequiredMixin, GenericRenderedView):
+class ReviewerRequestView(LoginRequiredMixin, GenericRenderedView, FormView):
     template_name='reviewer_request.html'
+    form_class = InstitutionIdForm
 
-    def post(self, request, *args, **kwargs):
+    def get_institution_ids(self):
+        return [c for c in Citations.objects.values_list('institution_id', flat=True).distinct() if c]
+    
+    def get_institutions(self):
+        insts = {}
+        for i in self.request.user.user_permissions.values_list('codename', flat=True):
+            if 'edit' in i:
+                insts[i.replace('edit_','')] = i
+        return insts
 
-        if not self.request.user.has_perm('citations.add_citations'):
+    def get_user_permissions_text(self):
+        perms = []
+        for i in self.request.user.user_permissions.values_list('codename', flat=True):
+            if 'edit' in i:
+                perms.append(f'{i} (Edit citations belonging to Institution: {i.replace("edit_","")})')
+        return perms
 
-            request_text = f':bell: Github user: {request.user.username} ({request.user.first_name} {request.user.last_name}) ' \
-                'is requesting Reviewer access (Create/Update/Delete).'
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['user_permissions'] = self.get_user_permissions_text()
+        return context
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['institution_ids'] = self.get_institution_ids()
+        kwargs['preselect'] = self.get_institutions()
+
+        return kwargs
+
+    def form_valid(self, form):
+
+        institutions = []
+        change_permissions = False
+        for field in form.fields:
+            if form.cleaned_data.get(field):
+                institutions.append(field.replace('inst_',''))
+
+        for institution in institutions:
+            perm_request = Permission.objects.get(codename=f'edit_{institution}')
+            if not self.request.user.user_permissions.filter(pk=perm_request.pk):
+                change_permissions = True
+                
+        if change_permissions:
+            request_text = f':bell: Github user: {self.request.user.username} ({self.request.user.first_name} {self.request.user.last_name}) ' \
+                f'is requesting Reviewer access (Create/Update/Delete) for the institutions: {", ".join(institutions)}'
             
             if settings.DEBUG:
                 request_text += ' This is a test message'
@@ -977,8 +1069,8 @@ class ReviewerRequestView(LoginRequiredMixin, GenericRenderedView):
                 text=request_text,
                 username='CEDA Citation SVC'
             )
-            messages.success(self.request, 'Your request for permission to review Citation records has been submitted.')
+            messages.success(self.request, f'Your request for permission to edit Citation records for {", ".join(institutions)} has been submitted.')
         else:
-            messages.success(self.request, 'You have already been granted reviewer permissions.')
+            messages.success(self.request, 'Your permissions have not been changed.')
 
         return HttpResponseRedirect(reverse('citations:citations'))
