@@ -1,7 +1,10 @@
+import os
+
+from django.conf import settings
+
 from citations.consumer import KafkaConsumer
 from citations.serializers import handle_update
-from django.conf import settings
-import os
+
 
 def main():
     consumer = KafkaConsumer(

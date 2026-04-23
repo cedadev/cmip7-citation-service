@@ -1,1 +1,1 @@
-from .consumer import KafkaConsumer
+from .internal import CitationKafkaConsumer as CitationKafkaConsumer

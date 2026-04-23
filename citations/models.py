@@ -1,10 +1,6 @@
-import uuid
-
 import requests
 import xmltodict
-from django.contrib.postgres.fields import ArrayField
 from django.db import models
-from django.db.models.signals import post_save
 
 from citations.validators import validate_orcid, validate_title
 

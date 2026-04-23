@@ -1,35 +1,39 @@
 import copy
 import json
-from datetime import datetime
+
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth.mixins import PermissionRequiredMixin, LoginRequiredMixin
+from django.contrib.auth.mixins import (LoginRequiredMixin,
+                                        PermissionRequiredMixin)
+from django.contrib.auth.models import Permission
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db.models import CharField, ForeignKey, Q, TextField
 from django.db.models.functions import Lower
-from django.http import (HttpResponseForbidden,
-                         HttpResponseNotFound, HttpResponseRedirect)
+from django.http import (HttpResponseForbidden, HttpResponseNotFound,
+                         HttpResponseRedirect)
 from django.urls import reverse
 from django.views.generic.base import TemplateView
 from django.views.generic.edit import FormView
 from rest_framework import generics, mixins, permissions, status
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.response import Response
-from django.contrib.auth.models import Permission
+from slack_sdk import WebClient
 
 from citations.consumer.write import delete_instance
+from citations.external import publish_record
 from citations.forms import (ContactFormSet, EditCitationForm, FunderFormSet,
-                             InstitutionFormSet, NewCitationForm, InstitutionIdForm,
-                             ReplicaFormSet, ReferenceFormSet, reference_options)
-from citations.models import Citations, FundingStreams, Institutions, Parties, References
+                             InstitutionFormSet, InstitutionIdForm,
+                             NewCitationForm, ReferenceFormSet, ReplicaFormSet,
+                             reference_options)
+from citations.models import (Citations, FundingStreams, Institutions, Parties,
+                              References)
 from citations.serializers import (CitationsSerializer,
                                    FundingStreamsSerializer,
                                    InstitutionsSerializer, PartiesSerializer,
-                                   ReferencesSerializer, 
-                                   chain_new_objects, handle_update, title_from_facets)
-from citations.external import publish_record
-from slack_sdk import WebClient
+                                   ReferencesSerializer, chain_new_objects,
+                                   handle_update, title_from_facets)
+
 
 def get_citable_party(party: Parties):
     if party.middle_names:
@@ -718,12 +722,34 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
         funder_formset      = FunderFormSet(self.request.POST)
         reference_formset   = ReferenceFormSet(self.request.POST)
 
+        def check_empty_custom(form, nonempty_fields: list) -> bool:
+            """
+            Allow this form to be empty based on custom logic.
+
+            If a field in the form evaluates to True it is not empty.
+            
+            Returns True if the form is considered empty for all relevant fields.
+            """
+
+            for field, value in form.cleaned_data.items():
+                if field in nonempty_fields:
+                    continue
+
+                if value:
+                    return False
+            return True
+
+
         errors = 0
 
         error_map = {}
         for formset in [contact_formset, institution_formset, funder_formset, reference_formset]:
             for form_pt in formset:
                 if not form_pt.is_valid() and not form_pt.empty_permitted:
+
+                    if formset == reference_formset:
+                        if check_empty_custom(form_pt, nonempty_fields=['relation']):
+                            continue
                     err_msgs = []
                     for err, msg in form_pt.errors.items():
                         err_msgs.append(f'{err}: {msg[0]}')
@@ -805,7 +831,7 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
             mint_data = data
             mint_inst = None
 
-        status, ndata = publish_record(self.request, data)
+        status, ndata = publish_record(self.request, mint_data)
         data.update(ndata)
 
         serializer = self.serializer_class(

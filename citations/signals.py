@@ -1,9 +1,9 @@
-from django.contrib.auth.models import User, Permission
+from django.conf import settings
+from django.contrib.auth.models import Permission, User
 from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
-
-from django.conf import settings
 from slack_sdk import WebClient
+
 
 @receiver(m2m_changed, sender=User.user_permissions.through)
 def user_permission_changed(sender, instance, action, pk_set, **kwargs):

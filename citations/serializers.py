@@ -1,26 +1,26 @@
 import hashlib
 import json
 
-from django.db import models
+import requests
+from django.conf import settings
 from django.contrib.auth.models import Permission
+from django.contrib.contenttypes.models import ContentType
+from django.db import models
 from rest_framework import serializers
 from rest_framework.exceptions import MethodNotAllowed
 
-from citations.consumer.write import (create_instance, update_instance)
-from citations.models import (Citations, FundingStreams, Institutions, Parties, References,
-                              extract_from_orcid, locate_institute)
+from citations.consumer.write import create_instance, update_instance
+#from citations.external import post_stac_esgf
+from citations.models import (Citations, FundingStreams, Institutions, Parties,
+                              References, extract_from_orcid, locate_institute)
 from citations.validators import validate_title
-from citations.external import post_stac_esgf
 
-from django.contrib.contenttypes.models import ContentType
-from django.conf import settings
-import requests
 
 def institution_mappings(institution_id: str) -> str:
     try:
         mappings = requests.get(settings.INSTITUTION_MAPPINGS_URL).json()
         return mappings[institution_id.lower()]
-    except Exception as e:
+    except Exception:
         # Unreachable or no mapping available
         return {'name': institution_id, 'acronym': institution_id}
     

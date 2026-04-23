@@ -226,7 +226,7 @@
                 {{ reference_formset.management_form }}
                 {% for form in reference_formset %}
                     <div class="subreference">
-                        <b><label class="subref-label">Reference</label></b>
+                        <label class="subref-label">Reference</label>
                         <button type="button" class="remove-reference btn btn-danger btn-sm">
                             Remove
                         </button>
@@ -521,6 +521,36 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
+    function updateReferenceLabels(e) {
+        var table_count = references.querySelectorAll('.subreference').length;
+        if (e.target.classList.contains("remove-reference")) {
+            // Count tables and remove the correct table as needed.
+            if (table_count > 1) {
+                a = $(e.target).closest(".subreference")
+                a.remove();
+
+                var remainingRefs = references.querySelectorAll('.subreference');
+                for (var k = 0; k < remainingRefs.length; k++){
+                    var ref = remainingRefs[k];
+                    var subrefLabel = ref.querySelector('.subref-label');
+                    var l = k+1;
+                    subrefLabel.textContent = "Reference " + l;
+                    ref.name = `reference-${k}`;
+                    const elements = ref.querySelectorAll('[name^="reference-"]');
+                    elements.forEach((el) => {
+                        el.name = el.name.replace(/reference-\d+/, `reference-${k}`);
+                    });
+                    //ref.innerHTML = ref.innerHTML.replace(/reference-\d+/g, `reference-${k}`);
+                }
+
+                // Find all preceding tables and change the reference label
+
+                const totalForms = references.querySelector('#id_reference-TOTAL_FORMS');
+                totalForms.value = table_count - 1;
+            }
+        }
+    };
+
     const references = document.getElementById('reference-table-area');
     const tables = references.querySelectorAll('.subreference').length;
     const addReference = document.getElementById("add-reference");
@@ -543,24 +573,11 @@ document.addEventListener("DOMContentLoaded", function () {
             input.style.backgroundColor = "";
         });
 
-
         // Clear input values
         newTable.querySelectorAll("input").forEach(input => input.value = "");
         newTable.querySelectorAll("textarea").forEach(textarea => textarea.value = "");
 
-        newTable.addEventListener("click", function (e) {
-            var table_count = references.querySelectorAll('.subreference').length;
-            if (e.target.classList.contains("remove-reference")) {
-                // Count tables and remove the correct table as needed.
-                if (table_count > 1) {
-                    a = $(e.target).closest(".subreference")
-                    a.remove();
-
-                    const totalForms = references.querySelector('#id_reference-TOTAL_FORMS');
-                    totalForms.value = table_count - 1;
-                }
-            }
-        })
+        newTable.addEventListener("click", updateReferenceLabels);
 
         references.insertBefore(newTable, references.querySelector('#add_reference'));
         totalForms.value = formCount + 1;
@@ -572,33 +589,11 @@ document.addEventListener("DOMContentLoaded", function () {
         tableLabel = tableDiv.querySelector('.subref-label');
         var j = i+1;
         tableLabel.textContent = "Reference " + j;
-        tableDiv.innerHTML = tableDiv.innerHTML.replace(/reference-\d+/g, `reference-${i}`);
+        tableDiv.name = 'reference-${i}';
+        // tableDiv.innerHTML = tableDiv.innerHTML.replace(/reference-\d+/g, `reference-${i}`);
         
-        tableDiv.addEventListener("click", function (e) {
-            var table_count = references.querySelectorAll('.subreference').length;
-            if (e.target.classList.contains("remove-reference")) {
-                // Count tables and remove the correct table as needed.
-                if (table_count > 1) {
-                    a = $(e.target).closest(".subreference")
-                    a.remove();
-
-                    var remainingRefs = references.querySelectorAll('.subreference');
-                    for (var k = 0; k < remainingRefs.length; k++){
-                        var ref = remainingRefs[k];
-                        var subrefLabel = ref.querySelector('.subref-label');
-                        var l = k+1;
-                        subrefLabel.textContent = "Reference " + l;
-                        ref.innerHTML = ref.innerHTML.replace(/reference-\d+/g, `reference-${k}`);
-                    }
-
-                    // Find all preceding tables and change the reference label
-
-                    const totalForms = references.querySelector('#id_reference-TOTAL_FORMS');
-                    totalForms.value = table_count - 1;
-                }
-            }
-        })
-    };
+        tableDiv.addEventListener("click", updateReferenceLabels); 
+    }
 
 
 

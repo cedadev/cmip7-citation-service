@@ -5,17 +5,20 @@ __copyright__ = "Copyright 2026 United Kingdom Research and Innovation"
 ## Consumer Unit for Kafka queues, able to utilise the ORM directly
 
 import logging
-from typing import Union, Callable
+from typing import Any, Callable, Union
 
 from confluent_kafka import Consumer, KafkaException, Producer
 
 from citations.utils import logstream
 
+# from esgf_core_utils.models.kafka.consumer import KafkaConsumer
+
+
 logger = logging.getLogger(__name__)
 logger.addHandler(logstream)
 logger.propagate = False
 
-class MessageProcessor:
+class CitationInternalMessageProcessor: # MessageProcessor
 
     def __init__(self, handler: Callable):
         self.handler = handler
@@ -23,17 +26,63 @@ class MessageProcessor:
     def ingest(self, message):
         self.handler(**dict(message))
 
-class CitationKafkaConsumer: # ESGF Kafka Base
+    def direct_message(self, table: str, method: str, content: dict[str,Any]):
+        self.handler(table=table, method=method, content=content)
+
+class CitationKafkaConsumer: # KafkaConsumer
 
     def __init__(self, update_handler: str, *args, **kwargs):
-        message_processor = MessageProcessor(update_handler)
+        message_processor = CitationInternalMessageProcessor(update_handler)
         super().__init__(*args, message_processor=message_processor, **kwargs)
 
-    # write request
+    def write_request(self, table: str, method: str, content: dict):
+        """
+        Request to update the database
 
-    # send message
+        This can ONLY be executed by the Frontend service as the backend
+        is stuck in the `start()` method loop.
+
+        If the consumer is defined the message system will be utilised for write
+        requesting. Otherwise the write can be made directly to the database.
+        """
+        logger.info(f'Write Request: {table}:{method} - {content}')
+
+        if self.consumer is not None:
+            self.send_message(table=table, method=method, content=content)
+        else:
+            self.message_processor.direct_message(table=table, method=method, content=content)
+
+    def send_message(self, table: str, method: str, content: dict):
+        """
+        Send message for write request to the events queue.
+
+        If any formal message checks are required beyond the validation of data
+        through the Views, here is where they should go.
+        """
+
+        if self.producer is None:
+            raise KafkaException("No configuration provided")
+
+        message = {"table": table, "method": method, "content": content}
+
+        def delivery_report(err, msg):
+            if err is not None:
+                raise ValueError(err)
+            else:
+                logger.info(
+                    f"Message {msg.key()} successfully delivered to {msg.topic()} [{msg.partition()}] at offset {msg.offset()}"
+                )
+
+        self.producer.produce(
+            topic=self.topics[0],
+            key="CitationSvc",
+            value=message,
+            callback=delivery_report,
+        )
+        self.producer.flush()
 
 
+# Temporary class - replace with import from esgf core utils package.
 class KafkaConsumer:
     def __init__(
         self,
@@ -99,52 +148,6 @@ class KafkaConsumer:
             logger.info("Closing Kafka consumer...")
 
             self.consumer.close()
-
-    def write_request(self, table: str, method: str, content: dict):
-        """
-        Request to update the database
-
-        This can ONLY be executed by the Frontend service as the backend
-        is stuck in the `start()` method loop.
-
-        If the consumer is defined the message system will be utilised for write
-        requesting. Otherwise the write can be made directly to the database.
-        """
-        logger.info(f'Write Request: {table}:{method} - {content}')
-
-        if self.consumer is not None:
-            self.send_message(table=table, method=method, content=content)
-        else:
-            self.handle_update(table=table, method=method, content=content)
-
-    def send_message(self, table: str, method: str, content: dict):
-        """
-        Send message for write request to the events queue.
-
-        If any formal message checks are required beyond the validation of data
-        through the Views, here is where they should go.
-        """
-
-        if self.producer is None:
-            raise KafkaException("No configuration provided")
-
-        message = {"table": table, "method": method, "content": content}
-
-        def delivery_report(err, msg):
-            if err is not None:
-                raise ValueError(err)
-            else:
-                logger.info(
-                    f"Message {msg.key()} successfully delivered to {msg.topic()} [{msg.partition()}] at offset {msg.offset()}"
-                )
-
-        self.producer.produce(
-            topic=self.topics[0],
-            key="CitationSvc",
-            value=message,
-            callback=delivery_report,
-        )
-        self.producer.flush()
 
     def receive_message(self, message):
         """
