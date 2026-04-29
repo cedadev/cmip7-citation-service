@@ -1,6 +1,6 @@
 [project]
 name = "cmip7-citation-service"
-version = "0.2.0"
+version = "0.3.0"
 description = "A citation service for the CMIP7 project"
 authors = [
     {name = "Daniel Westwood",email = "daniel.westwood@stfc.ac.uk"}
@@ -39,7 +39,7 @@ packages = [
 ]
 
 [project.scripts]
-backend_listen = "citations.listener:main"
+
 [dependency-groups]
 dev = [
     "ruff (>=0.15.11,<0.16.0)"
