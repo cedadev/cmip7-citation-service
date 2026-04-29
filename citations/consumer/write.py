@@ -6,7 +6,7 @@ from django.db import models
 from citations.consumer import CitationKafkaConsumer
 
 
-def create_instance(model: models.Model, update_handler: Callable, required_fields: list, **kwargs):
+def create_instance(model: models.Model, user: str, update_handler: Callable, required_fields: list, **kwargs):
     """
     Send message to consumer to create new instance"""
 
@@ -18,10 +18,11 @@ def create_instance(model: models.Model, update_handler: Callable, required_fiel
     consumer.write_request(
         table=model._meta.label.split('.')[-1],
         method='create',
-        content=kwargs
+        content=kwargs,
+        user=user
     )
 
-def update_instance(model: models.Model, update_handler: Callable, id: str, **kwargs):
+def update_instance(model: models.Model, user: str, update_handler: Callable, id: str, **kwargs):
     """
     Send message to consumer to update existing instance
     """
@@ -35,10 +36,11 @@ def update_instance(model: models.Model, update_handler: Callable, id: str, **kw
     consumer.write_request(
         table=model._meta.label.split('.')[-1],
         method='update',
-        content=kwargs | {'id': id}
+        content=kwargs | {'id': id},
+        user=user
     )
 
-def delete_instance(model: models.Model, update_handler: Callable, id: str, **kwargs):
+def delete_instance(model: models.Model, user: str, update_handler: Callable, id: str, **kwargs):
     """
     Send message to consumer to update existing instance
     """
@@ -52,5 +54,6 @@ def delete_instance(model: models.Model, update_handler: Callable, id: str, **kw
     consumer.write_request(
         table=model._meta.label.split('.')[-1],
         method='delete',
-        content={'id':id}
+        content={'id':id},
+        user=user
     )
