@@ -8,11 +8,13 @@
 
 ### General message structure.
 
-All messages must consist of `table`, `method` and `content` fields, where `table` refers to the database table structures created by the main node:
+All messages must consist of `table`, `method`, `content` and `user` fields, where `table` refers to the database table structures created by the main node:
 - citations
 - parties
 - institutions
 - fundingstreams
+
+The `user` field is required to log the citation service user submitting the request. This should correspond to either a Github username for a person authenticated to review records on the citation service, or the `esgfpub` user which corresponds to the default API token used in the publication workflow. Non-default API tokens can be generated upon request, specifically for projects like CORDEX, where we may choose to create a CORDEX user.
 
 Method refers to the write-required methods that services must perform via the Kafka queue:
 - create
@@ -75,12 +77,13 @@ Required fields of a citation `create` message:
 - editable - bool
 - primary_id - ID of the party record with which to link this field (NOT party information)
 
-The below fields should also be provided at the point of creation but their absence may not be treated as not allowed.
+The below fields should also be provided at the point of creation but their absence may not be treated as not allowed, provided a title is given instead.
 - mip_era
 - activity_id
 - institution_id
 - source_id
 - experiment_id
+- domain_id # For CORDEX data.
 
 Other fields of a citation `create` message are below. Any fields not included in the message should be saved as empty/blank for this record. Updates may later add further information to this record.
 - abstract
