@@ -86,25 +86,32 @@
             <br>
             <table class="table table-striped border border-light">
                 <tr>
-                    <th>MIP Era</th>
-                    <td>{{ citation.mip_era }}</td>
-                </tr>
-                <tr>
                     <th>Activity</th>
                     <td>{{ citation.activity_id }}</td>
+                </tr>
+                {% if citation.domain_id != 'unknown' %}
+                <tr>
+                    <th>Domain</th>
+                    <td>{{ citation.domain_id }}</td>
+                </tr>
+                {% endif %}
+                <tr>
+                    <th>Experiment</th>
+                    <td>{{ citation.experiment_id }}</td>
                 </tr>
                 <tr>
                     <th>Institution</th>
                     <td>{{ citation.institution_id }}</td>
                 </tr>
                 <tr>
+                    <th>MIP Era</th>
+                    <td>{{ citation.mip_era }}</td>
+                </tr>
+                <tr>
                     <th>Source</th>
                     <td>{{ citation.source_id }}</td>
                 </tr>
-                <tr>
-                    <th>Experiment</th>
-                    <td>{{ citation.experiment_id }}</td>
-                </tr>
+                
             </table>
         </div>
         <div class="tab-pane fade" id="tabB" role="tabpanel">
