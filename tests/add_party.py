@@ -1,5 +1,6 @@
 import requests
 
+
 def add_party():
 
     party_info = {

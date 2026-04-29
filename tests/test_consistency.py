@@ -1,10 +1,12 @@
 import os
-import sys
-import django_filters
 import pathlib
-import rest_framework
+import sys
 import uuid
-import xmltodict
-import requests
-import citations
+
+import django_filters
 import pycountry
+import requests
+import rest_framework
+import xmltodict
+
+import citations
