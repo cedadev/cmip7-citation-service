@@ -108,6 +108,7 @@ class Citations(models.Model):
     institution_id = models.CharField(max_length=30, default='unknown')
     source_id = models.CharField(max_length=30, default='unknown')
     experiment_id = models.CharField(max_length=30, default='unknown')
+    domain_id = models.CharField(max_length=30, default='unknown')
 
     # keywords = ArrayField(
     #     models.CharField(max_length=50),
