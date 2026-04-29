@@ -40,7 +40,7 @@ def mint_doi_for_record(data: dict, publication_year: int) -> str:
     Apply to mint a DOI via DataCite for the information in this record
     """
 
-    creator_info = data['contacts'] + [data['primary']]
+    creator_info = data['creators']
 
     creators = []
     for creator in creator_info:
@@ -82,13 +82,14 @@ def mint_doi_for_record(data: dict, publication_year: int) -> str:
             })
 
     doi_unique = ''
+    doi_prefix = '' # settings.DOI_PREFIX
 
     payload = {
         "data": {
             "type":"dois",
             "attributes":{
                 "event" : "publish", # For live publication
-                "doi": f'{settings.DOI_PREFIX}/ESGF/CMIP7.{doi_unique}',
+                "doi": f'{doi_prefix}/ESGF/CMIP7.{doi_unique}',
                 "creators": creators,
                 "titles":[
                     {
@@ -137,23 +138,21 @@ def resolve_drs(drs_url: str):
     # Placeholder implementation - replace with actual resolution logic
     return True
 
-def publish_record(request, data: dict) -> str:
+def publish_record(data: dict) -> str:
     """
     Apply to mint a DOI via DataCite for the information in this record
     """
     publication = {}
 
     if not resolve_drs(data.get('drs_url', '')):
-        messages.error(request, "Failed to resolve DRS URL. DOI cannot be minted until data is available.")
         return False, {'published':False}
 
     pub_yr = int(datetime.now().year)
     publication['doi_url'] = mint_doi_for_record(data, pub_yr)
     if not publication['doi_url']:
-        messages.error(request, "Failed to mint DOI for the record.")
         return False, {'published':False}
     
     publication['publication_year'] = pub_yr
-    messages.success(request, f"DOI '{publication['doi_url']}' ({publication['publication_year']}) minted.")
 
-    return True, publication
+
+    return True, publication | {'published': True}
