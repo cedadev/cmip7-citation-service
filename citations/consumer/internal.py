@@ -5,21 +5,35 @@ __copyright__ = "Copyright 2026 United Kingdom Research and Innovation"
 ## Consumer Unit for Kafka queues, able to utilise the ORM directly
 
 import logging
-from typing import Union, Callable
+from typing import Any, Callable, Union
 
 from confluent_kafka import Consumer, KafkaException, Producer
 
 from citations.utils import logstream
 
+# from esgf_core_utils.models.kafka.consumer import KafkaConsumer
+
+
 logger = logging.getLogger(__name__)
 logger.addHandler(logstream)
 logger.propagate = False
 
+class CitationInternalMessageProcessor: # MessageProcessor
 
+    def __init__(self, handler: Callable):
+        self.handler = handler
+
+    def ingest(self, message):
+        self.handler(**dict(message))
+
+    def direct_message(self, table: str, method: str, content: dict[str,Any]):
+        self.handler(table=table, method=method, content=content)
+
+# Temporary class - replace with import from esgf core utils package.
 class KafkaConsumer:
     def __init__(
         self,
-        update_handler: Callable,
+        message_processor: CitationInternalMessageProcessor, 
         config: Union[dict, None] = None,
         topics: Union[list, None] = None,
         timeout: Union[int, None] = None,
@@ -35,7 +49,7 @@ class KafkaConsumer:
             self.consumer = None
             self.producer = None
 
-        self.handle_update = update_handler
+        self.message_processor = message_processor
         self.timeout = timeout or 5000  # ms
         self.topics = topics
 
@@ -67,7 +81,7 @@ class KafkaConsumer:
                 if message is None:
                     continue
 
-                self.receive_message(message)
+                self.message_processor.ingest(message)
 
                 self.consumer.commit(message=message, asynchronous=False)
 
@@ -82,7 +96,13 @@ class KafkaConsumer:
 
             self.consumer.close()
 
-    def write_request(self, table: str, method: str, content: dict):
+class CitationKafkaConsumer(KafkaConsumer): # KafkaConsumer from ESGF
+
+    def __init__(self, update_handler: str, *args, **kwargs):
+        message_processor = CitationInternalMessageProcessor(update_handler)
+        super().__init__(message_processor=message_processor, **kwargs)
+
+    def write_request(self, table: str, method: str, content: dict, user: str):
         """
         Request to update the database
 
@@ -92,14 +112,14 @@ class KafkaConsumer:
         If the consumer is defined the message system will be utilised for write
         requesting. Otherwise the write can be made directly to the database.
         """
-        logger.info(f'Write Request: {table}:{method} - {content}')
+        logger.info(f'Write Request from {user}: {table}:{method} - {content}')
 
         if self.consumer is not None:
-            self.send_message(table=table, method=method, content=content)
+            self.send_message(table=table, method=method, content=content, user=user)
         else:
-            self.handle_update(table=table, method=method, content=content)
+            self.message_processor.direct_message(table=table, method=method, content=content)
 
-    def send_message(self, table: str, method: str, content: dict):
+    def send_message(self, table: str, method: str, content: dict, user: str):
         """
         Send message for write request to the events queue.
 
@@ -110,7 +130,7 @@ class KafkaConsumer:
         if self.producer is None:
             raise KafkaException("No configuration provided")
 
-        message = {"table": table, "method": method, "content": content}
+        message = {"table": table, "method": method, "content": content, "user": user}
 
         def delivery_report(err, msg):
             if err is not None:
@@ -127,13 +147,3 @@ class KafkaConsumer:
             callback=delivery_report,
         )
         self.producer.flush()
-
-    def receive_message(self, message):
-        """
-        Interpret message.value in terms of ORM
-
-        Note: Use a separate module to write using ORM so it can
-        be used outside the Kafka consumer.
-        """
-        self.handle_update(**dict(message.value))
-

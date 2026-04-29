@@ -1,10 +1,6 @@
-import uuid
-
 import requests
 import xmltodict
-from django.contrib.postgres.fields import ArrayField
 from django.db import models
-from django.db.models.signals import post_save
 
 from citations.validators import validate_orcid, validate_title
 
@@ -36,7 +32,7 @@ class Parties(models.Model):
     first_name = models.CharField(max_length=30, editable=False)
     last_name = models.CharField(max_length=30, editable=False)
     middle_names = models.CharField(max_length=60, blank=True, editable=False)
-    email = models.CharField(max_length=100)
+    email = models.CharField(max_length=100, editable=True)
     orcid = models.CharField(max_length=19, blank=True, validators=[validate_orcid])
     affiliations = models.ManyToManyField(Institutions, blank=True)
 
@@ -112,6 +108,7 @@ class Citations(models.Model):
     institution_id = models.CharField(max_length=30, default='unknown')
     source_id = models.CharField(max_length=30, default='unknown')
     experiment_id = models.CharField(max_length=30, default='unknown')
+    domain_id = models.CharField(max_length=30, default='unknown')
 
     # keywords = ArrayField(
     #     models.CharField(max_length=50),

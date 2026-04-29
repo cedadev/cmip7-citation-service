@@ -1,6 +1,6 @@
 [project]
 name = "cmip7-citation-service"
-version = "0.2.0"
+version = "0.3.0"
 description = "A citation service for the CMIP7 project"
 authors = [
     {name = "Daniel Westwood",email = "daniel.westwood@stfc.ac.uk"}
@@ -24,6 +24,7 @@ dependencies = [
     "confluent-kafka (>=2.13.2,<3.0.0)",
     "django-allauth[socialaccount] (>=65.15.1,<66.0.0)",
     "slack-sdk (>=3.41.0,<4.0.0)",
+    "esgf-core-utils (>=1.0.6,<2.0.0)",
 ]
 
 [build-system]
@@ -35,4 +36,11 @@ package-mode = true
 packages = [
     { include = 'citation_site' },
     { include = 'citations' }
+]
+
+[project.scripts]
+
+[dependency-groups]
+dev = [
+    "ruff (>=0.15.11,<0.16.0)"
 ]

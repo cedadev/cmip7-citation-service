@@ -1,14 +1,15 @@
-from django.contrib import admin
+
 from django.urls import include, path
 from django.views.generic import RedirectView
+
 from citations.views import (CitationAPIView, CitationsView, CitationView,
                              ConfirmDeleteCitationView, EditCitationFormView,
                              FundingStreamAPIView, FundingStreamsView,
                              FundingStreamView, InstitutionAPIView,
                              InstitutionsView, InstitutionView,
                              NewCitationFormView, PartiesView, PartyAPIView,
-                             PartyView, SpecificCitationAPIView,
-                             SpecificPartyAPIView, ReviewerRequestView)
+                             PartyView, ReviewerRequestView,
+                             SpecificCitationAPIView, SpecificPartyAPIView)
 
 app_name = 'citations'
 urlpatterns = [

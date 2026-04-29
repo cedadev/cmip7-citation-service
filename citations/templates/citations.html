@@ -5,17 +5,10 @@
 {% block page_title %}
 {% endblock %}
 
-{% block content_main %}
+{% block content_main_inner %}
 
-    {% if messages %}
-    <div class="alert alert-success">
-        <ul class="messages">
-            {% for message in messages %}
-            <li>{{ message }}</li>
-            {% endfor %}
-        </ul>
-    </div>
-    {% endif %}
+    {% block back_to_main %}
+    {% endblock %}
 
     <div>
         <span class="v-centre w-100 mb-2">

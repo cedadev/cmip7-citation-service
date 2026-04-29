@@ -1,18 +1,69 @@
 import hashlib
 import json
 
+import requests
+from django.conf import settings
+from django.contrib.auth.models import Permission
+from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from rest_framework import serializers
 from rest_framework.exceptions import MethodNotAllowed
 
-from citations.consumer.write import (create_instance, update_instance)
-from citations.models import (Citations, FundingStreams, Institutions, Parties, References,
-                              extract_from_orcid, locate_institute)
-from citations.validators import validate_title
-from citations.external import post_stac_esgf
+from datetime import datetime
 
+from citations.consumer.write import create_instance, update_instance
+from citations.external import publish_record
+from citations.models import (Citations, FundingStreams, Institutions, Parties,
+                              References, extract_from_orcid, locate_institute)
+from citations.validators import validate_title
+
+def mint_doi_for_data(data: dict):
+    """
+    'Data' is the partially serialized content for the record to be published.
+
+    - Expand all creators (proper serialization)
+    - Expand all funders
+    - Expand all references
+    - Send data to publish record
+    
+    """
+
+    creators = [PartiesSerializer(instance=Parties.objects.get(pk=data['primary_id'])).data] + \
+        [PartiesSerializer(instance=Parties.objects.get(pk=pk)).data for pk in data['contacts']]
+        
+    
+    data['creators'] = creators
+
+    funders = [
+        FundingStreamsSerializer(
+            instance=FundingStreams.objects.get(pk=pk)).data for pk in data['funders']
+    ]
+
+    data['funders'] = funders
+
+    for reltype in ['cites','is_cited_by','is_referenced_by']:
+        data[reltype] = [
+            ReferencesSerializer(
+                instance=References.objects.get(pk=pk)).data for pk in data.get(reltype,[])
+        ]
+    
+    status, pubdata = publish_record(data)
+    if status:
+        return pubdata
+
+def institution_mappings(institution_id: str) -> str:
+    try:
+        mappings = requests.get(settings.INSTITUTION_MAPPINGS_URL).json()
+        return mappings[institution_id.lower()]
+    except Exception:
+        # Unreachable or no mapping available
+        return {'name': institution_id, 'acronym': institution_id}
+     
 def title_from_facets(data: dict):
 
+    if 'domain_id' in data:
+        # CORDEX Data
+        return f'{data["mip_era"]}.{data["activity_id"]}.{data["domain_id"]}.{data["institution_id"]}.{data["experiment_id"]}.{data["source_id"]}'
     return f'{data["mip_era"]}.{data["activity_id"]}.{data["institution_id"]}.{data["source_id"]}.{data["experiment_id"]}'
 
 def chain_new_objects(
@@ -39,7 +90,7 @@ def chain_new_objects(
         serial = serializer(data=data)
         serial.is_valid(raise_exception=True)
         serial.save()
-        inst_pk = serial.validated_data['id']
+        inst_pk = serial.instance['id']
     else:
         instance = instance[0]
         serial = serializer(data=data, instance=instance)
@@ -90,6 +141,9 @@ class GenericSerializerMixin(serializers.ModelSerializer):
         Create and return an Institution instance given validated data.
         """
 
+        publish: bool = validated_data.pop('publish',False)
+        user_id: str  = validated_data.pop('user_id','anon')
+
         filtered_data  = self.filter_data(validated_data)
 
         for k in self.Meta.required_fields:
@@ -108,16 +162,25 @@ class GenericSerializerMixin(serializers.ModelSerializer):
         if self.Meta.model.objects.filter(pk=pk):
             return self.update(
                 self.Meta.model.objects.get(pk=pk),
-                filtered_data
+                filtered_data,
+                publish=publish
             )
-
-        create_instance(self.Meta.model, update_handler=handle_update, required_fields=self.Meta.required_fields, **filtered_data)
+        
+        if publish:
+            pubdata = mint_doi_for_data(validated_data)
+            if pubdata:
+                filtered_data.update(pubdata)
+        
+        create_instance(self.Meta.model, user=user_id, update_handler=handle_update, required_fields=self.Meta.required_fields, **filtered_data)
         return filtered_data
     
     def update(self, instance, validated_data: dict):
         """
         Update and return an existing `Snippet` instance, given the validated data.
         """
+
+        publish: bool = validated_data.pop('publish',False)
+        user_id: str  = validated_data.pop('user_id','anon')
 
         # "Quirky behaviour" allows creation of a new instance via this mechanism.
         # Need to experiment deleting the old instance.
@@ -132,8 +195,13 @@ class GenericSerializerMixin(serializers.ModelSerializer):
         for field in getattr(self.Meta,'immutable_fields',[]):
             if filtered_data.get(field) != getattr(instance, field) and filtered_data.get(field,None):
                 raise MethodNotAllowed(f'The field "{field}" is immutable')
+            
+        if publish:
+            pubdata = mint_doi_for_data(validated_data)
+            if pubdata:
+                filtered_data.update(pubdata)
 
-        update_instance(self.Meta.model, update_handler=handle_update, id=instance.id, **filtered_data)
+        update_instance(self.Meta.model, user=user_id, update_handler=handle_update, id=instance.id, **filtered_data)
         return filtered_data
 
 class InstitutionsSerializer(GenericSerializerMixin):
@@ -252,7 +320,7 @@ class CitationsSerializer(GenericSerializerMixin):
             'doi_url', 'rights', 'license',
             'primary', 'contacts', 'institutions',
             'funders','id', 'version', 'publication_year',
-            'mip_era','activity_id','institution_id',
+            'mip_era','activity_id','domain_id','institution_id',
             'source_id','experiment_id', 'cites', 'is_cited_by', 'is_referenced_by'
         ]
         required_fields=[
@@ -276,11 +344,12 @@ class CitationsSerializer(GenericSerializerMixin):
                 # Fill if not overridden by input.
                 if validated_data.get(k,None) is None:
                     validated_data[k] = facets[k]
+
         return super().create(validated_data)
     
     def update(self, instance, validated_data):
 
-        if instance.published and instance.doi_url is None:
+        if instance.published and not instance.doi_url:
             validated_data['published'] = False
 
         if validated_data.get('doi_url'):
@@ -302,6 +371,22 @@ class CitationsSerializer(GenericSerializerMixin):
                 data['title'] = title_from_facets(data)
             except KeyError:
                 raise MethodNotAllowed("Submission must include title or all CMIP7 facets")
+            
+        if data.get('institution_id'):
+            # Create new institution as below, and add to the main affiliated institutions
+
+            inst_data = institution_mappings(data['institution_id'])
+
+            institution = chain_new_objects(
+                inst_data,
+                InstitutionsSerializer,
+                Institutions,
+                filter_kwargs={'name': inst_data['name']}
+            )
+            if 'institutions' not in data:
+                data['institutions'] = []
+
+            data['institutions'].append(institution)
 
         if data.get('version') is None and data.get('id') is None:
             
@@ -378,7 +463,7 @@ class CitationsSerializer(GenericSerializerMixin):
             data[citation_type] = references
 
         data['published'] = False
-        if data.get('doi_url',None) is not None:
+        if data.get('doi_url',None):
             data['published'] = True
 
         return data
@@ -416,8 +501,6 @@ def handle_update(table: str, method: str, content: dict):
                 if r in content:
                     getattr(instance, r).set(content[r])
             instance.save()
-
-            post_stac_esgf(instance.title)
 
         case "update":
             # Must have already validated that the primary key exists and does not change - frontend
