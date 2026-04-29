@@ -1,11 +1,13 @@
 import copy
 import json
+import ast
 
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import (LoginRequiredMixin,
                                         PermissionRequiredMixin)
 from django.contrib.auth.models import Permission
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db.models import CharField, ForeignKey, Q, TextField
@@ -21,7 +23,7 @@ from rest_framework.response import Response
 from slack_sdk import WebClient
 
 from citations.consumer.write import delete_instance
-from citations.external import publish_record
+from citations.external import resolve_drs
 from citations.forms import (ContactFormSet, EditCitationForm, FunderFormSet,
                              InstitutionFormSet, InstitutionIdForm,
                              NewCitationForm, ReferenceFormSet, ReplicaFormSet,
@@ -33,6 +35,19 @@ from citations.serializers import (CitationsSerializer,
                                    InstitutionsSerializer, PartiesSerializer,
                                    ReferencesSerializer, chain_new_objects,
                                    handle_update, title_from_facets)
+
+def create_new_permission(user, institution_id: str):
+
+    content_type_citation = ContentType.objects.get_for_model(Citations)
+
+    if not Permission.objects.filter(codename=f'edit_{institution_id}').exists():
+        pm = Permission.objects.create(
+            codename=f'edit_{institution_id}', 
+            name=f'Can edit {institution_id} citations',
+            content_type=content_type_citation)
+        
+        user.user_permissions.add(pm)
+        user.save()
 
 
 def get_citable_party(party: Parties):
@@ -63,7 +78,6 @@ def render_reference_html(ref: dict) -> dict:
 
     ref['citeas'] = f'<b>{ref["title"]} </b>{cite_core} <a href={ref["id"]}>{ref["id"]}.</a>' 
     return ref
-
 
 def fullname(party):
     if party.get('middle_names'):
@@ -101,6 +115,21 @@ def filter_versions(queryset):
 
 def unwrap_request(data: dict) -> dict:
     return {k:v for k,v in data.items()}
+
+def check_publish_ok(request, data: dict):
+
+    status = True
+    if not data.get('doi_url'):
+        if not resolve_drs(data.get('drs_url', '')):
+            messages.error(request, "Failed to resolve DRS URL. DOI cannot be minted until data is available.")
+        else:
+            messages.error(request, f"Failed to mint DOI for the record {data['title']} (v{data['version']})")
+        status = False
+        data = {'warnings': 'publication unsuccessful'} | data
+    else:
+        messages.success(request, f"DOI '{data['doi_url']}' ({data['publication_year']}) minted.")
+
+    return data, status
 
 class GenericRenderedView(TemplateView):
 
@@ -172,6 +201,123 @@ class PaginatedListView(GenericRenderedView):
     def adjust_for_UI_render(self, queryset) -> list:
         return [self.serializer_class(q).data for q in queryset]
 
+class GenericAPIView(
+        mixins.ListModelMixin, 
+        mixins.CreateModelMixin, 
+        generics.GenericAPIView
+    ):
+    """
+    Generic Method Additions to the API View
+    """
+
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    json_fields = []
+
+    def get_permissions(self):
+        if self.request.method == 'GET' or self.request.method == 'OPTIONS':
+            return [permissions.AllowAny()]
+        else:
+            # Post or otherwise
+            return [permissions.IsAuthenticated()]
+        
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
+    
+    def create(self, request, *args, **kwargs):
+        data=unwrap_request(request.data)
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(user_id=request.user.username)
+
+        return Response(serializer.validated_data, status=status.HTTP_201_CREATED)
+    
+    def initialize_request(self, request, *args, **kwargs):
+        """
+        Decode Information Given to POST requests
+        """
+        req = super().initialize_request(request, *args, **kwargs)
+
+        # Modify req.data here
+        mutable = req.data.copy()
+        for field in self.json_fields:
+            if mutable.get(field,'') != '' and isinstance(mutable.get(field),str):
+                try:
+                    mutable[field] = json.loads(mutable[field])
+                except json.decoder.JSONDecodeError:
+                    mutable[field] = json.loads(mutable[field].replace("'",'"'))
+        req._full_data = mutable  # override parsed data
+
+        return req
+    
+class SpecificAPIView(
+    mixins.CreateModelMixin, mixins.RetrieveModelMixin, 
+    mixins.UpdateModelMixin, generics.GenericAPIView,
+    mixins.DestroyModelMixin):
+    """
+    Specific View Methods
+    """
+
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    json_fields = []
+
+    def get_permissions(self):
+        if self.request.method == 'GET' or self.request.method == 'OPTIONS':
+            return [permissions.AllowAny()]
+        else:
+            # Post or otherwise
+            return [permissions.IsAuthenticated()]
+        
+    def get(self, request, *args, **kwargs):
+        return self.retrieve(request, *args, **kwargs)
+    
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
+    
+    def delete(self, request, *args, **kwargs):
+        instance = self.get_object()
+        delete_instance(
+            update_handler=handle_update,
+            model=self.model,
+            user=request.user.username,
+            id=instance.id)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
+    def update(self, request, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(user_id=request.user.username)
+
+        if getattr(instance, '_prefetched_objects_cache', None):
+            # If 'prefetch_related' has been applied to a queryset, we need to
+            # forcibly invalidate the prefetch cache on the instance.
+            instance._prefetched_objects_cache = {}
+
+        return Response(serializer.data)
+    
+    def initialize_request(self, request, *args, **kwargs):
+        """
+        Decode Information Given to POST requests
+        """
+        req = super().initialize_request(request, *args, **kwargs)
+
+        # Modify req.data here
+        mutable = req.data.copy()
+        for field in self.json_fields:
+            if mutable.get(field,'') != '' and isinstance(mutable.get(field),str):
+                mutable[field] = json.loads(mutable[field])[0]
+        req._full_data = mutable  # override parsed data
+
+        return req
+    
 class PartiesView(PaginatedListView):
     template_name = 'parties.html'
     partial_template = 'partials/parties_partial.html'
@@ -342,104 +488,6 @@ class PartyView(GenericRenderedView):
 
         return context
 
-class GenericAPIView(
-        mixins.ListModelMixin, 
-        mixins.CreateModelMixin, 
-        generics.GenericAPIView
-    ):
-    """
-    Generic Method Additions to the API View
-    """
-
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [permissions.IsAuthenticated]
-
-    json_fields = []
-
-    def get_permissions(self):
-        if self.request.method == 'GET' or self.request.method == 'OPTIONS':
-            return [permissions.AllowAny()]
-        else:
-            # Post or otherwise
-            return [permissions.IsAuthenticated()]
-        
-    def get(self, request, *args, **kwargs):
-        return self.list(request, *args, **kwargs)
-
-    def post(self, request, *args, **kwargs):
-        return self.create(request, *args, **kwargs)
-    
-    def create(self, request, *args, **kwargs):
-        data=unwrap_request(request.data)
-        serializer = self.get_serializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.validated_data, status=status.HTTP_201_CREATED)
-    
-    def initialize_request(self, request, *args, **kwargs):
-        """
-        Decode Information Given to POST requests
-        """
-        req = super().initialize_request(request, *args, **kwargs)
-
-        # Modify req.data here
-        mutable = req.data.copy()
-        for field in self.json_fields:
-            if mutable.get(field,'') != '' and isinstance(mutable.get(field),str):
-                mutable[field] = json.loads(mutable[field])
-        req._full_data = mutable  # override parsed data
-
-        return req
-    
-class SpecificAPIView(
-    mixins.CreateModelMixin, mixins.RetrieveModelMixin, 
-    mixins.UpdateModelMixin, generics.GenericAPIView,
-    mixins.DestroyModelMixin):
-    """
-    Specific View Methods
-    """
-
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [permissions.IsAuthenticated]
-
-    json_fields = []
-
-    def get_permissions(self):
-        if self.request.method == 'GET' or self.request.method == 'OPTIONS':
-            return [permissions.AllowAny()]
-        else:
-            # Post or otherwise
-            return [permissions.IsAuthenticated()]
-        
-    def get(self, request, *args, **kwargs):
-        return self.retrieve(request, *args, **kwargs)
-    
-    def put(self, request, *args, **kwargs):
-        return self.update(request, *args, **kwargs)
-    
-    def delete(self, request, *args, **kwargs):
-        instance = self.get_object()
-        delete_instance(
-            update_handler=handle_update,
-            model=self.model,
-            id=instance.id)
-        return Response(status=status.HTTP_204_NO_CONTENT)
-    
-    def initialize_request(self, request, *args, **kwargs):
-        """
-        Decode Information Given to POST requests
-        """
-        req = super().initialize_request(request, *args, **kwargs)
-
-        # Modify req.data here
-        mutable = req.data.copy()
-        for field in self.json_fields:
-            if mutable.get(field,'') != '' and isinstance(mutable.get(field),str):
-                mutable[field] = json.loads(mutable[field])[0]
-        req._full_data = mutable  # override parsed data
-
-        return req
-
 class InstitutionAPIView(GenericAPIView):
     """
     List all institutions
@@ -483,7 +531,10 @@ class CitationAPIView(GenericAPIView):
     json_fields = ['primary','funders','institutions','contacts', 'is_cited_by', 'is_referenced_by','cites']
 
     def create(self, request, *args, **kwargs):
-        data=unwrap_request(request.data)
+        data = unwrap_request(request.data)
+
+        publish = data.pop('publish_on_save',None)
+
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         title = serializer.validated_data.get('title')
@@ -503,8 +554,13 @@ class CitationAPIView(GenericAPIView):
             if not latest[0].editable:
                 return Response(serializer.validated_data, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
-        serializer.save()
-        return Response(serializer.validated_data, status=status.HTTP_201_CREATED)
+        if 'institution_id' in serializer.validated_data: 
+            create_new_permission(request.user, serializer.validated_data['institution_id'])
+            
+        data = serializer.save(publish=publish, user_id=request.user.username)
+        if publish:
+            data, _ = check_publish_ok(request, data)
+        return Response(data, status=status.HTTP_201_CREATED)
 
 class SpecificCitationAPIView(SpecificAPIView):
     """
@@ -517,13 +573,25 @@ class SpecificCitationAPIView(SpecificAPIView):
     json_fields = ['primary','funders','institutions','contacts', 'is_cited_by','is_referenced_by', 'cites']
 
     def update(self, request, *args, **kwargs):
+        data = unwrap_request(request.data)
         instance = self.get_object()
         if not instance.editable:
             return HttpResponseForbidden(
                 f'Editing the record {instance.id} is forbidden'
             )
+        
+        publish = data.pop('publish_on_save',None)
+        
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=data, partial=partial)
+        serializer.is_valid(raise_exception=True)
 
-        return super().update(request, *args, **kwargs)
+        data = serializer.save(publish=publish, user_id=request.user.username)
+        if publish:
+            data, _ = check_publish_ok(request, data)
+
+        return Response(data, status=status.HTTP_201_CREATED)
     
     def get(self, request, *args, **kwargs):
 
@@ -602,12 +670,17 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
         return new_version
     
     def dispatch(self, request, *args, **kwargs):
+
+        if not request.user.user_permissions.filter(codename='add_citations'):
+            return HttpResponseRedirect(reverse('citations:reviewer_request'))
+
         title = kwargs.get('title') or request.GET.get('title')
         if title:
             institute = self.model.objects.filter(title=title).order_by('-version').last().institution_id
             if institute:
                 if not request.user.user_permissions.filter(codename=f'edit_{institute}'):
                     return HttpResponseRedirect(reverse('citations:reviewer_request'))
+                
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, title: str = None, **kwargs):
@@ -671,8 +744,7 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
                     serializer=serializer,
                     model=model,
                     filter_kwargs=serializer.Meta.required_fields,
-                    allow_update=allow_update,
-                    fill_data_parameters=True) # Allowed updates from citation form directly to contacts
+                    allow_update=allow_update) # Allowed updates from citation form directly to contacts
             pks.append(inst_pk)
         return pks
     
@@ -818,45 +890,26 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
             ndata.pop(field,'')
 
         return ndata, instance
-    
-    def mint_doi_for_data(self, data):
-        """
-        Attempt to mint a DOI for this data
-        """
-        mint_inst = self.model.objects.filter(id=data['id'])
-        if mint_inst:
-            mint_inst = mint_inst[0]
-            mint_data = self.serializer_class(mint_inst).data
-        else:
-            mint_data = data
-            mint_inst = None
-
-        status, ndata = publish_record(self.request, mint_data)
-        data.update(ndata)
-
-        serializer = self.serializer_class(
-            instance=mint_inst,
-            data=mint_data)
-        serializer.is_valid()
-        obj = serializer.save()
-        return status, obj
 
     def replicate_data(self, instance=None, data=None):
 
         for v, k in self.label_mappings.items():
             data[k] = data.pop(v,None)
 
-        status = True
-        # Activate publication workflow here if needed
-        if self.request.POST.get('publish'):
-            status, obj = self.mint_doi_for_data(data)
-        else:
-            serializer = self.serializer_class(
-                instance=instance,
-                data=data)
+        pubstatus = True
+        publish = self.request.POST.get('publish')
+
+        serializer = self.serializer_class(
+            instance=instance,
+            data=data)
             
-            serializer.is_valid(raise_exception=True)
-            obj = serializer.save()
+        serializer.is_valid(raise_exception=True)
+        obj = serializer.save(
+            publish=publish, 
+            user_id=self.request.user.username)
+
+        if publish:
+            obj, pubstatus = check_publish_ok(self.request, obj)
 
         # Determine replicas
         replica_formset = ReplicaFormSet(self.request.POST)
@@ -871,20 +924,25 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
 
                 ndata, inst = self.clean_replica_data(serializer.validated_data, r)
 
-                if self.request.POST.get('publish'):
-                    rstatus, _ = self.mint_doi_for_data(data)
-                    status = status and rstatus
-                else:
-                    serializer = self.serializer_class(
-                        instance=inst,
-                        data=ndata)
-                
-                    serializer.is_valid(raise_exception=True)
-                    serializer.save()
-            if len(replicas) > 0:
-                return self.redirect_on_success(status=status)
+                serializer = self.serializer_class(
+                    instance=inst,
+                    data=ndata)
             
-        return self.redirect_on_success(title=obj['title'], status=status)
+                serializer.is_valid(raise_exception=True)
+                obj = serializer.save(
+                    publish=publish,
+                    user_id=self.request.user.username)
+
+                if publish:
+                    obj, pubstatus = check_publish_ok(self.request, obj)
+
+            if len(replicas) > 0:
+                return self.redirect_on_success(status=pubstatus)
+            
+        if 'institution_id' in serializer.validated_data: 
+            create_new_permission(self.request.user, serializer.validated_data['institution_id'])
+            
+        return self.redirect_on_success(title=obj['title'], status=pubstatus)
     
 class NewCitationFormView(CitationFormMixin):
 
@@ -1021,6 +1079,15 @@ class ConfirmDeleteCitationView(GenericRenderedView):
     template_name = 'delete_citation.html'
     model = Citations
     serializer_class = CitationsSerializer
+
+    def dispatch(self, request, *args, **kwargs):
+        title = kwargs.get('title') or request.GET.get('title')
+        if title:
+            institute = self.model.objects.filter(title=title).order_by('-version').last().institution_id
+            if institute:
+                if not request.user.user_permissions.filter(codename=f'edit_{institute}'):
+                    return HttpResponseRedirect(reverse('citations:reviewer_request'))
+        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, pk, **kwargs):
         context = super().get_context_data(**kwargs)
