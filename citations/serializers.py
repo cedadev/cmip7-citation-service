@@ -9,12 +9,47 @@ from django.db import models
 from rest_framework import serializers
 from rest_framework.exceptions import MethodNotAllowed
 
+from datetime import datetime
+
 from citations.consumer.write import create_instance, update_instance
-#from citations.external import post_stac_esgf
+from citations.external import publish_record
 from citations.models import (Citations, FundingStreams, Institutions, Parties,
                               References, extract_from_orcid, locate_institute)
 from citations.validators import validate_title
 
+def mint_doi_for_data(data: dict):
+    """
+    'Data' is the partially serialized content for the record to be published.
+
+    - Expand all creators (proper serialization)
+    - Expand all funders
+    - Expand all references
+    - Send data to publish record
+    
+    """
+
+    creators = [PartiesSerializer(instance=Parties.objects.get(pk=data['primary_id'])).data] + \
+        [PartiesSerializer(instance=Parties.objects.get(pk=pk)).data for pk in data['contacts']]
+        
+    
+    data['creators'] = creators
+
+    funders = [
+        FundingStreamsSerializer(
+            instance=FundingStreams.objects.get(pk=pk)).data for pk in data['funders']
+    ]
+
+    data['funders'] = funders
+
+    for reltype in ['cites','is_cited_by','is_referenced_by']:
+        data[reltype] = [
+            ReferencesSerializer(
+                instance=References.objects.get(pk=pk)).data for pk in data.get(reltype,[])
+        ]
+    
+    status, pubdata = publish_record(data)
+    if status:
+        return pubdata
 
 def institution_mappings(institution_id: str) -> str:
     try:
@@ -23,10 +58,12 @@ def institution_mappings(institution_id: str) -> str:
     except Exception:
         # Unreachable or no mapping available
         return {'name': institution_id, 'acronym': institution_id}
-    
-    
+     
 def title_from_facets(data: dict):
 
+    if 'domain_id' in data:
+        # CORDEX Data
+        return f'{data["mip_era"]}.{data["activity_id"]}.{data["domain_id"]}.{data["institution_id"]}.{data["experiment_id"]}.{data["source_id"]}'
     return f'{data["mip_era"]}.{data["activity_id"]}.{data["institution_id"]}.{data["source_id"]}.{data["experiment_id"]}'
 
 def chain_new_objects(
@@ -104,6 +141,9 @@ class GenericSerializerMixin(serializers.ModelSerializer):
         Create and return an Institution instance given validated data.
         """
 
+        publish: bool = validated_data.pop('publish',False)
+        user_id: str  = validated_data.pop('user_id','anon')
+
         filtered_data  = self.filter_data(validated_data)
 
         for k in self.Meta.required_fields:
@@ -122,16 +162,25 @@ class GenericSerializerMixin(serializers.ModelSerializer):
         if self.Meta.model.objects.filter(pk=pk):
             return self.update(
                 self.Meta.model.objects.get(pk=pk),
-                filtered_data
+                filtered_data,
+                publish=publish
             )
-
-        create_instance(self.Meta.model, update_handler=handle_update, required_fields=self.Meta.required_fields, **filtered_data)
+        
+        if publish:
+            pubdata = mint_doi_for_data(validated_data)
+            if pubdata:
+                filtered_data.update(pubdata)
+        
+        create_instance(self.Meta.model, user=user_id, update_handler=handle_update, required_fields=self.Meta.required_fields, **filtered_data)
         return filtered_data
     
     def update(self, instance, validated_data: dict):
         """
         Update and return an existing `Snippet` instance, given the validated data.
         """
+
+        publish: bool = validated_data.pop('publish',False)
+        user_id: str  = validated_data.pop('user_id','anon')
 
         # "Quirky behaviour" allows creation of a new instance via this mechanism.
         # Need to experiment deleting the old instance.
@@ -146,8 +195,13 @@ class GenericSerializerMixin(serializers.ModelSerializer):
         for field in getattr(self.Meta,'immutable_fields',[]):
             if filtered_data.get(field) != getattr(instance, field) and filtered_data.get(field,None):
                 raise MethodNotAllowed(f'The field "{field}" is immutable')
+            
+        if publish:
+            pubdata = mint_doi_for_data(validated_data)
+            if pubdata:
+                filtered_data.update(pubdata)
 
-        update_instance(self.Meta.model, update_handler=handle_update, id=instance.id, **filtered_data)
+        update_instance(self.Meta.model, user=user_id, update_handler=handle_update, id=instance.id, **filtered_data)
         return filtered_data
 
 class InstitutionsSerializer(GenericSerializerMixin):
@@ -266,7 +320,7 @@ class CitationsSerializer(GenericSerializerMixin):
             'doi_url', 'rights', 'license',
             'primary', 'contacts', 'institutions',
             'funders','id', 'version', 'publication_year',
-            'mip_era','activity_id','institution_id',
+            'mip_era','activity_id','domain_id','institution_id',
             'source_id','experiment_id', 'cites', 'is_cited_by', 'is_referenced_by'
         ]
         required_fields=[
@@ -290,16 +344,6 @@ class CitationsSerializer(GenericSerializerMixin):
                 # Fill if not overridden by input.
                 if validated_data.get(k,None) is None:
                     validated_data[k] = facets[k]
-
-        content_type_citation = ContentType.objects.get_for_model(Citations)
-
-        # Create permission for new institution
-        if 'institution_id' in validated_data:
-            if not Permission.objects.filter(codename=f'edit_{validated_data["institution_id"]}').exists():
-                Permission.objects.create(
-                    codename=f'edit_{validated_data["institution_id"]}', 
-                    name=f'Can edit {validated_data["institution_id"]} citations',
-                    content_type=content_type_citation)
 
         return super().create(validated_data)
     
@@ -339,6 +383,8 @@ class CitationsSerializer(GenericSerializerMixin):
                 Institutions,
                 filter_kwargs={'name': inst_data['name']}
             )
+            if 'institutions' not in data:
+                data['institutions'] = []
 
             data['institutions'].append(institution)
 
