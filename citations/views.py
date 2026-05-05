@@ -630,7 +630,8 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
         'activity':'activity_id',
         'experiment': 'experiment_id',
         'source': 'source_id',
-        'institution': 'institution_id'
+        'institution': 'institution_id',
+        'domain': 'domain_id'
     }
 
     def redirect_on_success(self, title: str = None, status: bool = True):
@@ -1099,7 +1100,8 @@ class ConfirmDeleteCitationView(GenericRenderedView):
         delete_instance(
             update_handler=handle_update,
             model=self.model,
-            id=pk
+            id=pk,
+            user=request.user.username
         )
         return HttpResponseRedirect(reverse('citations:citations'))
     
