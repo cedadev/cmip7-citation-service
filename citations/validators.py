@@ -41,11 +41,16 @@ def validate_country(country: Union[str,None]):
             f'"{country}" returned no matches'
         )
     
-def validate_component(component: str, label: str, requested: Union[str,None] = None, raise_exception: bool = False):
+def validate_component(
+        component: str, 
+        label: str, 
+        requested: Union[str,None] = None, 
+        raise_exception: bool = False,
+        repo: str = settings.CV_REPO):
     """
     Check mip_era against CVs
     """
-    r = requests.get(f'{settings.CV_REPO}/{label}/{component}.json')
+    r = requests.get(f'{repo}/{label.lower()}/{component.lower()}.json')
     if str(r.status_code) != '200':
         if raise_exception:
             raise ValidationError(f'{component} not a valid {label}')
@@ -55,6 +60,44 @@ def validate_component(component: str, label: str, requested: Union[str,None] = 
     if requested:
         return r.json()[requested]
     
+def validate_cordex_facets(data: dict, raise_exceptions: bool = False):
+
+    if settings.CORDEX_CV_REPO is None:
+        raise ValueError('Misconfigured for CORDEX Facet validation')
+    
+    validate_component(data.get('mip_era').replace('CORDEX-',''), 'mip_era', 
+                       raise_exception=raise_exceptions, repo=settings.CORDEX_CV_REPO)
+    
+    validate_component(data.get('activity_id'), 'activity_id', 
+                       raise_exception=raise_exceptions, repo=settings.CORDEX_CV_REPO)
+    
+    validate_component(data.get('domain_id'), 'domain_id', 
+                       raise_exception=raise_exceptions, repo=settings.CORDEX_CV_REPO)
+    
+    validate_component(data.get('institution_id'), 'institution_id', 
+                       raise_exception=raise_exceptions, repo=settings.CORDEX_CV_REPO)
+    
+    validate_component(data.get('experiment_id'), 'driving_experiment_id', 
+                       raise_exception=raise_exceptions, repo=settings.CORDEX_CV_REPO)
+    
+    validate_component(data.get('source_id'), 'source_id', 
+                       raise_exception=raise_exceptions, repo=settings.CORDEX_CV_REPO)
+
+def validate_cmip7_facets(data: dict, raise_exceptions: bool = False):
+
+    if settings.CV_REPO is None:
+        raise ValueError('Misconfigured for CMIP7 Facet validation')
+
+    validate_component(data.get('mip_era'), 'mip_era', raise_exception=raise_exceptions)
+    validate_component(data.get('experiment_id'), 'experiment',raise_exception=raise_exceptions)
+    validate_component(data.get('institution_id'), 'institution',raise_exception=raise_exceptions)
+    validate_component(data.get('source_id'), 'source',raise_exception=raise_exceptions)
+
+    experiments = validate_component(data.get('activity_id'), 'activity', requested='experiments') or []
+    if data.get('experiment_id') not in experiments:
+        if raise_exceptions:
+            raise ValidationError(f'{data.get('experiment_id')} not valid for {data.get('activity_id')}')
+
 def validate_title(title: str, raise_exceptions = False):
     """
     Validate title parameter for CMIP7 citation record
