@@ -3,6 +3,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.forms import BaseFormSet, formset_factory
 from django.utils.safestring import mark_safe
+from django.conf import settings
 
 from citations.models import Citations
 
@@ -15,6 +16,12 @@ reference_options = (
     (2, 'is_referenced_by'),
     (3, 'cites')
 )
+
+POPOVER_ATTRS = {
+    'data-bs-toggle':'popover',
+    'data-bs-trigger':'hover',
+    'data-bs-placement': 'top',
+}
 
 class InstitutionIdForm(forms.Form):
     def __init__(self, *args, **kwargs):
@@ -171,66 +178,99 @@ class CitationForm(forms.ModelForm):
     """Form for gathering Citation information"""
 
     abstract = forms.CharField(
-        widget=forms.Textarea(attrs={'placeholder':"Abstract"}),
+        widget=forms.Textarea(attrs={
+            'placeholder':"Abstract",
+            'data-bs-content':'Abstract will be prefilled from Essential Model Documentation if empty.'
+            } | POPOVER_ATTRS),
         required=False
     )
 
     drs_url = forms.CharField(
         label = 'DRS URL',
-        widget=forms.TextInput(attrs={'placeholder':'DRS URL for the CMIP7 dataset'}),
+        widget=forms.TextInput(attrs={
+            'placeholder':'DRS URL for the CMIP7 dataset',
+            'data-bs-content':'Only provide if data is not present in ESGF Core Nodes.'
+            } | POPOVER_ATTRS),
         required=False
     )
 
     doi_url = forms.CharField(
         label='DOI URL',
-        widget=forms.TextInput(attrs={'placeholder':'DOI URL for the CMIP7 dataset'}),
+        widget=forms.TextInput(attrs={
+            'placeholder':'DOI URL for the CMIP7 dataset',
+            'data-bs-content':'Only provide if data has pre-existing DOI already published.'
+            } | POPOVER_ATTRS),
         required=False
     )
 
     rights = forms.CharField(
-        widget=forms.Textarea(attrs={'placeholder':'Usage rights for the CMIP7 dataset'}),
+        widget=forms.Textarea(attrs={
+            'placeholder':'Usage rights for the CMIP7 dataset',
+            'data-bs-content':'Rights will be prefilled from Essential Model Documentation if empty.'
+        } | POPOVER_ATTRS),
         required=False
     )
 
     license = forms.CharField(
-        widget=forms.Textarea(attrs={'placeholder':"License for the CMIP7 dataset"}),
+        widget=forms.Textarea(attrs={
+            'placeholder':"License for the CMIP7 dataset",
+            'data-bs-content':'License will be prefilled from Essential Model Documentation if empty.'
+        } | POPOVER_ATTRS),
         required=False
     )
 
     mip_era = forms.CharField(
-        label = 'MIP Era (Validated against CVs)',
-        widget=forms.TextInput(attrs={'placeholder':"CMIP7 MIP Era Facet"}),
+        label = 'MIP Era',
+        widget=forms.TextInput(attrs={
+            'placeholder':"CMIP7 MIP Era Facet",
+            'data-bs-content':'Validated against CMIP7 CVs.'
+        } | POPOVER_ATTRS),
         required=False
     )
     activity = forms.CharField(
-        label = 'Activity (Validated against CVs)',
-        widget=forms.TextInput(attrs={'placeholder':"CMIP7 Activity Facet"}),
+        label = 'Activity',
+        widget=forms.TextInput(attrs={
+            'placeholder':"CMIP7 Activity Facet",
+            'data-bs-content':'Validated against CMIP7 CVs.'
+        } | POPOVER_ATTRS),
         required=False
     )
     institution = forms.CharField(
-        label = 'Institution (Validated against CVs)',
-        widget=forms.TextInput(attrs={'placeholder':"CMIP7 Institution Facet"}),
+        label = 'Institution',
+        widget=forms.TextInput(attrs={
+            'placeholder':"CMIP7 Institution Facet",
+            'data-bs-content':'Validated against CMIP7 CVs.'
+        } | POPOVER_ATTRS),
         required=False
     )
     source = forms.CharField(
-        widget=forms.TextInput(attrs={'placeholder':"CMIP7 Source Facet"}),
+        widget=forms.TextInput(attrs={
+            'placeholder':"CMIP7 Source Facet",
+            'data-bs-content':'Validated against CMIP7 CVs.'
+        } | POPOVER_ATTRS),
         required=False
     )
     experiment = forms.CharField(
-        widget=forms.TextInput(attrs={'placeholder':"CMIP7 Experiment Facet"}),
+        widget=forms.TextInput(attrs={
+            'placeholder':"CMIP7 Experiment Facet",
+            'data-bs-content':'Validated against CMIP7/CORDEX CVs.'
+        } | POPOVER_ATTRS),
         required=False
     )
     domain = forms.CharField(
-        widget=forms.TextInput(attrs={'placeholder':"CMIP7 Domain Facet"}),
+        widget=forms.TextInput(attrs={
+            'placeholder':"CMIP7 Domain Facet",
+            'data-bs-content':'Validated against CORDEX CVs.'
+        } | POPOVER_ATTRS),
         required=False
     )
 
     field_groups = {
         'General Information': ['Title', 'Abstract','DRS URL','DOI URL'],
         'CMIP7 Facets': [
-            'MIP Era (Validated against CVs)',
-            'Activity (Validated against CVs)',
-            'Institution (Validated against CVs)',
+            'MIP Era',
+            'Activity',
+            'Institution',
             'Source',
             'Experiment',
             'Domain'],
@@ -273,7 +313,9 @@ class EditCitationForm(CitationForm):
         validators=[alphanumeric],
         widget=forms.TextInput(attrs={
             'readonly':'readonly',
-            'style':'background-color: #adadad;'})
+            'style':'background-color: #adadad;',
+            'data-bs-content':'Not possible to edit existing record title.'
+        } | POPOVER_ATTRS)
     )
 
 class NewCitationForm(CitationForm):
@@ -281,5 +323,7 @@ class NewCitationForm(CitationForm):
     title = forms.CharField(
         max_length=300,
         validators=[alphanumeric],
-        widget=forms.TextInput(attrs={'placeholder':'Title of CMIP7 Citation record'})
+        widget=forms.TextInput(attrs={
+            'placeholder':'Title of CMIP7 Citation record',
+        })
     )

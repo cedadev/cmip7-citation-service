@@ -331,6 +331,11 @@
     </form>
 
 <script>
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => {
+      new bootstrap.Popover(el);
+    });
+});
 document.addEventListener("keydown", function(e) {
     if (e.key === 'Enter'){
         location.reload();
