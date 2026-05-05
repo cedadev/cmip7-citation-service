@@ -7,7 +7,7 @@ authors = [
 ]
 license = "BSD 3"
 readme = "README.md"
-requires-python = ">=3.11,<4"
+requires-python = ">=3.13,<4"
 dependencies = [
     "django (>=5.1.14,<6.0.0)",
     "xmltodict (>=1.0.2,<2.0.0)",
@@ -24,7 +24,7 @@ dependencies = [
     "confluent-kafka (>=2.13.2,<3.0.0)",
     "django-allauth[socialaccount] (>=65.15.1,<66.0.0)",
     "slack-sdk (>=3.41.0,<4.0.0)",
-    "esgf-core-utils (>=1.0.6,<2.0.0)",
+    "esgf-core-utils (>=1.0.7,<2.0.0)",
 ]
 
 [build-system]
