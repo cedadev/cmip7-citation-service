@@ -1147,7 +1147,7 @@ class ReviewerRequestView(LoginRequiredMixin, GenericRenderedView, FormView):
             if form.cleaned_data.get(field):
                 institutions.append(field.replace('inst_',''))
 
-        general = Permission.objects.get(codename='add_citation')
+        general = Permission.objects.get(codename='add_citations')
         change_permissions = not self.request.user.user_permissions.filter(pk=general.pk)
 
         for institution in institutions:
