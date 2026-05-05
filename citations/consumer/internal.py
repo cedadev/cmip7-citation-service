@@ -11,8 +11,9 @@ from confluent_kafka import Consumer, KafkaException, Producer
 
 from citations.utils import logstream
 
-# from esgf_core_utils.models.kafka.consumer import KafkaConsumer
+from django.conf import settings
 
+#from esgf_core_utils.models.kafka.consumer import KafkaConsumer
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logstream)
@@ -24,13 +25,19 @@ class CitationInternalMessageProcessor: # MessageProcessor
         self.handler = handler
 
     def ingest(self, message):
+
+        if hasattr(settings, 'FROM_KAFKA_TIMESTAMP'):
+            if message.timestamp < settings.FROM_KAFKA_TIMESTAMP:
+                return
+
+        # Ignore messages before a specific timestamp as needed.
         self.handler(**dict(message))
 
     def direct_message(self, table: str, method: str, content: dict[str,Any]):
         self.handler(table=table, method=method, content=content)
 
 # Temporary class - replace with import from esgf core utils package.
-class KafkaConsumer:
+class TempKafkaConsumer:
     def __init__(
         self,
         message_processor: CitationInternalMessageProcessor, 
@@ -96,7 +103,7 @@ class KafkaConsumer:
 
             self.consumer.close()
 
-class CitationKafkaConsumer(KafkaConsumer): # KafkaConsumer from ESGF
+class CitationKafkaConsumer(TempKafkaConsumer): # KafkaConsumer from ESGF
 
     def __init__(self, update_handler: str, *args, **kwargs):
         message_processor = CitationInternalMessageProcessor(update_handler)
