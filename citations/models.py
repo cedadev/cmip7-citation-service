@@ -2,7 +2,7 @@ import requests
 import xmltodict
 from django.db import models
 
-from citations.validators import validate_orcid, validate_title
+from citations.validators import validate_orcid
 
 
 # Create your models here.
@@ -82,7 +82,7 @@ class Citations(models.Model):
     # Still would be good to create citations/parties etc in any order
 
     id        = models.CharField(max_length=300, primary_key=True)
-    title     = models.CharField(max_length=300, validators=[validate_title])
+    title     = models.CharField(max_length=300)
     version   = models.IntegerField()
 
     publication_year = models.IntegerField(null=True, blank=True)

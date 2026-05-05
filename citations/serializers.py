@@ -7,7 +7,8 @@ from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from rest_framework import serializers
-from rest_framework.exceptions import MethodNotAllowed
+from rest_framework.exceptions import MethodNotAllowed, ParseError
+from django.core.exceptions import ValidationError
 
 from datetime import datetime
 
@@ -15,7 +16,7 @@ from citations.consumer.write import create_instance, update_instance
 from citations.external import publish_record
 from citations.models import (Citations, FundingStreams, Institutions, Parties,
                               References, extract_from_orcid, locate_institute)
-from citations.validators import validate_title
+from citations.validators import validate_title, validate_cmip7_facets, validate_cordex_facets
 
 def mint_doi_for_data(data: dict):
     """
@@ -59,11 +60,18 @@ def institution_mappings(institution_id: str) -> str:
         # Unreachable or no mapping available
         return {'name': institution_id, 'acronym': institution_id}
      
-def title_from_facets(data: dict):
+def title_from_facets(data: dict, validate_all: bool = False):
 
     if 'domain_id' in data:
         # CORDEX Data
+        if validate_all:
+            validate_cordex_facets(data, raise_exceptions=True)
+
         return f'{data["mip_era"]}.{data["activity_id"]}.{data["domain_id"]}.{data["institution_id"]}.{data["experiment_id"]}.{data["source_id"]}'
+    
+    if validate_all:
+        validate_cmip7_facets(data, raise_exceptions=True)
+    
     return f'{data["mip_era"]}.{data["activity_id"]}.{data["institution_id"]}.{data["source_id"]}.{data["experiment_id"]}'
 
 def chain_new_objects(
@@ -365,13 +373,17 @@ class CitationsSerializer(GenericSerializerMixin):
 
         Locate or create references based on the provided information.
         """
-        if data.get('title') is None:
-            # Facet-only title construction
-            try:
-                data['title'] = title_from_facets(data)
-            except KeyError:
-                raise MethodNotAllowed("Submission must include title or all CMIP7 facets")
-            
+        # Facet-only title construction
+        try:
+            title = title_from_facets(data, validate_all=True)
+            if title != data['title']:
+                raise ParseError(f'Facet-constructed title {title} does not match provided title {data["title"]}')
+
+        except KeyError:
+            raise MethodNotAllowed("Submission must include title or all CMIP7 facets")
+        except ValidationError:
+            raise ParseError("Submission facets are invalid for CMIP7/CORDEX CVs")
+
         if data.get('institution_id'):
             # Create new institution as below, and add to the main affiliated institutions
 
