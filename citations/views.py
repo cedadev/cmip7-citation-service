@@ -671,7 +671,9 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
         return new_version
     
     def dispatch(self, request, *args, **kwargs):
-
+        """
+        Setup for form view
+        """
         if not request.user.user_permissions.filter(codename='add_citations'):
             return HttpResponseRedirect(reverse('citations:reviewer_request'))
 
