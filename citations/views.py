@@ -80,7 +80,10 @@ def get_drs_url(citation: Citations) -> Union[str,None]:
             f'"experiment_id"%3A"{citation.experiment_id}"'
         ])
     
-def get_code_snippet(citation: Citations):
+def get_code_snippet(citation: Citations) -> Union[str,None]:
+
+    if not hasattr(settings, 'STAC_API'):
+        return None
 
     query = [
         f'      "cmip7:mip_era={citation.mip_era}",',
@@ -104,7 +107,7 @@ def get_code_snippet(citation: Citations):
     code_snippet = [
         'from pystac.client import Client',
         '',
-        'cli = Client.open(STAC_API)',
+        f'cli = Client.open("{settings.STAC_API}")',
         'cli.search(',
         '   collections=["cmip7"],',
         '   query=['
