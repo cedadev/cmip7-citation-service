@@ -35,6 +35,7 @@ from citations.serializers import (CitationsSerializer,
                                    InstitutionsSerializer, PartiesSerializer,
                                    ReferencesSerializer, chain_new_objects,
                                    handle_update, title_from_facets)
+from typing import Union
 
 def create_new_permission(user, institution_id: str):
 
@@ -56,7 +57,10 @@ def get_citable_party(party: Parties):
     else:
         return f'{party.last_name}, {party.first_name}'
     
-def get_drs_url(citation: Citations):
+def get_drs_url(citation: Citations) -> Union[str,None]:
+
+    if not hasattr(settings, 'METAGRID_URL'):
+        return None
 
     if getattr(citation,'domain_id','unknown') != 'unknown':
         return "%2C".join([
