@@ -56,6 +56,60 @@ def get_citable_party(party: Parties):
     else:
         return f'{party.last_name}, {party.first_name}'
     
+def get_drs_url(citation: Citations):
+
+    if getattr(citation,'domain_id','unknown') != 'unknown':
+        return "%2C".join([
+            f'{settings.METAGRID_URL}/search?project={citation.mip_era}+STAC&activeFacets=%7B"mip_era"%3A"{citation.mip_era}"',
+            f'"institution_id"%3A"{citation.institution_id}"',
+            f'"activity_id"%3A"{citation.activity_id}"',
+            f'"source_id"%3A"{citation.source_id}"',
+            f'"driving_experiment_id"%3A"{citation.experiment_id}"',
+            f'"domain_id"%3A"{citation.domain_id}"'
+        ])
+    else:
+        return "%2C".join([
+            f'{settings.METAGRID_URL}/search?project={citation.mip_era}+STAC&activeFacets=%7B"mip_era"%3A"{citation.mip_era}"',
+            f'"institution_id"%3A"{citation.institution_id}"',
+            f'"activity_id"%3A"{citation.activity_id}"',
+            f'"source_id"%3A"{citation.source_id}"',
+            f'"experiment_id"%3A"{citation.experiment_id}"'
+        ])
+    
+def get_code_snippet(citation: Citations):
+
+    query = [
+        f'      "cmip7:mip_era={citation.mip_era}",',
+        f'      "cmip7:activity_id={citation.activity_id}",',
+    ]
+
+    if getattr(citation,'domain_id','unknown') != 'unknown':
+        query += [
+            f'      "cmip7:domain_id={citation.domain_id}",',
+            f'      "cmip7:institution_id={citation.institution_id}",',
+            f'      "cmip7:driving_experiment_id={citation.experiment_id}",',
+            f'      "cmip7:source_id={citation.source_id}",',
+        ]
+    else:
+        query += [
+            f'      "cmip7:institution_id={citation.institution_id}",',
+            f'      "cmip7:source_id={citation.source_id}",',
+            f'      "cmip7:experiment_id={citation.experiment_id}",',
+        ]
+
+    code_snippet = [
+        'from pystac.client import Client',
+        '',
+        'cli = Client.open(STAC_API)',
+        'cli.search(',
+        '   collections=["cmip7"],',
+        '   query=['
+    ] + query + [
+        '])'
+    ]
+
+    return "\n".join(code_snippet)
+
 def get_cite_as(citation: Citations):
     primary = get_citable_party(citation.primary) + '; '
 
@@ -430,6 +484,13 @@ class CitationView(GenericRenderedView):
             if citation_data.get(reference_type):
                 for ref in citation_data[reference_type]:
                     ref = render_reference_html(ref)
+
+        context['code_snippet'] = get_code_snippet(citation)
+
+        if not bool(citation.drs_url):
+            context['drs_url'] = get_drs_url(citation)
+        else:
+            context['drs_url'] = citation.drs_url
 
         context['citation'] = citation_data
         return context

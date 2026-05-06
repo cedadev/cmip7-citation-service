@@ -63,10 +63,12 @@
                     <th>Abstract</th>
                     <td>{{ citation.abstract }}</td>
                 </tr>
+                {% if drs_url %}
                 <tr>
                     <th>DRS URL</th>
-                    <td><a href="{{ citation.drs_url }}">{{citation.drs_url}}</a></td>
+                    <td><a href="{{ drs_url }}">{{ drs_url }}</a></td>
                 </tr>
+                {% endif %}
                 {% if cite_as %}
                 <tr>
                     <th>Cite As</th>
@@ -113,6 +115,18 @@
                 </tr>
                 
             </table>
+            <br>
+            {% if code_snippet %}
+            <h3><b>Data Access (python)</b></h3>
+            <p><i>Interfacing with the STAC API in python typically requires the pystac client or similar. Below is an example code snippet to fetch items to which this Citation record applies.</i></p>
+            <br>
+            <div class="box">
+                <pre>
+{{ code_snippet }}
+                </pre>
+            </div>
+            {% endif %}
+
         </div>
         <div class="tab-pane fade" id="tabB" role="tabpanel">
             <h3><b>Responsible Parties</b></h3>
