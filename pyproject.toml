@@ -25,6 +25,7 @@ dependencies = [
     "django-allauth[socialaccount] (>=65.15.1,<66.0.0)",
     "slack-sdk (>=3.41.0,<4.0.0)",
     "esgf-core-utils (>=1.0.7,<2.0.0)",
+    "esgvoc (>=4.0.0,<5.0.0)",
 ]
 
 [build-system]
