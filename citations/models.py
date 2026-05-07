@@ -103,12 +103,12 @@ class Citations(models.Model):
     editable = models.BooleanField(default=True)
     published = models.BooleanField(default=False)
 
-    mip_era     = models.CharField(max_length=30, default='unknown')
-    activity_id = models.CharField(max_length=30, default='unknown')
-    institution_id = models.CharField(max_length=30, default='unknown')
-    source_id = models.CharField(max_length=30, default='unknown')
-    experiment_id = models.CharField(max_length=30, default='unknown')
-    domain_id = models.CharField(max_length=30, default='unknown')
+    mip_era     = models.CharField(max_length=30, null=True, blank=True)
+    activity_id = models.CharField(max_length=30, null=True, blank=True)
+    institution_id = models.CharField(max_length=30, null=True, blank=True)
+    source_id = models.CharField(max_length=30, null=True, blank=True)
+    experiment_id = models.CharField(max_length=30, null=True, blank=True)
+    domain_id = models.CharField(max_length=30, null=True, blank=True)
 
     # keywords = ArrayField(
     #     models.CharField(max_length=50),

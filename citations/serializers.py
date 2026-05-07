@@ -17,6 +17,7 @@ from citations.external import publish_record
 from citations.models import (Citations, FundingStreams, Institutions, Parties,
                               References, extract_from_orcid, locate_institute)
 from citations.validators import validate_title, validate_cmip7_facets, validate_cordex_facets
+from citations.utils import LABEL_MAPPINGS
 
 def mint_doi_for_data(data: dict):
     """
@@ -62,7 +63,7 @@ def institution_mappings(institution_id: str) -> str:
      
 def title_from_facets(data: dict, validate_all: bool = False):
 
-    if 'domain_id' in data:
+    if data.get('domain_id'):
         # CORDEX Data
         if validate_all:
             validate_cordex_facets(data, raise_exceptions=True)
@@ -73,6 +74,40 @@ def title_from_facets(data: dict, validate_all: bool = False):
         validate_cmip7_facets(data, raise_exceptions=True)
     
     return f'{data["mip_era"]}.{data["activity_id"]}.{data["institution_id"]}.{data["source_id"]}.{data["experiment_id"]}'
+
+def abstract_from_esgvoc(data: dict):
+
+    try:
+        import esgvoc.api as ev
+    except ImportError:
+        return ''
+    
+    facet_descs = {
+        'activity': '',
+        'source': '',
+        'institution': 'Produced by: ',
+        'mip_era': 'MIP Era: ',
+        'experiment': '',
+        'domain': 'CORDEX Domain: '
+    }
+
+    cmip7_facet_labels = ['mip_era','activity','institution','source','experiment', 'domain']
+    # Domain
+
+    abstract = []
+    for fl in cmip7_facet_labels:
+        component = ev.get_term_in_collection(project_id='cmip7',collection_id=fl,term_id=data[LABEL_MAPPINGS.get(fl,fl)].lower())
+
+        entry = []
+        entry.append(getattr(component,"description",data[LABEL_MAPPINGS.get(fl,fl)]))
+
+        if getattr(component,"labels",None):
+            entry.append(','.join(component.labels))
+
+        if entry:
+            abstract.append(facet_descs[fl] + ' - '.join(entry))
+
+    return '\n\n'.join(abstract)
 
 def chain_new_objects(
         data: dict, 
@@ -383,6 +418,9 @@ class CitationsSerializer(GenericSerializerMixin):
             raise MethodNotAllowed("Submission must include title or all CMIP7 facets")
         except ValidationError:
             raise ParseError("Submission facets are invalid for CMIP7/CORDEX CVs")
+        
+        if not bool(data.get('abstract')):
+            data['abstract'] = abstract_from_esgvoc(data)
 
         if data.get('institution_id'):
             # Create new institution as below, and add to the main affiliated institutions

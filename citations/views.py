@@ -36,6 +36,7 @@ from citations.serializers import (CitationsSerializer,
                                    ReferencesSerializer, chain_new_objects,
                                    handle_update, title_from_facets)
 from typing import Union
+from citations.utils import LABEL_MAPPINGS, CORE_FACETS
 
 def create_new_permission(user, institution_id: str):
 
@@ -57,51 +58,59 @@ def get_citable_party(party: Parties):
     else:
         return f'{party.last_name}, {party.first_name}'
     
-def get_drs_url(citation: Citations) -> Union[str,None]:
+def get_drs_url(citation_data: dict) -> Union[str,None]:
 
     if not hasattr(settings, 'METAGRID_URL'):
         return None
+    
+    for facet in CORE_FACETS:
+        if not bool(citation_data.get(facet,False)):
+            return None
 
-    if getattr(citation,'domain_id','unknown') != 'unknown':
+    if citation_data.get('domain_id') is not None:
         return "%2C".join([
-            f'{settings.METAGRID_URL}/search?project={citation.mip_era}+STAC&activeFacets=%7B"mip_era"%3A"{citation.mip_era}"',
-            f'"institution_id"%3A"{citation.institution_id}"',
-            f'"activity_id"%3A"{citation.activity_id}"',
-            f'"source_id"%3A"{citation.source_id}"',
-            f'"driving_experiment_id"%3A"{citation.experiment_id}"',
-            f'"domain_id"%3A"{citation.domain_id}"'
+            f'{settings.METAGRID_URL}/search?project={citation_data["mip_era"]}+STAC&activeFacets=%7B"mip_era"%3A"{citation_data["mip_era"]}"',
+            f'"institution_id"%3A"{citation_data["institution_id"]}"',
+            f'"activity_id"%3A"{citation_data["activity_id"]}"',
+            f'"source_id"%3A"{citation_data["source_id"]}"',
+            f'"driving_experiment_id"%3A"{citation_data["experiment_id"]}"',
+            f'"domain_id"%3A"{citation_data["domain_id"]}'
         ])
     else:
         return "%2C".join([
-            f'{settings.METAGRID_URL}/search?project={citation.mip_era}+STAC&activeFacets=%7B"mip_era"%3A"{citation.mip_era}"',
-            f'"institution_id"%3A"{citation.institution_id}"',
-            f'"activity_id"%3A"{citation.activity_id}"',
-            f'"source_id"%3A"{citation.source_id}"',
-            f'"experiment_id"%3A"{citation.experiment_id}"'
+            f'{settings.METAGRID_URL}/search?project={citation_data["mip_era"]}+STAC&activeFacets=%7B"mip_era"%3A"{citation_data["mip_era"]}"',
+            f'"institution_id"%3A"{citation_data["institution_id"]}"',
+            f'"activity_id"%3A"{citation_data["activity_id"]}"',
+            f'"source_id"%3A"{citation_data["source_id"]}"',
+            f'"experiment_id"%3A"{citation_data["experiment_id"]}"'
         ])
     
-def get_code_snippet(citation: Citations) -> Union[str,None]:
+def get_code_snippet(citation_data: dict) -> Union[str,None]:
 
     if not hasattr(settings, 'STAC_API'):
         return None
+    
+    for facet in CORE_FACETS:
+        if citation_data.get(facet,None) is None:
+            return None
 
     query = [
-        f'      "cmip7:mip_era={citation.mip_era}",',
-        f'      "cmip7:activity_id={citation.activity_id}",',
+        f'      "cmip7:mip_era={citation_data["mip_era"]}",',
+        f'      "cmip7:activity_id={citation_data["activity_id"]}",',
     ]
 
-    if getattr(citation,'domain_id','unknown') != 'unknown':
+    if citation_data.get('domain_id') is not None:
         query += [
-            f'      "cmip7:domain_id={citation.domain_id}",',
-            f'      "cmip7:institution_id={citation.institution_id}",',
-            f'      "cmip7:driving_experiment_id={citation.experiment_id}",',
-            f'      "cmip7:source_id={citation.source_id}",',
+            f'      "cmip7:domain_id={citation_data["domain_id"]}",',
+            f'      "cmip7:institution_id={citation_data["institution_id"]}",',
+            f'      "cmip7:driving_experiment_id={citation_data["experiment_id"]}",',
+            f'      "cmip7:source_id={citation_data["source_id"]}",',
         ]
     else:
         query += [
-            f'      "cmip7:institution_id={citation.institution_id}",',
-            f'      "cmip7:source_id={citation.source_id}",',
-            f'      "cmip7:experiment_id={citation.experiment_id}",',
+            f'      "cmip7:institution_id={citation_data["institution_id"]}",',
+            f'      "cmip7:source_id={citation_data["source_id"]}",',
+            f'      "cmip7:experiment_id={citation_data["experiment_id"]}",',
         ]
 
     code_snippet = [
@@ -181,7 +190,7 @@ def check_publish_ok(request, data: dict):
 
     status = True
     if not data.get('doi_url'):
-        if not resolve_drs(data.get('drs_url', '')):
+        if not resolve_drs(data.get('drs_url', get_drs_url(data))):
             messages.error(request, "Failed to resolve DRS URL. DOI cannot be minted until data is available.")
         else:
             messages.error(request, f"Failed to mint DOI for the record {data['title']} (v{data['version']})")
@@ -492,10 +501,10 @@ class CitationView(GenericRenderedView):
                 for ref in citation_data[reference_type]:
                     ref = render_reference_html(ref)
 
-        context['code_snippet'] = get_code_snippet(citation)
+        context['code_snippet'] = get_code_snippet(citation_data)
 
         if not bool(citation.drs_url):
-            context['drs_url'] = get_drs_url(citation)
+            context['drs_url'] = get_drs_url(citation_data)
         else:
             context['drs_url'] = citation.drs_url
 
@@ -693,14 +702,6 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
     template_name = "edit_citation.html"
     model = Citations
     serializer_class = CitationsSerializer
-
-    label_mappings = {
-        'activity':'activity_id',
-        'experiment': 'experiment_id',
-        'source': 'source_id',
-        'institution': 'institution_id',
-        'domain': 'domain_id'
-    }
 
     def redirect_on_success(self, title: str = None, status: bool = True):
         
@@ -964,7 +965,7 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
 
     def replicate_data(self, instance=None, data=None):
 
-        for v, k in self.label_mappings.items():
+        for v, k in LABEL_MAPPINGS.items():
             data[k] = data.pop(v,None)
 
         pubstatus = True
@@ -1041,7 +1042,7 @@ class NewCitationFormView(CitationFormMixin):
                 Citations.objects.filter(title=self.request.GET.get('title')).order_by('version').last()
             ).data
 
-        for k, v in self.label_mappings.items():
+        for k, v in LABEL_MAPPINGS.items():
             citation_data[k] = citation_data.pop(v,None)
 
         initial = super().get_initial() | citation_data
@@ -1097,7 +1098,7 @@ class EditCitationFormView(CitationFormMixin):
                 Citations.objects.filter(title=self.kwargs['title']).order_by('version').last()
             ).data
 
-        for k, v in self.label_mappings.items():
+        for k, v in LABEL_MAPPINGS.items():
             citation_data[k] = citation_data.pop(v,None)
 
         initial = super().get_initial() | citation_data
