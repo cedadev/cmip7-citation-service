@@ -8,7 +8,7 @@ from django.contrib.auth.mixins import (LoginRequiredMixin,
                                         PermissionRequiredMixin)
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.db.models import CharField, ForeignKey, Q, TextField
 from django.db.models.functions import Lower
@@ -27,7 +27,7 @@ from citations.external import resolve_drs
 from citations.forms import (ContactFormSet, EditCitationForm, FunderFormSet,
                              InstitutionFormSet, InstitutionIdForm,
                              NewCitationForm, ReferenceFormSet, ReplicaFormSet,
-                             reference_options)
+                             reference_options, reference_mapping)
 from citations.models import (Citations, FundingStreams, Institutions, Parties,
                               References)
 from citations.serializers import (CitationsSerializer,
@@ -137,16 +137,48 @@ def get_cite_as(citation: Citations):
         ])
     }
 
+def render_abstract(data: dict) -> str:
+
+    replace_refs = {}
+    for bracket in data['abstract'].split('('):
+
+        try:
+            partial_ref = bracket.split(')')[0]
+            name = partial_ref.split(' ')[0]
+            year = partial_ref.split(' ')[-1]
+            for reftype in CitationsSerializer.Meta.citation_types:
+                for ref in data.get(reftype,[]):
+                    if name in ref['title'] and year in ref['title']:
+                        replace_refs[f'({partial_ref})'] = ''.join([
+                            '<a href="',ref['id'],
+                            '">(',partial_ref,')</a>'
+                        ])
+        except IndexError:
+            pass
+
+    abstract = data['abstract']
+    for k,v in replace_refs.items():
+        abstract = abstract.replace(k,v)
+
+    return str(abstract)
+
+def render_rights(data: dict) -> str:
+
+    if data.get('rights') in settings.RIGHTS_MAP:
+        return f'<a href={settings.RIGHTS_MAP[data["rights"]][0]}>' + \
+            f'{settings.RIGHTS_MAP[data["rights"]][1]} ({data["rights"]})</a>'
+    return data.get('rights')
+
+
 def render_reference_html(ref: dict) -> dict:
 
     if ref['title'][-1] != '.':
         ref['title'] += '.'
 
-    cite_core = ref['citeas'].replace(ref["title"],"").replace(ref["id"],"") or '.'
-    if cite_core[-1] != '.':
-        cite_core += '.'
+    ref['citeas'] = ref['citeas'].replace(
+        ref["title"],f"<b>{ref["title"]} </b>").replace(
+            ref["id"],f"<a href={ref['id']}>{ref['id']}.</a>")
 
-    ref['citeas'] = f'<b>{ref["title"]} </b>{cite_core} <a href={ref["id"]}>{ref["id"]}.</a>' 
     return ref
 
 def fullname(party):
@@ -493,20 +525,33 @@ class CitationView(GenericRenderedView):
         if citation.version != latest_version:
             context['latest_version'] = latest_version
 
+
+        ## View-specific rendering
+        
+        # 1. Render cite_as property
         if citation.published:
             context['cite_as'] = get_cite_as(citation)
 
+        # 2. Render References
         for reference_type in CitationsSerializer.Meta.citation_types:
             if citation_data.get(reference_type):
                 for ref in citation_data[reference_type]:
                     ref = render_reference_html(ref)
 
+        # 3. Add Code Snippet
         context['code_snippet'] = get_code_snippet(citation_data)
 
+        # 4. Add Data Access URL (DRS_URL)
         if not bool(citation.drs_url):
             context['drs_url'] = get_drs_url(citation_data)
         else:
             context['drs_url'] = citation.drs_url
+
+        # 5. Render Rights
+        context['rights'] = render_rights(citation_data)
+
+        # 6. Render Abstract
+        context['abstract'] = render_abstract(citation_data)
 
         context['citation'] = citation_data
         return context
@@ -854,8 +899,7 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
                     serializer=ReferencesSerializer,
                     model=References,
                     filter_kwargs=['id'],
-                    allow_update=True,
-                    fill_data_parameters=True)
+                    allow_update=True)
             ref_data[relation].append(inst_pk)
         return ref_data
              
@@ -924,9 +968,9 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
         if main_data.get('primary_id',None) is None:
             return self.render_to_response(
                 self.get_context_data(form=form, **kwargs) | {
+                    'errors': '1',
                     'extra_errors': {
                         'contact':["A primary contact must be provided"],
-                        'errors': 1
                 }})
 
         main_data['institutions'] = self.clean_formset_data(
@@ -1033,7 +1077,17 @@ class NewCitationFormView(CitationFormMixin):
         
         main_data.update(formset_data)
 
-        return self.replicate_data(data=main_data)
+        try:
+            return self.replicate_data(data=main_data)
+        except ValidationError as err:
+            return self.render_to_response(self.get_context_data(form=form) | {
+                'errors': '1 or more', 
+                'extra_errors': {
+                    'general':[getattr(err, 'message', str(err))]
+                }
+            })
+        except Exception as err:
+            raise err
     
     def get_initial(self):
         citation_data = {}
@@ -1084,7 +1138,17 @@ class EditCitationFormView(CitationFormMixin):
         data['version'] = instance.version
         data['id'] = instance.id
 
-        return self.replicate_data(instance=instance, data=data)
+        try:
+            return self.replicate_data(instance=instance, data=data)
+        except ValidationError as err:
+            return self.render_to_response(self.get_context_data(form=form, title=title) | {
+                'errors': '1 or more', 
+                'extra_errors': {
+                    'general':[getattr(err, 'message', str(err))]
+                }
+            })
+        except Exception as err:
+            raise err
         
     def get_initial(self):
 
@@ -1112,7 +1176,7 @@ class EditCitationFormView(CitationFormMixin):
         references = []
         for relation in self.serializer_class.Meta.citation_types:
             for v in init.get(relation):
-                v['relation'] = relation
+                v['relation'] = reference_mapping.index(relation) + 1
                 v['DOI'] = v['id']
                 references.append(v)
         

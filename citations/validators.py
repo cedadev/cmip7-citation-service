@@ -5,6 +5,18 @@ import xmltodict
 from django.conf import settings
 from django.core.exceptions import ValidationError
 
+import logging
+from citations.utils import logstream
+
+try:
+    import esgvoc.api as ev
+except ImportError:
+    ev = None
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logstream)
+logger.propagate = False
+
 
 def validate_orcid(orcid: Union[str,None]):
     """
@@ -50,15 +62,31 @@ def validate_component(
     """
     Check mip_era against CVs
     """
-    r = requests.get(f'{repo}/{label.lower()}/{component.lower()}.json')
-    if str(r.status_code) != '200':
-        if raise_exception:
+
+    if ev:
+        project_id = 'CMIP7'
+        if repo != settings.CV_REPO:
+            project_id = 'CORDEX-CMIP6'
+
+        logger.info(f'Validating {component} as {label} in {project_id} using ESGF Vocabs')
+        term_result = ev.get_term_in_collection(term_id=component.lower(), project_id=project_id.lower(), collection_id=label.lower())
+        if not bool(term_result):
+            logger.error(f'{component} not found in ESGF Vocabs for {label} in {project_id}')
             raise ValidationError(f'{component} not a valid {label}')
-        else:
-            return None
-    
-    if requested:
-        return r.json()[requested]
+        
+        if requested:
+            return getattr(term_result,requested,[])
+
+    else:
+        r = requests.get(f'{repo}/{label.lower()}/{component.lower()}.json')
+        if str(r.status_code) != '200':
+            if raise_exception:
+                raise ValidationError(f'{component} not a valid {label}')
+            else:
+                return None
+        
+        if requested:
+            return r.json()[requested]
     
 def validate_cordex_facets(data: dict, raise_exceptions: bool = False):
 
@@ -96,7 +124,7 @@ def validate_cmip7_facets(data: dict, raise_exceptions: bool = False):
     experiments = validate_component(data.get('activity_id'), 'activity', requested='experiments') or []
     if data.get('experiment_id') not in experiments:
         if raise_exceptions:
-            raise ValidationError(f'{data.get('experiment_id')} not valid for {data.get('activity_id')}')
+            raise ValidationError(f'{data.get('experiment_id')} not valid for {data.get('activity_id')}: Valid experiments are {experiments}')
 
 def validate_title(title: str, raise_exceptions = False):
     """
@@ -119,7 +147,7 @@ def validate_title(title: str, raise_exceptions = False):
         experiments = validate_component(activity_id, 'activity', requested='experiments') or []
         if experiment_id not in experiments:
             if raise_exceptions:
-                raise ValidationError(f'{experiment_id} not valid for {activity_id}')
+                raise ValidationError(f'{experiment_id} not valid for {activity_id}: Valid experiments are {experiments}')
             else:
                 experiment_id = ''
         

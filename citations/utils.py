@@ -26,3 +26,5 @@ CORE_FACETS = [
     'source_id',
     'institution_id',
 ]
+
+ESGVOC_FACET_LABELS = ['mip_era','activity','institution','source','experiment', 'domain']
