@@ -54,29 +54,29 @@
         <div class="tab-pane fade show active" id="tabA" role="tabpanel">
             <h3><b>General Information</b></h3>
             <br>
-            <table class="table table-striped border border-light">
+            <table class="table table-striped border border-light" style="table-layout: fixed; width: 100%;">
                 <tr>
-                    <th>Name</th>
-                    <td>{{ citation.title }}</td>
+                    <th style="width: 15%;">Name</th>
+                    <td style="width: 85%;">{{ citation.title }}</td>
                 </tr>
                 <tr>
                     <th>Abstract</th>
-                    <td>{{ citation.abstract }}</td>
+                    <td>{{ abstract|safe|linebreaksbr }}</td>
                 </tr>
                 {% if drs_url %}
                 <tr>
-                    <th>DRS URL</th>
-                    <td><a href="{{ drs_url }}">{{ drs_url }}</a></td>
+                    <th>Data Access URL</th>
+                    <td style="word-break: break-all;"><a href="{{ drs_url }}">{{ drs_url }}</a></td>
                 </tr>
                 {% endif %}
                 {% if cite_as %}
                 <tr>
                     <th>Cite As</th>
-                    <td><b>{{ cite_as.title }}.</b> {{ cite_as.rotc }}.<a href="{{ citation.doi_url }}"> {{ citation.doi_url }}</a></td>
+                    <td style="word-break: break-all;"><b>{{ cite_as.title }}.</b> {{ cite_as.rotc }}.<a href="{{ citation.doi_url }}"> {{ citation.doi_url }}</a></td>
                 {% endif %}
                 <tr>
                     <th>Rights</th>
-                    <td>{{ citation.rights }}</td>
+                    <td>{{ rights|safe }}</td>
                 </tr>
                 <tr>
                     <th>License</th>

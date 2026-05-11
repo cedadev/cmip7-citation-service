@@ -13,6 +13,7 @@
         <div class="alert alert-warning">
             {{ errors }} error(s) found in the citation:
             <ul>
+                {% for err in extra_errors.general %} <li>{{ err }}</li> {% endfor %}
                 {% for err in extra_errors.contact %} <li>Contact: {{ err }}</li> {% endfor %}
                 {% for err in extra_errors.institution%} <li>Institution: {{ err }}</li> {% endfor %}
                 {% for err in extra_errors.funder %} <li>Funder: {{ err }}</li> {% endfor %}
@@ -24,7 +25,20 @@
     <form method="post">
         {% csrf_token %}
         {% for title, fields in form.field_groups.items %}
-            <h3>{{ title }}</h3>
+            <h3>{{ title }}
+            {% if title == 'General Information' %}
+                </h3>
+            <p><i>Title is typically of the form: <ul>
+                <li>"mip_era.activity_id.institution_id.source_id.experiment_id" for CMIP7.</li>
+                <li>"mip_era.activity_id.domain_id.institution_id.driving_experiment_id.source_id" for CORDEX.</li>
+            </ul></i></p>
+            {% elif title == 'CMIP7 Facets' %}
+            <span style="color: red;">*</span></h3>
+            <!-- CMIP7 Facets section - will be used in validation -->
+             <p><i>Facets will be validated against CMIP7/CORDEX EMD (ESGVOC package)</i></p>
+            {% else %}
+            </h3>
+            {% endif %}
             <table class="table table-striped border border-light">
                 {% for field in form %}
                     {% if field.label in fields %}
