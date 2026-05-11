@@ -1,5 +1,6 @@
 import hashlib
 import json
+import re
 
 import requests
 from django.conf import settings
@@ -17,7 +18,12 @@ from citations.external import publish_record
 from citations.models import (Citations, FundingStreams, Institutions, Parties,
                               References, extract_from_orcid, locate_institute)
 from citations.validators import validate_title, validate_cmip7_facets, validate_cordex_facets
-from citations.utils import LABEL_MAPPINGS
+from citations.utils import LABEL_MAPPINGS, ESGVOC_FACET_LABELS
+
+try:
+    import esgvoc.api as ev
+except ImportError:
+    ev = None
 
 def mint_doi_for_data(data: dict):
     """
@@ -54,60 +60,152 @@ def mint_doi_for_data(data: dict):
         return pubdata
 
 def institution_mappings(institution_id: str) -> str:
+
     try:
         mappings = requests.get(settings.INSTITUTION_MAPPINGS_URL).json()
         return mappings[institution_id.lower()]
     except Exception:
-        # Unreachable or no mapping available
-        return {'name': institution_id, 'acronym': institution_id}
-     
-def title_from_facets(data: dict, validate_all: bool = False):
+        if not ev:
+            return {'name': institution_id, 'acronym': institution_id}
+        
+    # Get the institution from esgvoc
+    component = ev.get_term_in_collection(
+        project_id='cmip7',
+        collection_id='institution',
+        term_id=institution_id) or ev.get_term_in_collection(
+        project_id='cmip7',
+        collection_id='institution',
+        term_id=institution_id.lower())
+    
+    data = {'name': institution_id, 'acronym': institution_id}
+    if component:
+        country = None
+        try:
+            country = component.members[0].location[0].country
+        except Exception as e:
+            pass
 
-    if data.get('domain_id'):
+        data.update({
+            'name': getattr(component,'description',institution_id), 
+            'acronym': getattr(component,'acronyms',[institution_id])[0],
+        })
+        if country: 
+            data.update({'country': country})
+    return data
+    
+     
+def title_from_facets(data: dict, validate_all: bool = False, raise_exceptions: bool = True):
+
+    if bool(data.get('domain_id')):
         # CORDEX Data
         if validate_all:
-            validate_cordex_facets(data, raise_exceptions=True)
+            validate_cordex_facets(data, raise_exceptions=raise_exceptions)
 
         return f'{data["mip_era"]}.{data["activity_id"]}.{data["domain_id"]}.{data["institution_id"]}.{data["experiment_id"]}.{data["source_id"]}'
     
     if validate_all:
-        validate_cmip7_facets(data, raise_exceptions=True)
+        validate_cmip7_facets(data, raise_exceptions=raise_exceptions)
     
     return f'{data["mip_era"]}.{data["activity_id"]}.{data["institution_id"]}.{data["source_id"]}.{data["experiment_id"]}'
 
-def abstract_from_esgvoc(data: dict):
+def obtain_all_references(data: dict) -> dict:
+    """
+    Obtain Citation references from the EMD (ESGVOC)
+    
+    Prevent adding a reference if it already exists.
+    """
 
-    try:
-        import esgvoc.api as ev
-    except ImportError:
+    if not ev:
+        return {}
+    
+    cites = []
+    for fl in ESGVOC_FACET_LABELS:
+        component = ev.get_term_in_collection(project_id='cmip7',collection_id=fl,term_id=data[LABEL_MAPPINGS.get(fl,fl)].lower())
+
+        if not component:
+            continue
+        if not hasattr(component,'references'):
+            continue
+
+        for ref in component.references:
+
+            if ref.doi in ref.citation:
+                citeas = ref.citation
+            else:
+                citeas = f'{ref.citation} {ref.doi}'
+
+            title = getattr(ref,'title',None) or re.search(r'^.*?\d{4}', ref.citation).group(0)
+            cites.append({
+                'title':title,
+                'citeas':citeas,
+                'id':ref.doi
+            })
+
+    return cites
+
+def assemble_license_info(data: dict) -> str:
+    """
+    Determine the paragraph of text to use for the license.
+    """
+    license = []
+    if hasattr(settings, 'GENERAL_INFO'):
+        license += settings.GENERAL_INFO.split('.')
+    if hasattr(settings, 'CITATION_GUIDANCE'):
+        license += settings.CITATION_GUIDANCE.split('.')
+
+    license.append(f'Published under {data["rights"]}')
+
+    return '. '.join(license)
+    
+def abstract_from_esgvoc(data: dict):
+    """
+    Determine the paragraph of abstract text from esgvoc parameters.
+    """
+
+    if not ev:
         return ''
     
     facet_descs = {
         'activity': '',
         'source': '',
-        'institution': 'Produced by: ',
+        'institution': ['Produced by: ', ' (Using Model/Source: ', ' with Experiment ',')'],
         'mip_era': 'MIP Era: ',
         'experiment': '',
         'domain': 'CORDEX Domain: '
     }
 
-    cmip7_facet_labels = ['mip_era','activity','institution','source','experiment', 'domain']
-    # Domain
-
     abstract = []
-    for fl in cmip7_facet_labels:
+    for fl in ESGVOC_FACET_LABELS:
+        entry = []
+        if not bool(data.get(LABEL_MAPPINGS.get(fl,fl))):
+            continue
+
         component = ev.get_term_in_collection(project_id='cmip7',collection_id=fl,term_id=data[LABEL_MAPPINGS.get(fl,fl)].lower())
 
-        entry = []
         entry.append(getattr(component,"description",data[LABEL_MAPPINGS.get(fl,fl)]))
 
         if getattr(component,"labels",None):
             entry.append(','.join(component.labels))
 
-        if entry:
+        if not entry:
+            continue
+
+        if isinstance(facet_descs[fl],list):
+            # Rendering institution description
+            descs = facet_descs[fl]
+            abstract.append(
+                descs[0] + ' - '.join(entry) + descs[1] + data['source_id'] + descs[2] + data['experiment_id'] + descs[3]
+            )
+        else:
             abstract.append(facet_descs[fl] + ' - '.join(entry))
 
-    return '\n\n'.join(abstract)
+    if abstract and hasattr(settings, 'GENERAL_INFO'):
+        abstract += [settings.GENERAL_INFO]
+
+    if abstract and hasattr(settings, 'CEDA_INFO'):
+        abstract += [settings.CEDA_INFO]
+
+    return '\n\n'.join([a.replace('\n','') for a in abstract])
 
 def chain_new_objects(
         data: dict, 
@@ -335,7 +433,7 @@ class ReferencesSerializer(GenericSerializerMixin):
     class Meta:
         model = References
         fields = ['title','citeas','id']
-        required_fields = ['DOI']
+        required_fields = ['id']
         relations = []
         id_relations = []
         field_mappings = {
@@ -379,14 +477,29 @@ class CitationsSerializer(GenericSerializerMixin):
         internal_fields=['editable', 'published']
 
     def create(self, validated_data):
-        # Only run if the data title is new
-        if 'title' in validated_data:
-            facets = validate_title(validated_data['title'])
-            for k in facets.keys():
 
-                # Fill if not overridden by input.
-                if validated_data.get(k,None) is None:
-                    validated_data[k] = facets[k]
+        # Only run if the data title is new
+
+        # No longer pulling facets from title - these are provided and validated or they are not provided at all.
+        # if 'title' in validated_data:
+        #     facets = validate_title(validated_data['title'], raise_exceptions=True)
+        #     for k in facets.keys():
+
+        #         data_facet = validated_data.get(k,None)
+        #         if data_facet is not None and data_facet != facets[k]:
+        #             raise ParseError(f'Facet "{k}" does not match title facet: {facets[k]}')
+
+        #         # Fill if not overridden by input.
+        #         if data_facet is None:
+        #             validated_data[k] = facets[k]
+        # else:
+
+        # If no title, must have all facets to construct title.
+
+        # Enforces valid facets for all records - but don't have to match title structure.
+        title = title_from_facets(validated_data, validate_all=True, raise_exceptions=True)
+        if not bool(validated_data.get('title',False)):
+            validated_data['title'] = title
 
         return super().create(validated_data)
     
@@ -408,20 +521,24 @@ class CitationsSerializer(GenericSerializerMixin):
 
         Locate or create references based on the provided information.
         """
-        # Facet-only title construction
-        try:
-            title = title_from_facets(data, validate_all=True)
-            if title != data['title']:
-                raise ParseError(f'Facet-constructed title {title} does not match provided title {data["title"]}')
 
-        except KeyError:
-            raise MethodNotAllowed("Submission must include title or all CMIP7 facets")
-        except ValidationError:
-            raise ParseError("Submission facets are invalid for CMIP7/CORDEX CVs")
-        
+        # Only add references if they are not already present
+        for gr in obtain_all_references(data):
+            new_ref = True
+            for reftype in self.Meta.citation_types:
+                if gr['id'] in data[reftype]:
+                    new_ref = False
+            if new_ref:
+                data['cites'].append(gr)
+
+        # Auto-fills
         if not bool(data.get('abstract')):
             data['abstract'] = abstract_from_esgvoc(data)
-
+        if not bool(data.get('rights')):
+            data['rights'] = settings.DEFAULT_RIGHTS # 'CC-BY-4.0' SPDX identifier
+        if not bool(data.get('license')):
+            data['license'] = assemble_license_info(data)
+        
         if data.get('institution_id'):
             # Create new institution as below, and add to the main affiliated institutions
 
@@ -431,7 +548,8 @@ class CitationsSerializer(GenericSerializerMixin):
                 inst_data,
                 InstitutionsSerializer,
                 Institutions,
-                filter_kwargs={'name': inst_data['name']}
+                filter_kwargs={'name': inst_data['name']},
+                allow_update=True
             )
             if 'institutions' not in data:
                 data['institutions'] = []
@@ -506,7 +624,8 @@ class CitationsSerializer(GenericSerializerMixin):
             for ref in data.pop(citation_type):
                 if isinstance(ref, dict):
                     reference = chain_new_objects(ref, ReferencesSerializer, References, 
-                                                  filter_kwargs=ReferencesSerializer.Meta.required_fields)
+                                                  filter_kwargs=ReferencesSerializer.Meta.required_fields,
+                                                  allow_update=True)
                     references.append(reference)
                 else:
                     references.append(ref)

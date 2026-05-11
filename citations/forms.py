@@ -17,6 +17,12 @@ reference_options = (
     (3, 'cites')
 )
 
+reference_mapping = [
+    'is_cited_by',
+    'is_referenced_by',
+    'cites'
+]
+
 POPOVER_ATTRS = {
     'data-bs-toggle':'popover',
     'data-bs-trigger':'hover',
@@ -108,7 +114,7 @@ class ReferenceForm(forms.Form):
         required=False,
         widget=forms.Textarea(attrs={'placeholder':"Reference Citation in full"})
     )
-    DOI      = forms.CharField(label='DOI', max_length=50, required=True, widget=forms.TextInput(attrs={'placeholder':"Reference DOI"}))
+    DOI      = forms.CharField(label='DOI', max_length=200, required=True, widget=forms.TextInput(attrs={'placeholder':"Reference DOI"}))
     relation = forms.ChoiceField(choices=reference_options)
 
     field_order = [
@@ -315,7 +321,8 @@ class EditCitationForm(CitationForm):
             'readonly':'readonly',
             'style':'background-color: #adadad;',
             'data-bs-content':'Not possible to edit existing record title.'
-        } | POPOVER_ATTRS)
+        } | POPOVER_ATTRS),
+        required=False
     )
 
 class NewCitationForm(CitationForm):
@@ -325,5 +332,7 @@ class NewCitationForm(CitationForm):
         validators=[alphanumeric],
         widget=forms.TextInput(attrs={
             'placeholder':'Title of CMIP7 Citation record',
-        })
+            'data-bs-content':'Title will be filled from CMIP7 facets if not provided.'
+        } | POPOVER_ATTRS),
+        required=False
     )
