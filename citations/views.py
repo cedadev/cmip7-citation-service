@@ -1206,8 +1206,13 @@ class EditCitationFormView(CitationFormMixin):
         # In order to be publishable, a record must have an empty DOI URL slot
         # - Already determined as editable if we're at this stage.
         # - Already determined as un-published as it's editable.
-        if Citations.objects.get(title=title, version=context['new_version']).doi_url == '':
-            context['publishable'] = True
+        publishable = True
+        if Citations.objects.get(title=title, version=context['new_version']).doi_url != '':
+            publishable = False
+        if not bool(settings.DATACITE_API_URL):
+            publishable = False
+            
+        context['publishable'] = publishable
             
         return context
 
