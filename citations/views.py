@@ -70,7 +70,7 @@ def render_code_snippet(citation_data: dict) -> Union[str,None]:
     The code snippet is not saved in the database and is generated on viewing the record.
     """
 
-    if not hasattr(settings, 'STAC_API'):
+    if not getattr(settings, 'STAC_API',None):
         return None
     
     for facet in CORE_FACETS:
