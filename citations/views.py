@@ -53,39 +53,22 @@ def create_new_permission(user, institution_id: str):
 
 
 def get_citable_party(party: Parties):
+    """
+    Get representation of a party in the Cite As field.
+    
+    This is also done on rendering, to just assemble these fields in the correct manner.
+    """
     if party.middle_names:
         return f'{party.last_name}, {party.first_name} {party.middle_names}'
     else:
         return f'{party.last_name}, {party.first_name}'
     
-def get_drs_url(citation_data: dict) -> Union[str,None]:
-
-    if not hasattr(settings, 'METAGRID_URL'):
-        return None
+def render_code_snippet(citation_data: dict) -> Union[str,None]:
+    """
+    Get code snippet on rendering.
     
-    for facet in CORE_FACETS:
-        if not bool(citation_data.get(facet,False)):
-            return None
-
-    if citation_data.get('domain_id') is not None:
-        return "%2C".join([
-            f'{settings.METAGRID_URL}/search?project={citation_data["mip_era"]}+STAC&activeFacets=%7B"mip_era"%3A"{citation_data["mip_era"]}"',
-            f'"institution_id"%3A"{citation_data["institution_id"]}"',
-            f'"activity_id"%3A"{citation_data["activity_id"]}"',
-            f'"source_id"%3A"{citation_data["source_id"]}"',
-            f'"driving_experiment_id"%3A"{citation_data["experiment_id"]}"',
-            f'"domain_id"%3A"{citation_data["domain_id"]}'
-        ])
-    else:
-        return "%2C".join([
-            f'{settings.METAGRID_URL}/search?project={citation_data["mip_era"]}+STAC&activeFacets=%7B"mip_era"%3A"{citation_data["mip_era"]}"',
-            f'"institution_id"%3A"{citation_data["institution_id"]}"',
-            f'"activity_id"%3A"{citation_data["activity_id"]}"',
-            f'"source_id"%3A"{citation_data["source_id"]}"',
-            f'"experiment_id"%3A"{citation_data["experiment_id"]}"'
-        ])
-    
-def get_code_snippet(citation_data: dict) -> Union[str,None]:
+    The code snippet is not saved in the database and is generated on viewing the record.
+    """
 
     if not hasattr(settings, 'STAC_API'):
         return None
@@ -126,7 +109,12 @@ def get_code_snippet(citation_data: dict) -> Union[str,None]:
 
     return "\n".join(code_snippet)
 
-def get_cite_as(citation: Citations):
+def render_cite_as(citation: Citations):
+    """
+    Generate the full Cite As description on loading the page.
+    
+    This is generated on rendering the citation view.
+    """
     primary = get_citable_party(citation.primary) + '; '
 
     return {
@@ -138,6 +126,10 @@ def get_cite_as(citation: Citations):
     }
 
 def render_abstract(data: dict) -> str:
+    """
+    Apply formatting in the form of links to references identified in the abstract
+    
+    This occurs on rendering the citation view."""
 
     replace_refs = {}
     for bracket in data['abstract'].split('('):
@@ -163,14 +155,23 @@ def render_abstract(data: dict) -> str:
     return str(abstract)
 
 def render_rights(data: dict) -> str:
+    """
+    Generate the Rights section with appropriate labelling and linking.
+    
+    This is generated on rendering the citation view, assuming the `Rights` section is not empty.
+    """
 
     if data.get('rights') in settings.RIGHTS_MAP:
         return f'<a href={settings.RIGHTS_MAP[data["rights"]][0]}>' + \
             f'{settings.RIGHTS_MAP[data["rights"]][1]} ({data["rights"]})</a>'
     return data.get('rights')
 
-
 def render_reference_html(ref: dict) -> dict:
+    """
+    Apply bold to the reference title and link to the DOI.
+
+    This occurs on rendering the citation view.
+    """
 
     if ref['title'][-1] != '.':
         ref['title'] += '.'
@@ -222,7 +223,7 @@ def check_publish_ok(request, data: dict):
 
     status = True
     if not data.get('doi_url'):
-        if not resolve_drs(data.get('drs_url', get_drs_url(data))):
+        if not resolve_drs(data.get('drs_url')):
             messages.error(request, "Failed to resolve DRS URL. DOI cannot be minted until data is available.")
         else:
             messages.error(request, f"Failed to mint DOI for the record {data['title']} (v{data['version']})")
@@ -530,7 +531,7 @@ class CitationView(GenericRenderedView):
         
         # 1. Render cite_as property
         if citation.published:
-            context['cite_as'] = get_cite_as(citation)
+            context['cite_as'] = render_cite_as(citation)
 
         # 2. Render References
         for reference_type in CitationsSerializer.Meta.citation_types:
@@ -538,19 +539,13 @@ class CitationView(GenericRenderedView):
                 for ref in citation_data[reference_type]:
                     ref = render_reference_html(ref)
 
-        # 3. Add Code Snippet
-        context['code_snippet'] = get_code_snippet(citation_data)
+        # 3. Render Code Snippet
+        context['code_snippet'] = render_code_snippet(citation_data)
 
-        # 4. Add Data Access URL (DRS_URL)
-        if not bool(citation.drs_url):
-            context['drs_url'] = get_drs_url(citation_data)
-        else:
-            context['drs_url'] = citation.drs_url
-
-        # 5. Render Rights
+        # 4. Render Rights
         context['rights'] = render_rights(citation_data)
 
-        # 6. Render Abstract
+        # 5. Render Abstract
         context['abstract'] = render_abstract(citation_data)
 
         context['citation'] = citation_data

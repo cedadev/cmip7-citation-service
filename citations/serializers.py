@@ -4,21 +4,18 @@ import re
 
 import requests
 from django.conf import settings
-from django.contrib.auth.models import Permission
-from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from rest_framework import serializers
-from rest_framework.exceptions import MethodNotAllowed, ParseError
-from django.core.exceptions import ValidationError
-
-from datetime import datetime
+from rest_framework.exceptions import MethodNotAllowed
 
 from citations.consumer.write import create_instance, update_instance
 from citations.external import publish_record
 from citations.models import (Citations, FundingStreams, Institutions, Parties,
                               References, extract_from_orcid, locate_institute)
-from citations.validators import validate_title, validate_cmip7_facets, validate_cordex_facets
-from citations.utils import LABEL_MAPPINGS, ESGVOC_FACET_LABELS
+from citations.validators import validate_cmip7_facets, validate_cordex_facets
+from citations.utils import LABEL_MAPPINGS, ESGVOC_FACET_LABELS, CORE_FACETS
+
+from typing import Union
 
 try:
     import esgvoc.api as ev
@@ -142,6 +139,33 @@ def obtain_all_references(data: dict) -> dict:
             })
 
     return cites
+
+def get_drs_url(data: dict) -> Union[str,None]:
+
+    if not hasattr(settings, 'METAGRID_URL'):
+        return None
+    
+    for facet in CORE_FACETS:
+        if not bool(data.get(facet,False)):
+            return None
+
+    if data.get('domain_id') is not None:
+        return "%2C".join([
+            f'{settings.METAGRID_URL}/search?project={data["mip_era"]}+STAC&activeFacets=%7B"mip_era"%3A"{data["mip_era"]}"',
+            f'"institution_id"%3A"{data["institution_id"]}"',
+            f'"activity_id"%3A"{data["activity_id"]}"',
+            f'"source_id"%3A"{data["source_id"]}"',
+            f'"driving_experiment_id"%3A"{data["experiment_id"]}"',
+            f'"domain_id"%3A"{data["domain_id"]}'
+        ])
+    else:
+        return "%2C".join([
+            f'{settings.METAGRID_URL}/search?project={data["mip_era"]}+STAC&activeFacets=%7B"mip_era"%3A"{data["mip_era"]}"',
+            f'"institution_id"%3A"{data["institution_id"]}"',
+            f'"activity_id"%3A"{data["activity_id"]}"',
+            f'"source_id"%3A"{data["source_id"]}"',
+            f'"experiment_id"%3A"{data["experiment_id"]}"'
+        ])
 
 def assemble_license_info(data: dict) -> str:
     """
@@ -538,6 +562,8 @@ class CitationsSerializer(GenericSerializerMixin):
             data['rights'] = settings.DEFAULT_RIGHTS # 'CC-BY-4.0' SPDX identifier
         if not bool(data.get('license')):
             data['license'] = assemble_license_info(data)
+        if not bool(data.get('drs_url')):
+            data['drs_url'] = get_drs_url(data)
         
         if data.get('institution_id'):
             # Create new institution as below, and add to the main affiliated institutions
