@@ -143,11 +143,11 @@ def obtain_all_references(data: dict) -> dict:
 def get_drs_url(data: dict) -> Union[str,None]:
 
     if not hasattr(settings, 'METAGRID_URL'):
-        return None
+        return ''
     
     for facet in CORE_FACETS:
         if not bool(data.get(facet,False)):
-            return None
+            return ''
 
     if data.get('domain_id') is not None:
         return "%2C".join([
