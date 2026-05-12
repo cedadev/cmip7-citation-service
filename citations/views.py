@@ -824,7 +824,10 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
             ]
 
         context['required_fields'] = list(set(required_fields))
-        context['publishable'] = True
+        publishable = True
+        if not bool(getattr(settings,'DATACITE_API_URL',None)):
+            publishable = False
+        context['publishable'] = publishable
         return context
 
     def clean_formset_data(self, formset: dict, serializer, model, allow_update: bool = False) -> list:
@@ -1099,7 +1102,6 @@ class NewCitationFormView(CitationFormMixin):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['publishable'] = True
         return context
 
 class EditCitationFormView(CitationFormMixin):
@@ -1201,10 +1203,8 @@ class EditCitationFormView(CitationFormMixin):
         # In order to be publishable, a record must have an empty DOI URL slot
         # - Already determined as editable if we're at this stage.
         # - Already determined as un-published as it's editable.
-        publishable = True
+        publishable = context.get('publishable',True)
         if Citations.objects.get(title=title, version=context['new_version']).doi_url != '':
-            publishable = False
-        if not bool(settings.DATACITE_API_URL):
             publishable = False
             
         context['publishable'] = publishable
