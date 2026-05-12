@@ -155,4 +155,4 @@ def publish_record(data: dict) -> str:
     publication['publication_year'] = pub_yr
 
 
-    return True, publication | {'published': True}
+    return True, publication | {'published': True, 'editable': False}
