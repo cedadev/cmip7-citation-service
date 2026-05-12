@@ -177,9 +177,11 @@ def assemble_license_info(data: dict) -> str:
     if hasattr(settings, 'CITATION_GUIDANCE'):
         license += settings.CITATION_GUIDANCE.split('.')
 
-    license.append(f'Published under {data["rights"]}')
+    license.append(f'Published under {data["rights"]}.')
 
-    return '. '.join(license)
+    license = [lp for lp in license if lp.replace('\n','')]
+
+    return '. '.join(license).replace('\n','')
     
 def abstract_from_esgvoc(data: dict):
     """

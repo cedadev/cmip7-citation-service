@@ -12,7 +12,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.db.models import CharField, ForeignKey, Q, TextField
 from django.db.models.functions import Lower
-from django.http import (HttpResponseForbidden, HttpResponseNotFound,
+from django.http import (HttpResponseForbidden, Http404,
                          HttpResponseRedirect)
 from django.urls import reverse
 from django.views.generic.base import TemplateView
@@ -246,7 +246,10 @@ class GenericRenderedView(TemplateView):
         return context
     
     def get_instance(self, pk):
-        return self.serializer_class(self.model.objects.get(pk=pk)).data
+        try:
+            return self.serializer_class(self.model.objects.get(pk=pk)).data
+        except self.model.DoesNotExist:
+            raise Http404(f'Requested object ID {pk} not found')
     
 class PaginatedListView(GenericRenderedView):
 
@@ -383,8 +386,17 @@ class SpecificAPIView(
     def put(self, request, *args, **kwargs):
         return self.update(request, *args, **kwargs)
     
+    def is_deletable(self, *args, **kwargs):
+        return True
+    
     def delete(self, request, *args, **kwargs):
         instance = self.get_object()
+
+        # Determine if this instance is connected to any other records?
+        if not self.is_deletable(instance):
+            return HttpResponseForbidden(
+                'Not able to delete this instance as it is associated with other entities')
+
         delete_instance(
             update_handler=handle_update,
             model=self.model,
@@ -503,11 +515,14 @@ class CitationView(GenericRenderedView):
         context = super().get_context_data(**kwargs)
 
         if not Citations.objects.filter(title=title):
-            raise HttpResponseNotFound('The requested citation title does not yet exist.')
+            raise Http404('The requested citation title does not yet exist.')
 
         if self.request.GET.get('version'):
             vn = self.request.GET.get('version')
-            citation = Citations.objects.get(title=title, version=vn)
+            try:
+                citation = Citations.objects.get(title=title, version=vn)
+            except Citations.DoesNotExist:
+                raise Http404('The requested citation does not yet exist.')
             citation_data = CitationsSerializer(citation).data
         else:
             citation = Citations.objects.filter(title=title).order_by('version').last()
@@ -559,10 +574,10 @@ class InstitutionView(GenericRenderedView):
 
     def get_context_data(self, pk, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['institute'] = self.get_instance(pk=pk)
-
+        inst = self.get_instance(pk=pk)
+        
+        context['institute'] = inst
         context['funding_contribs'] = [n for n in FundingStreams.objects.filter(affiliation=pk)]
-
         context['citations'] = (Citations.objects.filter(institutions__id=pk).values_list('title', flat=True).distinct())
 
         return context
@@ -575,7 +590,10 @@ class FundingStreamView(GenericRenderedView):
 
     def get_context_data(self, pk, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['stream'] = self.get_instance(pk=pk)
+        stream = self.get_instance(pk=pk)
+        
+        context['stream'] = stream
+        # Additional information not contained within the stream
         context['stream']['affiliation_id'] = self.model.objects.get(pk=pk).affiliation.id
 
         context['citations'] = (Citations.objects.filter(funders__id=pk).values_list('title', flat=True).distinct())
@@ -587,6 +605,9 @@ class PartyView(GenericRenderedView):
 
     def get_context_data(self, pk, **kwargs):
         context = super().get_context_data(**kwargs)
+        if not Parties.objects.filter(id=pk):
+            raise Http404('Requested party does not exist')
+        
         instance = Parties.objects.get(id=pk)
         context['party'] = PartiesSerializer(instance).data
 
@@ -621,6 +642,14 @@ class SpecificPartyAPIView(SpecificAPIView):
     model = Parties
     queryset = Parties.objects.all()
     serializer_class = PartiesSerializer
+
+    def is_deletable(self, instance: Parties):
+        
+        if Citations.objects.filter(primary_id=instance.pk):
+            return False
+        if Citations.objects.filter(contacts__in=[instance.pk]):
+            return False
+        return True
     
 class PartyAPIView(GenericAPIView):
     """
@@ -1151,13 +1180,18 @@ class EditCitationFormView(CitationFormMixin):
 
         if self.request.GET.get('version'):
             vn = self.request.GET.get('version')
-            citation_data = CitationsSerializer(
-                Citations.objects.get(title=self.kwargs['title'], version=vn)
-            ).data
+            try:
+                citation = Citations.objects.get(title=self.kwargs['title'], version=vn)
+            except Citations.DoesNotExist:
+                raise Http404(
+                    f'Citation does not exist with title {self.kwargs["title"]} (v{vn})')
         else:
-            citation_data = CitationsSerializer(
-                Citations.objects.filter(title=self.kwargs['title']).order_by('version').last()
-            ).data
+            citation = Citations.objects.filter(title=self.kwargs['title']).order_by('version').last()
+
+        if not citation.editable:
+            raise PermissionDenied(f'Citation "{citation.title} (v{citation.version})" is not editable')
+
+        citation_data = CitationsSerializer(citation).data
 
         for k, v in LABEL_MAPPINGS.items():
             citation_data[k] = citation_data.pop(v,None)
@@ -1227,8 +1261,11 @@ class ConfirmDeleteCitationView(GenericRenderedView):
 
     def get_context_data(self, pk, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['citation'] = self.get_instance(pk=pk)
-
+        citation = self.get_instance(pk=pk)
+        if isinstance(citation, HttpResponseNotFound):
+            return citation
+        
+        context['citation'] = citation
         return context
     
     def post(self, request, pk, *args, **kwargs):
