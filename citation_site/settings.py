@@ -139,3 +139,25 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 from .settings_local import *
 
 SITE_ID = 1
+
+CEDA_INFO = """
+This record was created via the CEDA Citation Service, maintained and hosted on the CEDA JASMIN Infrastructure.
+"""
+
+GENERAL_INFO = """
+CMIP7 is a project of the World Climate Research Programme (WCRP), coordinated by the Working Group on Coupled Modelling (WGCM).
+Phase 7 builds on previous phases executed under the leadership of the Program for Climate Model Diagnosis and Intercomparison (PCMDI) and relies on the Earth System Grid Federation (ESGF) and the Centre for Environmental Data Analysis (CEDA) along with numerous related activities for implementation.
+"""
+
+SERVICE_URL=''
+DOI_PREFIX=''
+
+DATACITE_API_URL  = None
+DATACITE_USERNAME = None
+DATACITE_PASSWORD = None
+
+DEFAULT_RIGHTS = 'CC-BY-4.0'
+
+RIGHTS_MAP = {
+    "CC-BY-4.0": ('https://creativecommons.org/licenses/by/4.0/','Creative Commons Attribution 4.0 International License')
+}
