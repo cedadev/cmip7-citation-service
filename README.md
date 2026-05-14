@@ -1,70 +1,15 @@
 # cmip7-citation-service
 
-## Citations Table
-name: string (300 char limit)
-Abstract: string (unlimited?)
-subjects: 
-rights: string (license)
-license: string (paragraph)
-primary: -> <author> # ManyToOne or ManyToMany
-Primary institute: -> <institution> # ManyToOne
-contacts: -> <authors> # ManyToMany
-funders: -> <funders> # ManyToMany
-cite as: string (300 char limit)
-data access: (list)
+CMIP7 is a project of the World Climate Research Programme (WCRP), coordinated by the Working Group on Coupled Modelling (WGCM).
+Phase 7 builds on previous phases executed under the leadership of the Program for Climate Model Diagnosis and Intercomparison (PCMDI) and relies on the Earth System Grid Federation (ESGF) and the Centre for Environmental Data Analysis (CEDA) along with numerous related activities for implementation.
 
-## Authors Table
-Author ID (internal)
-firstname: string
-lastname: string
-PID: orcid
-affiliation -> institution # Many
+The CMIP7 Citation Service is hosted at https://cmip7-citations.ceda.ac.uk and allows the creation of citation records for ESGF-NG datasets (CMIP7, CORDEX-CMIP6) directly via the UI, using the service REST API or automatically as part of the ESGF-NG publication workflow.
 
-## Funders Table
-Funding ID (internal)
-name: Funding name
-Affiliation -> institution
+NOTE: The ESGF-NG Publication Workflow Listener (KafkaListener) is not in production as of 14/05/2026 while the production Kafka systems are being assembled. Only the manual UI/API methods are available for creating records
 
-## Institution Table
-name: Institute
-IID: Institute ID
-<Other Institution Metadata>
+## Information for Citation Record DOI Minting
 
-## External References Table
-Table for listing external DOI references that are not part of the CMIP7 citations model
-title, year, authorset, doi
+It is possible to use the citation service to mint DOIs for records as needed. This requires an approving party to use either the UI or API to 'publish' the information via STFC's DataCite account for the Citation Service.
+Use of the Citation Service, including reviewing citation records and approving for publication can be found in the Citation Reviewer Guide: https://github.com/cedadev/cmip7-citation-service/blob/main/docs/CitationReviewerGuide.pdf
 
-OR
-
-reference text (full text?)
-
-## Database table relations
-
-Citation -> primary author # Many to One
-Citation -> contacts # Many to Many
-Citation -> primary institute # Many to One
-Citation -> Funders # Many to Many
-
-Author Affiliation -> Institute # Many to One
-Funder Affiliation -> Institute # Many to One
-
-## Web Interface
-### Reading Data
-REST API for json representations of objects from any table.
-Display URLs for each table to display single records
-Search interface?
-
-#### URLs:
-- API to all model views
-- Main model views (display all/search page with no content)
-- Specific model views (use ID or alternative for page viewing)
-
-### Writing Data
-Use of CEDA or Internal login for updating content with Web Interface?
-API-based updates with API-Key to specific url for creating new objects?
-For a new citation entry:
-Create any new institutions not present yet?
-Add authors/funders as needed?
-Create citation entry (can we create this first with blank entries?)
-
-# Token Authentication
+NOTE: The DataCite publication workflow is not in production as of 14/05/2026, pending the formal agreement of DOI responsibilities with the Consortium leaders at STFC.
