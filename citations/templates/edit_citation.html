@@ -32,7 +32,7 @@
                 <li>"mip_era.activity_id.institution_id.source_id.experiment_id" for CMIP7.</li>
                 <li>"mip_era.activity_id.domain_id.institution_id.driving_experiment_id.source_id" for CORDEX.</li>
             </ul></i></p>
-            {% elif title == 'CMIP7 Facets' %}
+            {% elif title == 'Search Facets' %}
             <span style="color: red;">*</span></h3>
             <!-- CMIP7 Facets section - will be used in validation -->
              <p><i>Facets will be validated against CMIP7/CORDEX EMD (ESGVOC package)</i></p>
@@ -221,9 +221,13 @@
         </div> 
 
         <h2>References</h2>
-        <p><i>If the DOI is used as part of another citation record, you are only required to enter the DOI field.</i></p>
-        <p><i>Please ensure the DOI and Title are the same as presented in the 'Cite As' field. Note the DOI field of an existing reference to this record </i><b>cannot be altered.</b></p>
-        <p><i>Example: (Cite As) <b>Title of a reference paper, document or otherwise and the date it was published (2026). </b>Last name, A.; Last name, B.; Last name, C.; Last name, D.; <a href="">example.doi.org/abc123</a></i></p>
+        <p>Important Information:</p>
+        <ul>
+            <li><i>If the DOI is used as part of another citation record, you are only required to enter the DOI field.</i></li>
+            <li><i>References will be prefilled from the </i><b>ESGVOC EMD</b><i> if identified from your set of search facets.</i></li>
+            <li><i>Please ensure the DOI and Title are the same as presented in the 'Cite As' field. Note the DOI field of an existing reference to this record </i><b>cannot be altered.</b>
+                <i>Example: (Cite As) <b>Title of a reference paper, document or otherwise and the date it was published (2026). </b>Last name, A.; Last name, B.; Last name, C.; Last name, D.; <a href="">example.doi.org/abc123</a></i></li>
+        </ul>
         <div id="references-formset-div">
             {% if extra_errors.reference %}
             <div class="alert alert-warning">

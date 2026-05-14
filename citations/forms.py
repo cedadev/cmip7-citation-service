@@ -192,9 +192,9 @@ class CitationForm(forms.ModelForm):
     )
 
     drs_url = forms.CharField(
-        label = 'DRS URL',
+        label = 'Data Access URL',
         widget=forms.TextInput(attrs={
-            'placeholder':'DRS URL for the CMIP7 dataset',
+            'placeholder':'Data Access URL for the CMIP dataset',
             'data-bs-content':'Only provide if data is not present in ESGF Core Nodes.'
             } | POPOVER_ATTRS),
         required=False
@@ -203,7 +203,7 @@ class CitationForm(forms.ModelForm):
     doi_url = forms.CharField(
         label='DOI URL',
         widget=forms.TextInput(attrs={
-            'placeholder':'DOI URL for the CMIP7 dataset',
+            'placeholder':'DOI URL for the CMIP dataset',
             'data-bs-content':'Only provide if data has pre-existing DOI already published.'
             } | POPOVER_ATTRS),
         required=False
@@ -211,7 +211,7 @@ class CitationForm(forms.ModelForm):
 
     rights = forms.CharField(
         widget=forms.Textarea(attrs={
-            'placeholder':'Usage rights for the CMIP7 dataset',
+            'placeholder':'Usage rights for the CMIP dataset',
             'data-bs-content':'Rights will be prefilled from Essential Model Documentation if empty.'
         } | POPOVER_ATTRS),
         required=False
@@ -219,7 +219,7 @@ class CitationForm(forms.ModelForm):
 
     license = forms.CharField(
         widget=forms.Textarea(attrs={
-            'placeholder':"License for the CMIP7 dataset",
+            'placeholder':"License for the CMIP dataset",
             'data-bs-content':'License will be prefilled from Essential Model Documentation if empty.'
         } | POPOVER_ATTRS),
         required=False
@@ -228,52 +228,52 @@ class CitationForm(forms.ModelForm):
     mip_era = forms.CharField(
         label = 'MIP Era',
         widget=forms.TextInput(attrs={
-            'placeholder':"CMIP7 MIP Era Facet",
-            'data-bs-content':'Validated against CMIP7 CVs.'
+            'placeholder':"MIP Era Facet",
+            'data-bs-content':'Validated against CMIP CVs.'
         } | POPOVER_ATTRS),
         required=False
     )
     activity = forms.CharField(
         label = 'Activity',
         widget=forms.TextInput(attrs={
-            'placeholder':"CMIP7 Activity Facet",
-            'data-bs-content':'Validated against CMIP7 CVs.'
+            'placeholder':"Activity Facet",
+            'data-bs-content':'Validated against CMIP CVs.'
         } | POPOVER_ATTRS),
         required=False
     )
     institution = forms.CharField(
         label = 'Institution',
         widget=forms.TextInput(attrs={
-            'placeholder':"CMIP7 Institution Facet",
-            'data-bs-content':'Validated against CMIP7 CVs.'
+            'placeholder':"Institution Facet",
+            'data-bs-content':'Validated against CMIP CVs.'
         } | POPOVER_ATTRS),
         required=False
     )
     source = forms.CharField(
         widget=forms.TextInput(attrs={
-            'placeholder':"CMIP7 Source Facet",
-            'data-bs-content':'Validated against CMIP7 CVs.'
+            'placeholder':"Source Facet",
+            'data-bs-content':'Validated against CMIP CVs.'
         } | POPOVER_ATTRS),
         required=False
     )
     experiment = forms.CharField(
         widget=forms.TextInput(attrs={
-            'placeholder':"CMIP7 Experiment Facet",
-            'data-bs-content':'Validated against CMIP7/CORDEX CVs.'
+            'placeholder':"(Driving) Experiment Facet",
+            'data-bs-content':'Validated against CMIP CVs.'
         } | POPOVER_ATTRS),
         required=False
     )
     domain = forms.CharField(
         widget=forms.TextInput(attrs={
-            'placeholder':"CMIP7 Domain Facet",
+            'placeholder':"Domain Facet",
             'data-bs-content':'Validated against CORDEX CVs.'
         } | POPOVER_ATTRS),
         required=False
     )
 
     field_groups = {
-        'General Information': ['Title', 'Abstract','DRS URL','DOI URL'],
-        'CMIP7 Facets': [
+        'General Information': ['Title', 'Abstract','Data Access URL','DOI URL'],
+        'Search Facets': [
             'MIP Era',
             'Activity',
             'Institution',
@@ -331,8 +331,8 @@ class NewCitationForm(CitationForm):
         max_length=300,
         validators=[alphanumeric],
         widget=forms.TextInput(attrs={
-            'placeholder':'Title of CMIP7 Citation record',
-            'data-bs-content':'Title will be filled from CMIP7 facets if not provided.'
+            'placeholder':'Title of CMIP Citation record',
+            'data-bs-content':'Title will be auto-assembled if the Search Facets are supplied. Either the Title or Search Facets must be given.'
         } | POPOVER_ATTRS),
         required=False
     )

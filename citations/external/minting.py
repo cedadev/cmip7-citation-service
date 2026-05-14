@@ -2,8 +2,6 @@ from datetime import datetime
 
 import requests
 from django.conf import settings
-from django.contrib import messages
-
 
 def get_ror_link(inst: str):
     """
@@ -81,15 +79,16 @@ def mint_doi_for_record(data: dict, publication_year: int) -> str:
                 "relationType": reltype.replace('_', ' ').title().replace(' ', '')
             })
 
-    doi_unique = ''
-    doi_prefix = '' # settings.DOI_PREFIX
+    # hundred-microseconds since beta release - guarantees uniqueness
+    doi_unique = str(int((datetime.now()-datetime(year=2026,month=5,day=11)).total_seconds()*10))
+    doi_prefix = getattr(settings, 'DOI_PREFIX',None)
 
     payload = {
         "data": {
             "type":"dois",
             "attributes":{
                 "event" : "publish", # For live publication
-                "doi": f'{doi_prefix}/ESGF/CMIP7.{doi_unique}',
+                "doi": f'{doi_prefix}/{data['mip_era']}.{doi_unique}',
                 "creators": creators,
                 "titles":[
                     {

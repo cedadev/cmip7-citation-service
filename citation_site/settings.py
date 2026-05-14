@@ -149,13 +149,6 @@ CMIP7 is a project of the World Climate Research Programme (WCRP), coordinated b
 Phase 7 builds on previous phases executed under the leadership of the Program for Climate Model Diagnosis and Intercomparison (PCMDI) and relies on the Earth System Grid Federation (ESGF) and the Centre for Environmental Data Analysis (CEDA) along with numerous related activities for implementation.
 """
 
-SERVICE_URL=''
-DOI_PREFIX=''
-
-DATACITE_API_URL  = None
-DATACITE_USERNAME = None
-DATACITE_PASSWORD = None
-
 DEFAULT_RIGHTS = 'CC-BY-4.0'
 
 RIGHTS_MAP = {
