@@ -1,7 +1,16 @@
 from datetime import datetime
-
+import base64
 import requests
 from django.conf import settings
+
+from citations.utils import logstream
+import logging
+
+#from esgf_core_utils.models.kafka.consumer import KafkaConsumer
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logstream)
+logger.propagate = False
 
 def get_ror_link(inst: str):
     """
@@ -33,10 +42,13 @@ def get_ror_link(inst: str):
         return resp['items'][inst_count]['id']
     return None
 
-def mint_doi_for_record(data: dict, publication_year: int) -> str:
+def mint_doi_for_record(data: dict, publication_year: int, id: str, return_citation: bool = False) -> str:
     """
     Apply to mint a DOI via DataCite for the information in this record
     """
+
+    if not getattr(settings,"DATACITE_API_URL",None):
+        return None
 
     creator_info = data['creators']
 
@@ -76,19 +88,16 @@ def mint_doi_for_record(data: dict, publication_year: int) -> str:
         for rel in data.get(reltype, []):
             related_identifiers.append({
                 "relatedIdentifier": rel['id'],
+                "relatedIdentifierType":"URL",
                 "relationType": reltype.replace('_', ' ').title().replace(' ', '')
             })
-
-    # hundred-microseconds since beta release - guarantees uniqueness
-    doi_unique = str(int((datetime.now()-datetime(year=2026,month=5,day=11)).total_seconds()*10))
-    doi_prefix = getattr(settings, 'DOI_PREFIX',None)
 
     payload = {
         "data": {
             "type":"dois",
             "attributes":{
-                "event" : "publish", # For live publication
-                "doi": f'{doi_prefix}/{data['mip_era']}.{doi_unique}',
+                #"event" : "publish", # For live publication
+                "prefix":settings.DOI_PREFIX,
                 "creators": creators,
                 "titles":[
                     {
@@ -106,7 +115,7 @@ def mint_doi_for_record(data: dict, publication_year: int) -> str:
                 "types": {
                     "resourceTypeGeneral": "Text"
                 },
-                "url": settings.SERVICE_URL + '/citation/' + data['id'],
+                "url": settings.SERVICE_URL + '/citation/' + id,
                 "version": data['version'],
                 "rightsList": [],
                 "fundingReferences": funds,
@@ -114,21 +123,32 @@ def mint_doi_for_record(data: dict, publication_year: int) -> str:
             }
         }
     }
+    logger.info(f'Sending Request to: {settings.DATACITE_API_URL}')
 
-    if settings.DATACITE_API_URL:
-        r = requests.post(
-            settings.DATACITE_API_URL,
-            json=payload,
-            auth=(settings.DATACITE_USERNAME, settings.DATACITE_PASSWORD)
-        )
-
-        if r.status_code >= 300:
-            return None
-        
-        return r.json()['data']['id']
+    if return_citation:
+        return payload
     
-    # Placeholder implementation - replace with actual minting logic
-    return f"https://doi.org/10.1234/{data.get('id', 'unknown')}"
+    token = base64.b64encode(
+        bytes(f'{settings.DATACITE_USERNAME}:{settings.DATACITE_PASSWORD}', 'utf-8')
+    ).decode("utf-8")
+    
+    headers = {
+        "accept": "application/vnd.api+json",
+        "content-type": "application/json",
+        "authorization": f"Basic {token}",
+    }
+
+    r = requests.post(
+        settings.DATACITE_API_URL,
+        json=payload,
+        headers=headers
+    )
+
+    if r.status_code >= 300:
+        logger.error(f'DOI Minting Failed: {r.content}')
+        return None
+    
+    return f"https://doi.org/{r.json()['data']['id']}"
 
 def resolve_drs(drs_url: str):
     """
@@ -137,7 +157,7 @@ def resolve_drs(drs_url: str):
     # Placeholder implementation - replace with actual resolution logic
     return True
 
-def publish_record(data: dict) -> str:
+def publish_record(data: dict, id: str) -> str:
     """
     Apply to mint a DOI via DataCite for the information in this record
     """
@@ -147,7 +167,7 @@ def publish_record(data: dict) -> str:
         return False, {'published':False}
 
     pub_yr = int(datetime.now().year)
-    publication['doi_url'] = mint_doi_for_record(data, pub_yr)
+    publication['doi_url'] = mint_doi_for_record(data, pub_yr, id=id)
     if not publication['doi_url']:
         return False, {'published':False}
     

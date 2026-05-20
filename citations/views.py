@@ -115,14 +115,14 @@ def render_cite_as(citation: Citations):
     
     This is generated on rendering the citation view.
     """
-    primary = get_citable_party(citation.primary) + '; '
+    all_authors = [get_citable_party(citation.primary)]
+
+    for contact in citation.contacts.all():
+        all_authors.append(get_citable_party(contact))
 
     return {
-        'title': f'{citation.title} ({getattr(citation,"publication_year", "2026")})',
-        'rotc': primary + '; '.join([
-            get_citable_party(contact)
-            for contact in citation.contacts.all()
-        ])
+        'title': f'{";".join(all_authors)}. ({getattr(citation,"publication_year", "2026")}).',
+        'rotc': f'{citation.title}. {settings.PUBLISHER}.'
     }
 
 def render_abstract(data: dict) -> str:
@@ -514,10 +514,17 @@ class CitationView(GenericRenderedView):
     def get_context_data(self, title, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        if not Citations.objects.filter(title=title):
+        version = None
+        if Citations.objects.filter(id=title):
+            c = Citations.objects.get(id=title)
+            title = c.title
+            version = c.version
+        elif not Citations.objects.filter(title=title):
             raise Http404('The requested citation title does not yet exist.')
+        else:
+            pass
 
-        if self.request.GET.get('version'):
+        if not version and self.request.GET.get('version'):
             vn = self.request.GET.get('version')
             try:
                 citation = Citations.objects.get(title=title, version=vn)
@@ -525,7 +532,10 @@ class CitationView(GenericRenderedView):
                 raise Http404('The requested citation does not yet exist.')
             citation_data = CitationsSerializer(citation).data
         else:
-            citation = Citations.objects.filter(title=title).order_by('version').last()
+            if not version:
+                citation = Citations.objects.filter(title=title).order_by('version').last()
+            else:
+                citation = Citations.objects.get(title=title, version=version)
             citation_data = CitationsSerializer(citation).data
 
         latest_version = Citations.objects.filter(title=title).order_by('version').last().version
@@ -1262,7 +1272,7 @@ class ConfirmDeleteCitationView(GenericRenderedView):
     def get_context_data(self, pk, **kwargs):
         context = super().get_context_data(**kwargs)
         citation = self.get_instance(pk=pk)
-        if isinstance(citation, HttpResponseNotFound):
+        if isinstance(citation, Http404):
             return citation
         
         context['citation'] = citation

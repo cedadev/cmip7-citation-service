@@ -27,4 +27,7 @@ CORE_FACETS = [
     'institution_id',
 ]
 
-ESGVOC_FACET_LABELS = ['mip_era','activity','institution','source','experiment', 'domain']
+ESGVOC_FACET_LABELS = {
+    'cmip7':['mip_era','activity','institution','source','experiment'],
+    'cordex-cmip6':['mip_era','activity','institution','source','driving_experiment', 'domain']
+}

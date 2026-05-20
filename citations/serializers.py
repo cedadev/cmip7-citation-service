@@ -1,6 +1,7 @@
 import hashlib
 import json
 import re
+import copy
 
 import requests
 from django.conf import settings
@@ -22,7 +23,7 @@ try:
 except ImportError:
     ev = None
 
-def mint_doi_for_data(data: dict):
+def mint_doi_for_data(data: dict, id: str):
     """
     'Data' is the partially serialized content for the record to be published.
 
@@ -32,6 +33,7 @@ def mint_doi_for_data(data: dict):
     - Send data to publish record
     
     """
+    data = copy.deepcopy(data)
 
     creators = [PartiesSerializer(instance=Parties.objects.get(pk=data['primary_id'])).data] + \
         [PartiesSerializer(instance=Parties.objects.get(pk=pk)).data for pk in data['contacts']]
@@ -52,7 +54,7 @@ def mint_doi_for_data(data: dict):
                 instance=References.objects.get(pk=pk)).data for pk in data.get(reltype,[])
         ]
     
-    status, pubdata = publish_record(data)
+    status, pubdata = publish_record(data, id=id)
     if status:
         return pubdata
 
@@ -115,9 +117,14 @@ def obtain_all_references(data: dict) -> dict:
     if not ev:
         return {}
     
+    project_id = data.get('mip_era').lower()
+    
     cites = []
-    for fl in ESGVOC_FACET_LABELS:
-        component = ev.get_term_in_collection(project_id='cmip7',collection_id=fl,term_id=data[LABEL_MAPPINGS.get(fl,fl)].lower())
+    for fl in ESGVOC_FACET_LABELS[project_id]:
+        component = ev.get_term_in_collection(
+            project_id=project_id,
+            collection_id=fl,
+            term_id=data[LABEL_MAPPINGS.get(fl,fl)].lower())
 
         if not component:
             continue
@@ -197,11 +204,14 @@ def abstract_from_esgvoc(data: dict):
         'institution': ['Produced by: ', ' (Using Model/Source: ', ' with Experiment ',')'],
         'mip_era': 'MIP Era: ',
         'experiment': '',
+        'driving_experiment': '',
         'domain': 'CORDEX Domain: '
     }
 
+    project_id = data.get('mip_era').lower()
+
     abstract = []
-    for fl in ESGVOC_FACET_LABELS:
+    for fl in ESGVOC_FACET_LABELS[project_id]:
         entry = []
         if not bool(data.get(LABEL_MAPPINGS.get(fl,fl))):
             continue
@@ -334,7 +344,7 @@ class GenericSerializerMixin(serializers.ModelSerializer):
             )
         
         if publish:
-            pubdata = mint_doi_for_data(validated_data)
+            pubdata = mint_doi_for_data(filtered_data, id=pk)
             if pubdata:
                 filtered_data.update(pubdata)
         
@@ -354,7 +364,7 @@ class GenericSerializerMixin(serializers.ModelSerializer):
 
         filtered_data  = self.filter_data(validated_data)
         filtered_data  = self.replace_id_relations(filtered_data)
-        filtered_data.pop('id',None)
+        id = filtered_data.pop('id',None)
 
         if len(filtered_data.keys()) == 0:
             raise MethodNotAllowed('No updates supplied')
@@ -364,7 +374,7 @@ class GenericSerializerMixin(serializers.ModelSerializer):
                 raise MethodNotAllowed(f'The field "{field}" is immutable')
             
         if publish:
-            pubdata = mint_doi_for_data(validated_data)
+            pubdata = mint_doi_for_data(filtered_data, id=id)
             if pubdata:
                 filtered_data.update(pubdata)
 
