@@ -16,7 +16,7 @@ Including another URLconf
 """
 from allauth.socialaccount.providers.github.views import oauth2_login
 from django.conf import settings
-from django.conf.urls import handler403, handler404
+from django.conf.urls import handler403, handler404, handler500
 from django.contrib import admin
 from django.contrib.auth.models import User
 from django.shortcuts import render
@@ -73,6 +73,19 @@ def custom_403(request, exception):
         "template_base":template_base,
     }, status=403)
 
+def custom_500(request):
+    if settings.USE_CEDA_BRANDING:
+        template_base = 'fwtheme_django/layout.html'
+    else:
+        template_base = 'bases/generic_base.html'
+
+    return render(request, "500.html", {
+        "reason": "Internal Server Error - Contact the CEDA Helpdesk",
+        "template_base":template_base,
+    }, status=500)
+
 handler404 = custom_404
 
 handler403 = custom_403
+
+handler500 = custom_500
