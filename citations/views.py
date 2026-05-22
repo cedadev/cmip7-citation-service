@@ -36,21 +36,36 @@ from citations.serializers import (CitationsSerializer,
                                    ReferencesSerializer, chain_new_objects,
                                    handle_update, title_from_facets)
 from typing import Union
-from citations.utils import LABEL_MAPPINGS, CORE_FACETS
+from citations.facet_mappings import ESGVOC_FACET_LABELS, STAC_LABELS
 
 def create_new_permission(user, institution_id: str):
+    """
+    Create a new permission type based on the newly added institution.
+    
+    The user who created the new institution will automatically be given access
+    to that new permission. This permission allows editing based on the ``institution_id``
+    of the record.
+
+    Creating a new record with an existing institution will only be allowed 
+    if the user already has permission for that institution.
+    """
 
     content_type_citation = ContentType.objects.get_for_model(Citations)
 
-    if not Permission.objects.filter(codename=f'edit_{institution_id}').exists():
-        pm = Permission.objects.create(
-            codename=f'edit_{institution_id}', 
-            name=f'Can edit {institution_id} citations',
-            content_type=content_type_citation)
-        
-        user.user_permissions.add(pm)
-        user.save()
+    if Permission.objects.filter(codename=f'edit_{institution_id}').exists():
 
+        if not user.has_perm(f'citations.edit_{institution_id}'):
+            raise PermissionDenied(
+                'Cannot create a record for an institution you are not allowed to review.'
+            )
+
+    pm = Permission.objects.create(
+        codename=f'edit_{institution_id}', 
+        name=f'Can edit {institution_id} citations',
+        content_type=content_type_citation)
+    
+    user.user_permissions.add(pm)
+    user.save()
 
 def get_citable_party(party: Parties):
     """
@@ -73,28 +88,19 @@ def render_code_snippet(citation_data: dict) -> Union[str,None]:
     if not getattr(settings, 'STAC_API',None):
         return None
     
-    for facet in CORE_FACETS:
+    if not bool(citation_data.get('mip_era')):
+        return None
+    
+    project_id = citation_data['mip_era'].lower()
+    
+    query = []
+    for label, facet in ESGVOC_FACET_LABELS[project_id].items():
         if citation_data.get(facet,None) is None:
             return None
-
-    query = [
-        f'      "cmip7:mip_era={citation_data["mip_era"]}",',
-        f'      "cmip7:activity_id={citation_data["activity_id"]}",',
-    ]
-
-    if citation_data.get('domain_id') is not None:
-        query += [
-            f'      "cmip7:domain_id={citation_data["domain_id"]}",',
-            f'      "cmip7:institution_id={citation_data["institution_id"]}",',
-            f'      "cmip7:driving_experiment_id={citation_data["experiment_id"]}",',
-            f'      "cmip7:source_id={citation_data["source_id"]}",',
-        ]
-    else:
-        query += [
-            f'      "cmip7:institution_id={citation_data["institution_id"]}",',
-            f'      "cmip7:source_id={citation_data["source_id"]}",',
-            f'      "cmip7:experiment_id={citation_data["experiment_id"]}",',
-        ]
+        
+        query.append(
+            f'      "cmip7:{STAC_LABELS.get(label,facet)}={citation_data[facet]}",'
+        )
 
     code_snippet = [
         'from pystac.client import Client',
@@ -182,7 +188,10 @@ def render_reference_html(ref: dict) -> dict:
 
     return ref
 
-def fullname(party):
+def fullname(party: dict) -> str:
+    """
+    Display the fullname of a party based on if the middle name is blank or not
+    """
     if party.get('middle_names'):
         if party['middle_names'] != '':
             return f"{party['first_name']} {party['middle_names']} {party['last_name']}"
@@ -190,6 +199,11 @@ def fullname(party):
     return f"{party['first_name']} {party['last_name']}"
 
 def deep_search(queryset, term: str, order_by: str, all_versions=True):
+    """
+    Fuzzy search for a term within the queryset.
+    
+    This also allows ordering of search results and filtering on versions.
+    """
     q = Q()
     model = queryset.model
 
@@ -207,6 +221,11 @@ def deep_search(queryset, term: str, order_by: str, all_versions=True):
         return queryset.filter(q).order_by(order_by)
 
 def filter_versions(queryset):
+    """
+    Find only the latest version of every citation record.
+    
+    Will find the titles of all records in the queryset and filter out the non-latest version records.
+    """
 
     titles = list(set(queryset.values_list('title', flat=True).distinct()))
     instances = []
@@ -220,6 +239,9 @@ def unwrap_request(data: dict) -> dict:
     return {k:v for k,v in data.items()}
 
 def check_publish_ok(request, data: dict):
+    """
+    Send a message to the user (UI) if a DOI minting event is unsuccessful
+    """
 
     status = True
     if not data.get('doi_url'):
@@ -235,8 +257,14 @@ def check_publish_ok(request, data: dict):
     return data, status
 
 class GenericRenderedView(TemplateView):
+    """
+    Generic processing for all UI views, including configuring CEDA branding templates
+    """
 
     def get_context_data(self, **kwargs):
+        """
+        Adds the CEDA branding or generic base for rendering.
+        """
         context = super().get_context_data(**kwargs)
         if settings.USE_CEDA_BRANDING:
             context['template_base'] = 'fwtheme_django/layout.html'
@@ -246,18 +274,27 @@ class GenericRenderedView(TemplateView):
         return context
     
     def get_instance(self, pk):
+        """
+        Handle 404 on getting an instance of a model
+        """
         try:
             return self.serializer_class(self.model.objects.get(pk=pk)).data
         except self.model.DoesNotExist:
             raise Http404(f'Requested object ID {pk} not found')
     
 class PaginatedListView(GenericRenderedView):
+    """
+    Pagination for all UI List views using HTMX
+    """
 
     def get_pagination(self, search_queryset, page_number: int = 1):
         paginator = Paginator(search_queryset, self.paginate_by)
         return paginator.get_page(page_number)
     
     def get_context_data(self, page_obj, page_number: int = 1, search_term = None, count=None,**kwargs):
+        """
+        Handle pagination context including page number and search term if provided.
+        """
         context = super().get_context_data(**kwargs)
 
         context['total_results'] = count or self.model.objects.count()
@@ -269,6 +306,9 @@ class PaginatedListView(GenericRenderedView):
         return context
     
     def perform_search(self) -> tuple:
+        """
+        Obtain the search term and apply a deep 'fuzzy' search to all instances of the model.
+        """
         count = self.model.objects.count()
         term = None
         if self.request.GET.get('search') != '' and self.request.GET.get('search') is not None:
@@ -281,7 +321,8 @@ class PaginatedListView(GenericRenderedView):
 
     def get(self, request, *args, **kwargs):
         """
-        Get list view with filtering"""
+        Get list view with filtering and pagination
+        """
         searches, count, term = self.perform_search()
 
         adj_searches          = self.adjust_for_UI_render(searches)
@@ -305,6 +346,9 @@ class PaginatedListView(GenericRenderedView):
         return self.render_to_response(context)
 
     def adjust_for_UI_render(self, queryset) -> list:
+        """
+        Convert queryset to JSON representations
+        """
         return [self.serializer_class(q).data for q in queryset]
 
 class GenericAPIView(
@@ -689,6 +733,9 @@ class CitationAPIView(GenericAPIView):
     def create(self, request, *args, **kwargs):
         data = unwrap_request(request.data)
 
+        if 'institution_id' in data: 
+            create_new_permission(request.user, data['institution_id'])
+
         publish = data.pop('publish_on_save',None)
 
         serializer = self.get_serializer(data=data)
@@ -709,9 +756,6 @@ class CitationAPIView(GenericAPIView):
         if latest:
             if not latest[0].editable:
                 return Response(serializer.validated_data, status=status.HTTP_405_METHOD_NOT_ALLOWED)
-
-        if 'institution_id' in serializer.validated_data: 
-            create_new_permission(request.user, serializer.validated_data['institution_id'])
             
         data = serializer.save(publish=publish, user_id=request.user.username)
         if publish:
@@ -1046,8 +1090,10 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
 
     def replicate_data(self, instance=None, data=None):
 
-        for v, k in LABEL_MAPPINGS.items():
-            data[k] = data.pop(v,None)
+        project_id = data.get('mip_era','').lower()
+        # Remap External to Internal Labels
+        # for label, facet in ESGVOC_FACET_LABELS.get(project_id,{}).items():
+        #     data[facet] = data.pop(label,None)
 
         pubstatus = True
         publish = self.request.POST.get('publish')
@@ -1133,8 +1179,9 @@ class NewCitationFormView(CitationFormMixin):
                 Citations.objects.filter(title=self.request.GET.get('title')).order_by('version').last()
             ).data
 
-        for k, v in LABEL_MAPPINGS.items():
-            citation_data[k] = citation_data.pop(v,None)
+        # # Map Internal to External Labels
+        # for label, facet in ESGVOC_FACET_LABELS.get(citation_data.get('mip_era',''),{}).items():
+        #     citation_data[label] = citation_data.pop(facet,None)
 
         initial = super().get_initial() | citation_data
         return initial
@@ -1203,8 +1250,11 @@ class EditCitationFormView(CitationFormMixin):
 
         citation_data = CitationsSerializer(citation).data
 
-        for k, v in LABEL_MAPPINGS.items():
-            citation_data[k] = citation_data.pop(v,None)
+        project_id = citation_data.get('mip_era','').lower()
+
+        # # Map Internal to External Labels
+        # for label, facet in ESGVOC_FACET_LABELS.get(project_id,{}).items():
+        #     citation_data[label] = citation_data.pop(facet,None)
 
         initial = super().get_initial() | citation_data
         return initial
@@ -1261,12 +1311,16 @@ class ConfirmDeleteCitationView(GenericRenderedView):
     serializer_class = CitationsSerializer
 
     def dispatch(self, request, *args, **kwargs):
-        title = kwargs.get('title') or request.GET.get('title')
-        if title:
-            institute = self.model.objects.filter(title=title).order_by('-version').last().institution_id
-            if institute:
-                if not request.user.user_permissions.filter(codename=f'edit_{institute}'):
-                    return HttpResponseRedirect(reverse('citations:reviewer_request'))
+        id = kwargs.get('pk') or request.GET.get('pk')
+
+        record = self.model.objects.filter(pk=id)
+        if not record:
+            return Http404('No record specified for deletion')
+
+        institute = self.model.objects.get(pk=id).institution_id
+        if institute:
+            if not request.user.user_permissions.filter(codename=f'edit_{institute}'):
+                return HttpResponseRedirect(reverse('citations:reviewer_request'))
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, pk, **kwargs):
