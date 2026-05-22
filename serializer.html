@@ -1,0 +1,340 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Citation Auto Generation (Serializer Classes) &mdash; CEDA CMIP7 Citation Service 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Citation Views and Rendering" href="views.html" />
+    <link rel="prev" title="CMIP7 Citation Service" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            CEDA CMIP7 Citation Service
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Developer Guides</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Citation Auto Generation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#citations.serializers.mint_doi_for_data"><code class="docutils literal notranslate"><span class="pre">mint_doi_for_data()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.serializers.institution_mappings"><code class="docutils literal notranslate"><span class="pre">institution_mappings()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.serializers.title_from_facets"><code class="docutils literal notranslate"><span class="pre">title_from_facets()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.serializers.obtain_all_references"><code class="docutils literal notranslate"><span class="pre">obtain_all_references()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.serializers.get_drs_url"><code class="docutils literal notranslate"><span class="pre">get_drs_url()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.serializers.assemble_license_info"><code class="docutils literal notranslate"><span class="pre">assemble_license_info()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.serializers.abstract_from_esgvoc"><code class="docutils literal notranslate"><span class="pre">abstract_from_esgvoc()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.serializers.chain_new_objects"><code class="docutils literal notranslate"><span class="pre">chain_new_objects()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.serializers.GenericSerializerMixin"><code class="docutils literal notranslate"><span class="pre">GenericSerializerMixin</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#citations.serializers.GenericSerializerMixin.to_internal_value"><code class="docutils literal notranslate"><span class="pre">GenericSerializerMixin.to_internal_value()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.serializers.GenericSerializerMixin.filter_data"><code class="docutils literal notranslate"><span class="pre">GenericSerializerMixin.filter_data()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.serializers.GenericSerializerMixin.replace_id_relations"><code class="docutils literal notranslate"><span class="pre">GenericSerializerMixin.replace_id_relations()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.serializers.GenericSerializerMixin.create"><code class="docutils literal notranslate"><span class="pre">GenericSerializerMixin.create()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.serializers.GenericSerializerMixin.update"><code class="docutils literal notranslate"><span class="pre">GenericSerializerMixin.update()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.serializers.InstitutionsSerializer"><code class="docutils literal notranslate"><span class="pre">InstitutionsSerializer</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#citations.serializers.InstitutionsSerializer.fill_data_parameters"><code class="docutils literal notranslate"><span class="pre">InstitutionsSerializer.fill_data_parameters()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.serializers.PartiesSerializer"><code class="docutils literal notranslate"><span class="pre">PartiesSerializer</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#citations.serializers.PartiesSerializer.fill_data_parameters"><code class="docutils literal notranslate"><span class="pre">PartiesSerializer.fill_data_parameters()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.serializers.FundingStreamsSerializer"><code class="docutils literal notranslate"><span class="pre">FundingStreamsSerializer</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#citations.serializers.FundingStreamsSerializer.fill_data_parameters"><code class="docutils literal notranslate"><span class="pre">FundingStreamsSerializer.fill_data_parameters()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.serializers.ReferencesSerializer"><code class="docutils literal notranslate"><span class="pre">ReferencesSerializer</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#citations.serializers.ReferencesSerializer.fill_data_parameters"><code class="docutils literal notranslate"><span class="pre">ReferencesSerializer.fill_data_parameters()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.serializers.CitationsSerializer"><code class="docutils literal notranslate"><span class="pre">CitationsSerializer</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#citations.serializers.CitationsSerializer.create"><code class="docutils literal notranslate"><span class="pre">CitationsSerializer.create()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.serializers.CitationsSerializer.fill_data_parameters"><code class="docutils literal notranslate"><span class="pre">CitationsSerializer.fill_data_parameters()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.serializers.handle_update"><code class="docutils literal notranslate"><span class="pre">handle_update()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="views.html">Citation Views and Rendering</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dois.html">DOI Minting Service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="kafka.html">Kafka Queue Systems &amp; Listener</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stac.html">STAC ESGF Integration</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">CEDA CMIP7 Citation Service</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Citation Auto Generation (Serializer Classes)</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/serializer.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="citation-auto-generation-serializer-classes">
+<h1>Citation Auto Generation (Serializer Classes)<a class="headerlink" href="#citation-auto-generation-serializer-classes" title="Link to this heading"></a></h1>
+<p>Citation records (and other records) are auto-filled with additional content through the Serializer classes from django rest framework. All auto-generation and validation steps are centralised in the Serializer classes, with very little functionality being required from the <code class="docutils literal notranslate"><span class="pre">Views</span></code> classes except for rendering changes.</p>
+<dl class="simple">
+<dt>The process for updating a record is as follows:</dt><dd><ul class="simple">
+<li><p>UI/API view registers a change to a record.</p></li>
+<li><p>Serializer is instantiated and the data is validated.</p></li>
+<li><dl class="simple">
+<dt>Serializer is then used to create/update records (<code class="docutils literal notranslate"><span class="pre">serializer.save</span></code>)</dt><dd><ul>
+<li><p>Provided data is filtered to remove unknown arguments (mostly from the API)</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">fill_data_parameters</span></code> serializer method fills in new parameters, and instantiates sub-records (i.e institutions, funders, parties)</p></li>
+<li><p>The publication workflow is executed if required.</p></li>
+<li><p>The update is made via the <code class="docutils literal notranslate"><span class="pre">create/update</span> <span class="pre">instance</span></code> functions that route changes through the Kafka system if it is in use.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+<p>See below for a list of the functions used to fill content in the records.</p>
+<dl class="py function" id="module-citations.serializers">
+<dt class="sig sig-object py" id="citations.serializers.mint_doi_for_data">
+<span class="sig-prename descclassname"><span class="pre">citations.serializers.</span></span><span class="sig-name descname"><span class="pre">mint_doi_for_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="_modules/citations/serializers.html#mint_doi_for_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.mint_doi_for_data" title="Link to this definition"></a></dt>
+<dd><p>‘Data’ is the partially serialized content for the record to be published.</p>
+<ul class="simple">
+<li><p>Expand all creators (proper serialization)</p></li>
+<li><p>Expand all funders</p></li>
+<li><p>Expand all references</p></li>
+<li><p>Send data to publish record</p></li>
+</ul>
+<p>This function is considered a ‘core’ function because it relies on access
+to the models of this application.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="citations.serializers.institution_mappings">
+<span class="sig-prename descclassname"><span class="pre">citations.serializers.</span></span><span class="sig-name descname"><span class="pre">institution_mappings</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">institution_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">project_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cmip7'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="_modules/citations/serializers.html#institution_mappings"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.institution_mappings" title="Link to this definition"></a></dt>
+<dd><p>Apply known institution mappings given the institution_id which is most likely the acronym.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="citations.serializers.title_from_facets">
+<span class="sig-prename descclassname"><span class="pre">citations.serializers.</span></span><span class="sig-name descname"><span class="pre">title_from_facets</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">raise_exceptions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="_modules/citations/serializers.html#title_from_facets"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.title_from_facets" title="Link to this definition"></a></dt>
+<dd><p>Validate by generating the expected title from the facets.</p>
+<p>Facet title generation is <cite>mip_era</cite> specific. If the <cite>mip_era</cite> is not contained
+in the data, this function should not be run, but will return a None value.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="citations.serializers.obtain_all_references">
+<span class="sig-prename descclassname"><span class="pre">citations.serializers.</span></span><span class="sig-name descname"><span class="pre">obtain_all_references</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="_modules/citations/serializers.html#obtain_all_references"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.obtain_all_references" title="Link to this definition"></a></dt>
+<dd><p>Obtain Citation references from the EMD (ESGVOC)</p>
+<p>Prevent adding a reference if it already exists.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="citations.serializers.get_drs_url">
+<span class="sig-prename descclassname"><span class="pre">citations.serializers.</span></span><span class="sig-name descname"><span class="pre">get_drs_url</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="_modules/citations/serializers.html#get_drs_url"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.get_drs_url" title="Link to this definition"></a></dt>
+<dd><p>Obtain the DRS URL expected for this record, given the set of search facets.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="citations.serializers.assemble_license_info">
+<span class="sig-prename descclassname"><span class="pre">citations.serializers.</span></span><span class="sig-name descname"><span class="pre">assemble_license_info</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="_modules/citations/serializers.html#assemble_license_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.assemble_license_info" title="Link to this definition"></a></dt>
+<dd><p>Determine the paragraph of text to use for the license.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="citations.serializers.abstract_from_esgvoc">
+<span class="sig-prename descclassname"><span class="pre">citations.serializers.</span></span><span class="sig-name descname"><span class="pre">abstract_from_esgvoc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/serializers.html#abstract_from_esgvoc"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.abstract_from_esgvoc" title="Link to this definition"></a></dt>
+<dd><p>Determine the paragraph of abstract text from esgvoc parameters.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="citations.serializers.chain_new_objects">
+<span class="sig-prename descclassname"><span class="pre">citations.serializers.</span></span><span class="sig-name descname"><span class="pre">chain_new_objects</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">serializer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ModelSerializer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">type</span><span class="p"><span class="pre">[</span></span><span class="pre">Model</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filter_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optionals</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">allow_update</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="_modules/citations/serializers.html#chain_new_objects"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.chain_new_objects" title="Link to this definition"></a></dt>
+<dd><p>Create new model instances if required, or return the ID of the existing instance.</p>
+<p>This includes locating the existing record based on some filter kwargs (normally just the ID)
+to identify the existing instance.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="citations.serializers.GenericSerializerMixin">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">citations.serializers.</span></span><span class="sig-name descname"><span class="pre">GenericSerializerMixin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/serializers.html#GenericSerializerMixin"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.GenericSerializerMixin" title="Link to this definition"></a></dt>
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="citations.serializers.GenericSerializerMixin.to_internal_value">
+<span class="sig-name descname"><span class="pre">to_internal_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/serializers.html#GenericSerializerMixin.to_internal_value"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.GenericSerializerMixin.to_internal_value" title="Link to this definition"></a></dt>
+<dd><p>Dict of native values &lt;- Dict of primitive datatypes.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.serializers.GenericSerializerMixin.filter_data">
+<span class="sig-name descname"><span class="pre">filter_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">validated_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="_modules/citations/serializers.html#GenericSerializerMixin.filter_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.GenericSerializerMixin.filter_data" title="Link to this definition"></a></dt>
+<dd><p>Filter out unrecognised parameters.</p>
+<p>Also runs the <cite>fill_data_parameters</cite> method to auto-generate content.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.serializers.GenericSerializerMixin.replace_id_relations">
+<span class="sig-name descname"><span class="pre">replace_id_relations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">validated_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="_modules/citations/serializers.html#GenericSerializerMixin.replace_id_relations"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.GenericSerializerMixin.replace_id_relations" title="Link to this definition"></a></dt>
+<dd><p>Replace relations like <cite>primary</cite> in the citations model with <cite>primary_id</cite></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.serializers.GenericSerializerMixin.create">
+<span class="sig-name descname"><span class="pre">create</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">validated_data</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/serializers.html#GenericSerializerMixin.create"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.GenericSerializerMixin.create" title="Link to this definition"></a></dt>
+<dd><p>Create and return a model instance given validated data.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.serializers.GenericSerializerMixin.update">
+<span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">instance</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validated_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/serializers.html#GenericSerializerMixin.update"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.GenericSerializerMixin.update" title="Link to this definition"></a></dt>
+<dd><p>Update and return an existing instance, given the validated data.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="citations.serializers.InstitutionsSerializer">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">citations.serializers.</span></span><span class="sig-name descname"><span class="pre">InstitutionsSerializer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/serializers.html#InstitutionsSerializer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.InstitutionsSerializer" title="Link to this definition"></a></dt>
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="citations.serializers.InstitutionsSerializer.fill_data_parameters">
+<span class="sig-name descname"><span class="pre">fill_data_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/serializers.html#InstitutionsSerializer.fill_data_parameters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.InstitutionsSerializer.fill_data_parameters" title="Link to this definition"></a></dt>
+<dd><p>Auto-fill content into the data dict.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="citations.serializers.PartiesSerializer">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">citations.serializers.</span></span><span class="sig-name descname"><span class="pre">PartiesSerializer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/serializers.html#PartiesSerializer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.PartiesSerializer" title="Link to this definition"></a></dt>
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="citations.serializers.PartiesSerializer.fill_data_parameters">
+<span class="sig-name descname"><span class="pre">fill_data_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/serializers.html#PartiesSerializer.fill_data_parameters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.PartiesSerializer.fill_data_parameters" title="Link to this definition"></a></dt>
+<dd><p>Auto-fill content into the data dict.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="citations.serializers.FundingStreamsSerializer">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">citations.serializers.</span></span><span class="sig-name descname"><span class="pre">FundingStreamsSerializer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/serializers.html#FundingStreamsSerializer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.FundingStreamsSerializer" title="Link to this definition"></a></dt>
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="citations.serializers.FundingStreamsSerializer.fill_data_parameters">
+<span class="sig-name descname"><span class="pre">fill_data_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/serializers.html#FundingStreamsSerializer.fill_data_parameters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.FundingStreamsSerializer.fill_data_parameters" title="Link to this definition"></a></dt>
+<dd><p>Auto-fill content into the data dict.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="citations.serializers.ReferencesSerializer">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">citations.serializers.</span></span><span class="sig-name descname"><span class="pre">ReferencesSerializer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/serializers.html#ReferencesSerializer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.ReferencesSerializer" title="Link to this definition"></a></dt>
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="citations.serializers.ReferencesSerializer.fill_data_parameters">
+<span class="sig-name descname"><span class="pre">fill_data_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/serializers.html#ReferencesSerializer.fill_data_parameters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.ReferencesSerializer.fill_data_parameters" title="Link to this definition"></a></dt>
+<dd><p>No data filling for references</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="citations.serializers.CitationsSerializer">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">citations.serializers.</span></span><span class="sig-name descname"><span class="pre">CitationsSerializer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/serializers.html#CitationsSerializer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.CitationsSerializer" title="Link to this definition"></a></dt>
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="citations.serializers.CitationsSerializer.create">
+<span class="sig-name descname"><span class="pre">create</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">validated_data</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/serializers.html#CitationsSerializer.create"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.CitationsSerializer.create" title="Link to this definition"></a></dt>
+<dd><p>Apply extra validation to the citation record.</p>
+<p>This validates the <code class="docutils literal notranslate"><span class="pre">search_facets</span></code> if they have been provided to this record.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.serializers.CitationsSerializer.fill_data_parameters">
+<span class="sig-name descname"><span class="pre">fill_data_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/serializers.html#CitationsSerializer.fill_data_parameters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.CitationsSerializer.fill_data_parameters" title="Link to this definition"></a></dt>
+<dd><p>Update the data in a POST request.</p>
+<p>Locate or create references based on the provided information.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="citations.serializers.handle_update">
+<span class="sig-prename descclassname"><span class="pre">citations.serializers.</span></span><span class="sig-name descname"><span class="pre">handle_update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">table</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">content</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/serializers.html#handle_update"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.handle_update" title="Link to this definition"></a></dt>
+<dd><p>Handle ANY ORM Request updates here.</p>
+<p>This function is passed to the Kafka update system, and will be called directly
+if the Kafka Internal Queue is disabled.</p>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="CMIP7 Citation Service" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="views.html" class="btn btn-neutral float-right" title="Citation Views and Rendering" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022-2024, Centre of Environmental Data Analysis Developers,Scientific and Technical Facilities Council (STFC),UK Research and Innovation (UKRI). BSD 2-Clause License. All rights reserved.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

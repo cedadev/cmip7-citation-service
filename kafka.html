@@ -1,0 +1,139 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kafka Queue Systems &amp; Listener &mdash; CEDA CMIP7 Citation Service 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="STAC Integration" href="stac.html" />
+    <link rel="prev" title="DOI Minting Service" href="dois.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            CEDA CMIP7 Citation Service
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Developer Guides</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="serializer.html">Citation Auto Generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="views.html">Citation Views and Rendering</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dois.html">DOI Minting Service</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Kafka Queue Systems &amp; Listener</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#citations.consumer.write.create_instance"><code class="docutils literal notranslate"><span class="pre">create_instance()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.consumer.write.update_instance"><code class="docutils literal notranslate"><span class="pre">update_instance()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.consumer.write.delete_instance"><code class="docutils literal notranslate"><span class="pre">delete_instance()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="stac.html">STAC ESGF Integration</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">CEDA CMIP7 Citation Service</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Kafka Queue Systems &amp; Listener</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/kafka.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="kafka-queue-systems-listener">
+<h1>Kafka Queue Systems &amp; Listener<a class="headerlink" href="#kafka-queue-systems-listener" title="Link to this heading"></a></h1>
+<p>The Internal Kafka Queue System is currently not enabled in production (22/05/2026). When the functions <code class="docutils literal notranslate"><span class="pre">create/update/delete_instance</span></code> are used, this creates a <code class="docutils literal notranslate"><span class="pre">CitationKafkaConsumer</span></code> instance to handle sending the message. If the Internal queue is enabled (config is provided to Kafka) a message is added to the queue which is picked up by the backend sidecar deployment for this service, whose sole purpose is to listen for internal events and update the ORM.</p>
+<p>If the internal queue is not used (which is currently the case). A log message is generated, and the consumer proceeds to directly ingest the message. The message handler directly calls the <code class="docutils literal notranslate"><span class="pre">handle_update</span></code> function in <code class="docutils literal notranslate"><span class="pre">serializers.py</span></code> which updates the database with the new content.</p>
+<p>Lastly, a third deployment is also planned for production, which is separate to this Django application but is still worth noting. This deployment uses the <code class="docutils literal notranslate"><span class="pre">cmip7_listeners</span></code> repository from cedadev, and deploys a listener to the <code class="docutils literal notranslate"><span class="pre">success</span></code> topic in Kafka. Please see the repo at <a class="reference external" href="https://github.com/cedadev/cmip7-listeners">https://github.com/cedadev/cmip7-listeners</a> for details of how this listener is configured. TL;DR: The listener sends API requests to the citation service to create new records as needed, and updates the STAC items with citation links.</p>
+<dl class="py function" id="module-citations.consumer.write">
+<dt class="sig sig-object py" id="citations.consumer.write.create_instance">
+<span class="sig-prename descclassname"><span class="pre">citations.consumer.write.</span></span><span class="sig-name descname"><span class="pre">create_instance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">user</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">update_handler</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">required_fields</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/consumer/write.html#create_instance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.consumer.write.create_instance" title="Link to this definition"></a></dt>
+<dd><p>Send message to consumer to create new instance</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="citations.consumer.write.update_instance">
+<span class="sig-prename descclassname"><span class="pre">citations.consumer.write.</span></span><span class="sig-name descname"><span class="pre">update_instance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">user</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">update_handler</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/consumer/write.html#update_instance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.consumer.write.update_instance" title="Link to this definition"></a></dt>
+<dd><p>Send message to consumer to update existing instance</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="citations.consumer.write.delete_instance">
+<span class="sig-prename descclassname"><span class="pre">citations.consumer.write.</span></span><span class="sig-name descname"><span class="pre">delete_instance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">user</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">update_handler</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/consumer/write.html#delete_instance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.consumer.write.delete_instance" title="Link to this definition"></a></dt>
+<dd><p>Send message to consumer to update existing instance</p>
+</dd></dl>
+
+<span class="target" id="module-citations.consumer.internal"></span></section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="dois.html" class="btn btn-neutral float-left" title="DOI Minting Service" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="stac.html" class="btn btn-neutral float-right" title="STAC Integration" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022-2024, Centre of Environmental Data Analysis Developers,Scientific and Technical Facilities Council (STFC),UK Research and Innovation (UKRI). BSD 2-Clause License. All rights reserved.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

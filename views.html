@@ -1,0 +1,859 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Citation Views and Rendering &mdash; CEDA CMIP7 Citation Service 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="DOI Minting Service" href="dois.html" />
+    <link rel="prev" title="Citation Auto Generation (Serializer Classes)" href="serializer.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            CEDA CMIP7 Citation Service
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Developer Guides</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="serializer.html">Citation Auto Generation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Citation Views and Rendering</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.create_new_permission"><code class="docutils literal notranslate"><span class="pre">create_new_permission()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.get_citable_party"><code class="docutils literal notranslate"><span class="pre">get_citable_party()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.render_code_snippet"><code class="docutils literal notranslate"><span class="pre">render_code_snippet()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.render_cite_as"><code class="docutils literal notranslate"><span class="pre">render_cite_as()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.render_abstract"><code class="docutils literal notranslate"><span class="pre">render_abstract()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.render_rights"><code class="docutils literal notranslate"><span class="pre">render_rights()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.render_reference_html"><code class="docutils literal notranslate"><span class="pre">render_reference_html()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.fullname"><code class="docutils literal notranslate"><span class="pre">fullname()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.deep_search"><code class="docutils literal notranslate"><span class="pre">deep_search()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.filter_versions"><code class="docutils literal notranslate"><span class="pre">filter_versions()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.check_publish_ok"><code class="docutils literal notranslate"><span class="pre">check_publish_ok()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.GenericRenderedView"><code class="docutils literal notranslate"><span class="pre">GenericRenderedView</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.GenericRenderedView.get_context_data"><code class="docutils literal notranslate"><span class="pre">GenericRenderedView.get_context_data()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.GenericRenderedView.get_instance"><code class="docutils literal notranslate"><span class="pre">GenericRenderedView.get_instance()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.PaginatedListView"><code class="docutils literal notranslate"><span class="pre">PaginatedListView</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.PaginatedListView.get_context_data"><code class="docutils literal notranslate"><span class="pre">PaginatedListView.get_context_data()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.PaginatedListView.perform_search"><code class="docutils literal notranslate"><span class="pre">PaginatedListView.perform_search()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.PaginatedListView.get"><code class="docutils literal notranslate"><span class="pre">PaginatedListView.get()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.PaginatedListView.adjust_for_UI_render"><code class="docutils literal notranslate"><span class="pre">PaginatedListView.adjust_for_UI_render()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.GenericAPIView"><code class="docutils literal notranslate"><span class="pre">GenericAPIView</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.GenericAPIView.get_permissions"><code class="docutils literal notranslate"><span class="pre">GenericAPIView.get_permissions()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.GenericAPIView.initialize_request"><code class="docutils literal notranslate"><span class="pre">GenericAPIView.initialize_request()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.SpecificAPIView"><code class="docutils literal notranslate"><span class="pre">SpecificAPIView</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.SpecificAPIView.get_permissions"><code class="docutils literal notranslate"><span class="pre">SpecificAPIView.get_permissions()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.SpecificAPIView.initialize_request"><code class="docutils literal notranslate"><span class="pre">SpecificAPIView.initialize_request()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.PartiesView"><code class="docutils literal notranslate"><span class="pre">PartiesView</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.PartiesView.model"><code class="docutils literal notranslate"><span class="pre">PartiesView.model</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.PartiesView.serializer_class"><code class="docutils literal notranslate"><span class="pre">PartiesView.serializer_class</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.InstitutionsView"><code class="docutils literal notranslate"><span class="pre">InstitutionsView</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.InstitutionsView.model"><code class="docutils literal notranslate"><span class="pre">InstitutionsView.model</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.InstitutionsView.serializer_class"><code class="docutils literal notranslate"><span class="pre">InstitutionsView.serializer_class</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.FundingStreamsView"><code class="docutils literal notranslate"><span class="pre">FundingStreamsView</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.FundingStreamsView.model"><code class="docutils literal notranslate"><span class="pre">FundingStreamsView.model</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.FundingStreamsView.serializer_class"><code class="docutils literal notranslate"><span class="pre">FundingStreamsView.serializer_class</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.FundingStreamsView.adjust_for_UI_render"><code class="docutils literal notranslate"><span class="pre">FundingStreamsView.adjust_for_UI_render()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.CitationsView"><code class="docutils literal notranslate"><span class="pre">CitationsView</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.CitationsView.model"><code class="docutils literal notranslate"><span class="pre">CitationsView.model</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.CitationsView.serializer_class"><code class="docutils literal notranslate"><span class="pre">CitationsView.serializer_class</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.CitationsView.get_context_data"><code class="docutils literal notranslate"><span class="pre">CitationsView.get_context_data()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.CitationsView.perform_search"><code class="docutils literal notranslate"><span class="pre">CitationsView.perform_search()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.CitationsView.adjust_for_UI_render"><code class="docutils literal notranslate"><span class="pre">CitationsView.adjust_for_UI_render()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.CitationView"><code class="docutils literal notranslate"><span class="pre">CitationView</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.CitationView.get_context_data"><code class="docutils literal notranslate"><span class="pre">CitationView.get_context_data()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.InstitutionView"><code class="docutils literal notranslate"><span class="pre">InstitutionView</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.InstitutionView.model"><code class="docutils literal notranslate"><span class="pre">InstitutionView.model</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.InstitutionView.serializer_class"><code class="docutils literal notranslate"><span class="pre">InstitutionView.serializer_class</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.InstitutionView.get_context_data"><code class="docutils literal notranslate"><span class="pre">InstitutionView.get_context_data()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.FundingStreamView"><code class="docutils literal notranslate"><span class="pre">FundingStreamView</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.FundingStreamView.model"><code class="docutils literal notranslate"><span class="pre">FundingStreamView.model</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.FundingStreamView.serializer_class"><code class="docutils literal notranslate"><span class="pre">FundingStreamView.serializer_class</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.FundingStreamView.get_context_data"><code class="docutils literal notranslate"><span class="pre">FundingStreamView.get_context_data()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.PartyView"><code class="docutils literal notranslate"><span class="pre">PartyView</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.PartyView.get_context_data"><code class="docutils literal notranslate"><span class="pre">PartyView.get_context_data()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.InstitutionAPIView"><code class="docutils literal notranslate"><span class="pre">InstitutionAPIView</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.InstitutionAPIView.model"><code class="docutils literal notranslate"><span class="pre">InstitutionAPIView.model</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.InstitutionAPIView.serializer_class"><code class="docutils literal notranslate"><span class="pre">InstitutionAPIView.serializer_class</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.SpecificPartyAPIView"><code class="docutils literal notranslate"><span class="pre">SpecificPartyAPIView</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.SpecificPartyAPIView.model"><code class="docutils literal notranslate"><span class="pre">SpecificPartyAPIView.model</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.SpecificPartyAPIView.serializer_class"><code class="docutils literal notranslate"><span class="pre">SpecificPartyAPIView.serializer_class</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.PartyAPIView"><code class="docutils literal notranslate"><span class="pre">PartyAPIView</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.PartyAPIView.model"><code class="docutils literal notranslate"><span class="pre">PartyAPIView.model</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.PartyAPIView.serializer_class"><code class="docutils literal notranslate"><span class="pre">PartyAPIView.serializer_class</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.FundingStreamAPIView"><code class="docutils literal notranslate"><span class="pre">FundingStreamAPIView</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.FundingStreamAPIView.model"><code class="docutils literal notranslate"><span class="pre">FundingStreamAPIView.model</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.FundingStreamAPIView.serializer_class"><code class="docutils literal notranslate"><span class="pre">FundingStreamAPIView.serializer_class</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.CitationAPIView"><code class="docutils literal notranslate"><span class="pre">CitationAPIView</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.CitationAPIView.model"><code class="docutils literal notranslate"><span class="pre">CitationAPIView.model</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.CitationAPIView.serializer_class"><code class="docutils literal notranslate"><span class="pre">CitationAPIView.serializer_class</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.SpecificCitationAPIView"><code class="docutils literal notranslate"><span class="pre">SpecificCitationAPIView</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.SpecificCitationAPIView.model"><code class="docutils literal notranslate"><span class="pre">SpecificCitationAPIView.model</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.SpecificCitationAPIView.serializer_class"><code class="docutils literal notranslate"><span class="pre">SpecificCitationAPIView.serializer_class</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.CitationFormMixin"><code class="docutils literal notranslate"><span class="pre">CitationFormMixin</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.CitationFormMixin.model"><code class="docutils literal notranslate"><span class="pre">CitationFormMixin.model</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.CitationFormMixin.serializer_class"><code class="docutils literal notranslate"><span class="pre">CitationFormMixin.serializer_class</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.CitationFormMixin.dispatch"><code class="docutils literal notranslate"><span class="pre">CitationFormMixin.dispatch()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.CitationFormMixin.get_context_data"><code class="docutils literal notranslate"><span class="pre">CitationFormMixin.get_context_data()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.CitationFormMixin.clean_formset_data"><code class="docutils literal notranslate"><span class="pre">CitationFormMixin.clean_formset_data()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.NewCitationFormView"><code class="docutils literal notranslate"><span class="pre">NewCitationFormView</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.NewCitationFormView.form_class"><code class="docutils literal notranslate"><span class="pre">NewCitationFormView.form_class</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.NewCitationFormView.form_valid"><code class="docutils literal notranslate"><span class="pre">NewCitationFormView.form_valid()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.NewCitationFormView.get_initial"><code class="docutils literal notranslate"><span class="pre">NewCitationFormView.get_initial()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.NewCitationFormView.get_context_data"><code class="docutils literal notranslate"><span class="pre">NewCitationFormView.get_context_data()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.EditCitationFormView"><code class="docutils literal notranslate"><span class="pre">EditCitationFormView</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.EditCitationFormView.form_class"><code class="docutils literal notranslate"><span class="pre">EditCitationFormView.form_class</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.EditCitationFormView.form_valid"><code class="docutils literal notranslate"><span class="pre">EditCitationFormView.form_valid()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.EditCitationFormView.get_initial"><code class="docutils literal notranslate"><span class="pre">EditCitationFormView.get_initial()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.EditCitationFormView.get_context_data"><code class="docutils literal notranslate"><span class="pre">EditCitationFormView.get_context_data()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.ConfirmDeleteCitationView"><code class="docutils literal notranslate"><span class="pre">ConfirmDeleteCitationView</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.ConfirmDeleteCitationView.model"><code class="docutils literal notranslate"><span class="pre">ConfirmDeleteCitationView.model</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.ConfirmDeleteCitationView.serializer_class"><code class="docutils literal notranslate"><span class="pre">ConfirmDeleteCitationView.serializer_class</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.ConfirmDeleteCitationView.get_context_data"><code class="docutils literal notranslate"><span class="pre">ConfirmDeleteCitationView.get_context_data()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.ReviewerRequestView"><code class="docutils literal notranslate"><span class="pre">ReviewerRequestView</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.ReviewerRequestView.form_class"><code class="docutils literal notranslate"><span class="pre">ReviewerRequestView.form_class</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.ReviewerRequestView.get_context_data"><code class="docutils literal notranslate"><span class="pre">ReviewerRequestView.get_context_data()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.ReviewerRequestView.get_form_kwargs"><code class="docutils literal notranslate"><span class="pre">ReviewerRequestView.get_form_kwargs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.ReviewerRequestView.form_valid"><code class="docutils literal notranslate"><span class="pre">ReviewerRequestView.form_valid()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="dois.html">DOI Minting Service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="kafka.html">Kafka Queue Systems &amp; Listener</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stac.html">STAC ESGF Integration</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">CEDA CMIP7 Citation Service</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Citation Views and Rendering</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/views.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="citation-views-and-rendering">
+<h1>Citation Views and Rendering<a class="headerlink" href="#citation-views-and-rendering" title="Link to this heading"></a></h1>
+<p>For a full listing of the available views, see the <code class="docutils literal notranslate"><span class="pre">urls.py</span></code> file.</p>
+<dl class="simple">
+<dt>Standard types of views available:</dt><dd><ul class="simple">
+<li><p>List views: Citations, Parties, Institutions, FundingStreams</p></li>
+<li><p>Specific Record views: Citation, Party, Institution, FundingStreams</p></li>
+<li><p>API List views: Citations, Parties, Institutions, FundingStreams</p></li>
+<li><p>Specific API views: Citation, Party</p></li>
+<li><p>Create/Edit UI view: Citation (able to create new instances of all the above)</p></li>
+<li><p>Delete view: Citation (No other records able to be deleted via UI currently.)</p></li>
+<li><p>Delete API views: Citations, Parties, Institutions, FundingStreams</p></li>
+</ul>
+</dd>
+<dt>Miscellaneous Other Views:</dt><dd><ul class="simple">
+<li><p>Reviewer Request: Allows users to request access to review records.</p></li>
+</ul>
+</dd>
+<dt>Render functions listed below may perform changes to the content rendered to the HTML view for a better user experience. This includes:</dt><dd><ul class="simple">
+<li><p>Adding links to the abstract paragraph based on references in the citation</p></li>
+<li><p>Linking to the rights/licence info from the <code class="docutils literal notranslate"><span class="pre">RIGHTS_MAP</span></code></p></li>
+<li><p>Rendering the references with linked DOIs and bold titles.</p></li>
+<li><p>Rendering the Cite As option from the DOI and available info</p></li>
+<li><p>Adding the STAC Code Snippet if available.</p></li>
+</ul>
+</dd>
+</dl>
+<p>Permissions apply to all create/update/delete views including for the API (PUT/POST/DELETE methods), where a user/token provided must have both the <code class="docutils literal notranslate"><span class="pre">add_citations</span></code> and <code class="docutils literal notranslate"><span class="pre">edit_&lt;institution&gt;</span></code> permissions to edit an existing record, or just the <code class="docutils literal notranslate"><span class="pre">add_citations</span></code> permission to create new records.</p>
+<dl class="py function" id="module-citations.views">
+<dt class="sig sig-object py" id="citations.views.create_new_permission">
+<span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">create_new_permission</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">user</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">institution_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#create_new_permission"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.create_new_permission" title="Link to this definition"></a></dt>
+<dd><p>Create a new permission type based on the newly added institution.</p>
+<p>The user who created the new institution will automatically be given access
+to that new permission. This permission allows editing based on the <code class="docutils literal notranslate"><span class="pre">institution_id</span></code>
+of the record.</p>
+<p>Creating a new record with an existing institution will only be allowed
+if the user already has permission for that institution.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="citations.views.get_citable_party">
+<span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">get_citable_party</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">party</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Parties</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#get_citable_party"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.get_citable_party" title="Link to this definition"></a></dt>
+<dd><p>Get representation of a party in the Cite As field.</p>
+<p>This is also done on rendering, to just assemble these fields in the correct manner.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="citations.views.render_code_snippet">
+<span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">render_code_snippet</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">citation_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="_modules/citations/views.html#render_code_snippet"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.render_code_snippet" title="Link to this definition"></a></dt>
+<dd><p>Get code snippet on rendering.</p>
+<p>The code snippet is not saved in the database and is generated on viewing the record.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="citations.views.render_cite_as">
+<span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">render_cite_as</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">citation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Citations</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#render_cite_as"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.render_cite_as" title="Link to this definition"></a></dt>
+<dd><p>Generate the full Cite As description on loading the page.</p>
+<p>This is generated on rendering the citation view.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="citations.views.render_abstract">
+<span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">render_abstract</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="_modules/citations/views.html#render_abstract"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.render_abstract" title="Link to this definition"></a></dt>
+<dd><p>Apply formatting in the form of links to references identified in the abstract</p>
+<p>This occurs on rendering the citation view.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="citations.views.render_rights">
+<span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">render_rights</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="_modules/citations/views.html#render_rights"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.render_rights" title="Link to this definition"></a></dt>
+<dd><p>Generate the Rights section with appropriate labelling and linking.</p>
+<p>This is generated on rendering the citation view, assuming the <cite>Rights</cite> section is not empty.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="citations.views.render_reference_html">
+<span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">render_reference_html</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ref</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="_modules/citations/views.html#render_reference_html"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.render_reference_html" title="Link to this definition"></a></dt>
+<dd><p>Apply bold to the reference title and link to the DOI.</p>
+<p>This occurs on rendering the citation view.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="citations.views.fullname">
+<span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">fullname</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">party</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="_modules/citations/views.html#fullname"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.fullname" title="Link to this definition"></a></dt>
+<dd><p>Display the fullname of a party based on if the middle name is blank or not</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="citations.views.deep_search">
+<span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">deep_search</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">queryset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">term</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">order_by</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">all_versions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#deep_search"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.deep_search" title="Link to this definition"></a></dt>
+<dd><p>Fuzzy search for a term within the queryset.</p>
+<p>This also allows ordering of search results and filtering on versions.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="citations.views.filter_versions">
+<span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">filter_versions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">queryset</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#filter_versions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.filter_versions" title="Link to this definition"></a></dt>
+<dd><p>Find only the latest version of every citation record.</p>
+<p>Will find the titles of all records in the queryset and filter out the non-latest version records.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="citations.views.check_publish_ok">
+<span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">check_publish_ok</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#check_publish_ok"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.check_publish_ok" title="Link to this definition"></a></dt>
+<dd><p>Send a message to the user (UI) if a DOI minting event is unsuccessful</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="citations.views.GenericRenderedView">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">GenericRenderedView</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#GenericRenderedView"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.GenericRenderedView" title="Link to this definition"></a></dt>
+<dd><p>Generic processing for all UI views, including configuring CEDA branding templates</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.GenericRenderedView.get_context_data">
+<span class="sig-name descname"><span class="pre">get_context_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#GenericRenderedView.get_context_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.GenericRenderedView.get_context_data" title="Link to this definition"></a></dt>
+<dd><p>Adds the CEDA branding or generic base for rendering.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.GenericRenderedView.get_instance">
+<span class="sig-name descname"><span class="pre">get_instance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pk</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#GenericRenderedView.get_instance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.GenericRenderedView.get_instance" title="Link to this definition"></a></dt>
+<dd><p>Handle 404 on getting an instance of a model</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="citations.views.PaginatedListView">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">PaginatedListView</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#PaginatedListView"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.PaginatedListView" title="Link to this definition"></a></dt>
+<dd><p>Pagination for all UI List views using HTMX</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.PaginatedListView.get_context_data">
+<span class="sig-name descname"><span class="pre">get_context_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">page_obj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">page_number</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">search_term</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">count</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#PaginatedListView.get_context_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.PaginatedListView.get_context_data" title="Link to this definition"></a></dt>
+<dd><p>Handle pagination context including page number and search term if provided.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.PaginatedListView.perform_search">
+<span class="sig-name descname"><span class="pre">perform_search</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span></span></span><a class="reference internal" href="_modules/citations/views.html#PaginatedListView.perform_search"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.PaginatedListView.perform_search" title="Link to this definition"></a></dt>
+<dd><p>Obtain the search term and apply a deep ‘fuzzy’ search to all instances of the model.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.PaginatedListView.get">
+<span class="sig-name descname"><span class="pre">get</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#PaginatedListView.get"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.PaginatedListView.get" title="Link to this definition"></a></dt>
+<dd><p>Get list view with filtering and pagination</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.PaginatedListView.adjust_for_UI_render">
+<span class="sig-name descname"><span class="pre">adjust_for_UI_render</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">queryset</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="reference internal" href="_modules/citations/views.html#PaginatedListView.adjust_for_UI_render"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.PaginatedListView.adjust_for_UI_render" title="Link to this definition"></a></dt>
+<dd><p>Convert queryset to JSON representations</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="citations.views.GenericAPIView">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">GenericAPIView</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#GenericAPIView"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.GenericAPIView" title="Link to this definition"></a></dt>
+<dd><p>Generic Method Additions to the API View</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.GenericAPIView.get_permissions">
+<span class="sig-name descname"><span class="pre">get_permissions</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#GenericAPIView.get_permissions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.GenericAPIView.get_permissions" title="Link to this definition"></a></dt>
+<dd><p>Instantiates and returns the list of permissions that this view requires.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.GenericAPIView.initialize_request">
+<span class="sig-name descname"><span class="pre">initialize_request</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#GenericAPIView.initialize_request"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.GenericAPIView.initialize_request" title="Link to this definition"></a></dt>
+<dd><p>Decode Information Given to POST requests</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="citations.views.SpecificAPIView">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">SpecificAPIView</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#SpecificAPIView"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.SpecificAPIView" title="Link to this definition"></a></dt>
+<dd><p>Specific View Methods</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.SpecificAPIView.get_permissions">
+<span class="sig-name descname"><span class="pre">get_permissions</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#SpecificAPIView.get_permissions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.SpecificAPIView.get_permissions" title="Link to this definition"></a></dt>
+<dd><p>Instantiates and returns the list of permissions that this view requires.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.SpecificAPIView.initialize_request">
+<span class="sig-name descname"><span class="pre">initialize_request</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#SpecificAPIView.initialize_request"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.SpecificAPIView.initialize_request" title="Link to this definition"></a></dt>
+<dd><p>Decode Information Given to POST requests</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="citations.views.PartiesView">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">PartiesView</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#PartiesView"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.PartiesView" title="Link to this definition"></a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.PartiesView.model">
+<span class="sig-name descname"><span class="pre">model</span></span><a class="headerlink" href="#citations.views.PartiesView.model" title="Link to this definition"></a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">Parties</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.PartiesView.serializer_class">
+<span class="sig-name descname"><span class="pre">serializer_class</span></span><a class="headerlink" href="#citations.views.PartiesView.serializer_class" title="Link to this definition"></a></dt>
+<dd><p>alias of <a class="reference internal" href="serializer.html#citations.serializers.PartiesSerializer" title="citations.serializers.PartiesSerializer"><code class="xref py py-class docutils literal notranslate"><span class="pre">PartiesSerializer</span></code></a></p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="citations.views.InstitutionsView">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">InstitutionsView</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#InstitutionsView"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.InstitutionsView" title="Link to this definition"></a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.InstitutionsView.model">
+<span class="sig-name descname"><span class="pre">model</span></span><a class="headerlink" href="#citations.views.InstitutionsView.model" title="Link to this definition"></a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">Institutions</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.InstitutionsView.serializer_class">
+<span class="sig-name descname"><span class="pre">serializer_class</span></span><a class="headerlink" href="#citations.views.InstitutionsView.serializer_class" title="Link to this definition"></a></dt>
+<dd><p>alias of <a class="reference internal" href="serializer.html#citations.serializers.InstitutionsSerializer" title="citations.serializers.InstitutionsSerializer"><code class="xref py py-class docutils literal notranslate"><span class="pre">InstitutionsSerializer</span></code></a></p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="citations.views.FundingStreamsView">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">FundingStreamsView</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#FundingStreamsView"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.FundingStreamsView" title="Link to this definition"></a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.FundingStreamsView.model">
+<span class="sig-name descname"><span class="pre">model</span></span><a class="headerlink" href="#citations.views.FundingStreamsView.model" title="Link to this definition"></a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">FundingStreams</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.FundingStreamsView.serializer_class">
+<span class="sig-name descname"><span class="pre">serializer_class</span></span><a class="headerlink" href="#citations.views.FundingStreamsView.serializer_class" title="Link to this definition"></a></dt>
+<dd><p>alias of <a class="reference internal" href="serializer.html#citations.serializers.FundingStreamsSerializer" title="citations.serializers.FundingStreamsSerializer"><code class="xref py py-class docutils literal notranslate"><span class="pre">FundingStreamsSerializer</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.FundingStreamsView.adjust_for_UI_render">
+<span class="sig-name descname"><span class="pre">adjust_for_UI_render</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">queryset</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="reference internal" href="_modules/citations/views.html#FundingStreamsView.adjust_for_UI_render"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.FundingStreamsView.adjust_for_UI_render" title="Link to this definition"></a></dt>
+<dd><p>Convert queryset to JSON representations</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="citations.views.CitationsView">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">CitationsView</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#CitationsView"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.CitationsView" title="Link to this definition"></a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.CitationsView.model">
+<span class="sig-name descname"><span class="pre">model</span></span><a class="headerlink" href="#citations.views.CitationsView.model" title="Link to this definition"></a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">Citations</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.CitationsView.serializer_class">
+<span class="sig-name descname"><span class="pre">serializer_class</span></span><a class="headerlink" href="#citations.views.CitationsView.serializer_class" title="Link to this definition"></a></dt>
+<dd><p>alias of <a class="reference internal" href="serializer.html#citations.serializers.CitationsSerializer" title="citations.serializers.CitationsSerializer"><code class="xref py py-class docutils literal notranslate"><span class="pre">CitationsSerializer</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.CitationsView.get_context_data">
+<span class="sig-name descname"><span class="pre">get_context_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#CitationsView.get_context_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.CitationsView.get_context_data" title="Link to this definition"></a></dt>
+<dd><p>Handle pagination context including page number and search term if provided.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.CitationsView.perform_search">
+<span class="sig-name descname"><span class="pre">perform_search</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">show_all_versions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span></span></span><a class="reference internal" href="_modules/citations/views.html#CitationsView.perform_search"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.CitationsView.perform_search" title="Link to this definition"></a></dt>
+<dd><p>Obtain the search term and apply a deep ‘fuzzy’ search to all instances of the model.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.CitationsView.adjust_for_UI_render">
+<span class="sig-name descname"><span class="pre">adjust_for_UI_render</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">queryset</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="reference internal" href="_modules/citations/views.html#CitationsView.adjust_for_UI_render"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.CitationsView.adjust_for_UI_render" title="Link to this definition"></a></dt>
+<dd><p>Convert queryset to JSON representations</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="citations.views.CitationView">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">CitationView</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#CitationView"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.CitationView" title="Link to this definition"></a></dt>
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="citations.views.CitationView.get_context_data">
+<span class="sig-name descname"><span class="pre">get_context_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">title</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#CitationView.get_context_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.CitationView.get_context_data" title="Link to this definition"></a></dt>
+<dd><p>Adds the CEDA branding or generic base for rendering.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="citations.views.InstitutionView">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">InstitutionView</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#InstitutionView"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.InstitutionView" title="Link to this definition"></a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.InstitutionView.model">
+<span class="sig-name descname"><span class="pre">model</span></span><a class="headerlink" href="#citations.views.InstitutionView.model" title="Link to this definition"></a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">Institutions</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.InstitutionView.serializer_class">
+<span class="sig-name descname"><span class="pre">serializer_class</span></span><a class="headerlink" href="#citations.views.InstitutionView.serializer_class" title="Link to this definition"></a></dt>
+<dd><p>alias of <a class="reference internal" href="serializer.html#citations.serializers.InstitutionsSerializer" title="citations.serializers.InstitutionsSerializer"><code class="xref py py-class docutils literal notranslate"><span class="pre">InstitutionsSerializer</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.InstitutionView.get_context_data">
+<span class="sig-name descname"><span class="pre">get_context_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pk</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#InstitutionView.get_context_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.InstitutionView.get_context_data" title="Link to this definition"></a></dt>
+<dd><p>Adds the CEDA branding or generic base for rendering.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="citations.views.FundingStreamView">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">FundingStreamView</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#FundingStreamView"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.FundingStreamView" title="Link to this definition"></a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.FundingStreamView.model">
+<span class="sig-name descname"><span class="pre">model</span></span><a class="headerlink" href="#citations.views.FundingStreamView.model" title="Link to this definition"></a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">FundingStreams</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.FundingStreamView.serializer_class">
+<span class="sig-name descname"><span class="pre">serializer_class</span></span><a class="headerlink" href="#citations.views.FundingStreamView.serializer_class" title="Link to this definition"></a></dt>
+<dd><p>alias of <a class="reference internal" href="serializer.html#citations.serializers.FundingStreamsSerializer" title="citations.serializers.FundingStreamsSerializer"><code class="xref py py-class docutils literal notranslate"><span class="pre">FundingStreamsSerializer</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.FundingStreamView.get_context_data">
+<span class="sig-name descname"><span class="pre">get_context_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pk</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#FundingStreamView.get_context_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.FundingStreamView.get_context_data" title="Link to this definition"></a></dt>
+<dd><p>Adds the CEDA branding or generic base for rendering.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="citations.views.PartyView">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">PartyView</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#PartyView"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.PartyView" title="Link to this definition"></a></dt>
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="citations.views.PartyView.get_context_data">
+<span class="sig-name descname"><span class="pre">get_context_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pk</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#PartyView.get_context_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.PartyView.get_context_data" title="Link to this definition"></a></dt>
+<dd><p>Adds the CEDA branding or generic base for rendering.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="citations.views.InstitutionAPIView">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">InstitutionAPIView</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#InstitutionAPIView"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.InstitutionAPIView" title="Link to this definition"></a></dt>
+<dd><p>List all institutions</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.InstitutionAPIView.model">
+<span class="sig-name descname"><span class="pre">model</span></span><a class="headerlink" href="#citations.views.InstitutionAPIView.model" title="Link to this definition"></a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">Institutions</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.InstitutionAPIView.serializer_class">
+<span class="sig-name descname"><span class="pre">serializer_class</span></span><a class="headerlink" href="#citations.views.InstitutionAPIView.serializer_class" title="Link to this definition"></a></dt>
+<dd><p>alias of <a class="reference internal" href="serializer.html#citations.serializers.InstitutionsSerializer" title="citations.serializers.InstitutionsSerializer"><code class="xref py py-class docutils literal notranslate"><span class="pre">InstitutionsSerializer</span></code></a></p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="citations.views.SpecificPartyAPIView">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">SpecificPartyAPIView</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#SpecificPartyAPIView"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.SpecificPartyAPIView" title="Link to this definition"></a></dt>
+<dd><p>Action requests related to Specific Party</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.SpecificPartyAPIView.model">
+<span class="sig-name descname"><span class="pre">model</span></span><a class="headerlink" href="#citations.views.SpecificPartyAPIView.model" title="Link to this definition"></a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">Parties</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.SpecificPartyAPIView.serializer_class">
+<span class="sig-name descname"><span class="pre">serializer_class</span></span><a class="headerlink" href="#citations.views.SpecificPartyAPIView.serializer_class" title="Link to this definition"></a></dt>
+<dd><p>alias of <a class="reference internal" href="serializer.html#citations.serializers.PartiesSerializer" title="citations.serializers.PartiesSerializer"><code class="xref py py-class docutils literal notranslate"><span class="pre">PartiesSerializer</span></code></a></p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="citations.views.PartyAPIView">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">PartyAPIView</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#PartyAPIView"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.PartyAPIView" title="Link to this definition"></a></dt>
+<dd><p>List all parties.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.PartyAPIView.model">
+<span class="sig-name descname"><span class="pre">model</span></span><a class="headerlink" href="#citations.views.PartyAPIView.model" title="Link to this definition"></a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">Parties</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.PartyAPIView.serializer_class">
+<span class="sig-name descname"><span class="pre">serializer_class</span></span><a class="headerlink" href="#citations.views.PartyAPIView.serializer_class" title="Link to this definition"></a></dt>
+<dd><p>alias of <a class="reference internal" href="serializer.html#citations.serializers.PartiesSerializer" title="citations.serializers.PartiesSerializer"><code class="xref py py-class docutils literal notranslate"><span class="pre">PartiesSerializer</span></code></a></p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="citations.views.FundingStreamAPIView">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">FundingStreamAPIView</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#FundingStreamAPIView"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.FundingStreamAPIView" title="Link to this definition"></a></dt>
+<dd><p>List all funding streams.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.FundingStreamAPIView.model">
+<span class="sig-name descname"><span class="pre">model</span></span><a class="headerlink" href="#citations.views.FundingStreamAPIView.model" title="Link to this definition"></a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">FundingStreams</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.FundingStreamAPIView.serializer_class">
+<span class="sig-name descname"><span class="pre">serializer_class</span></span><a class="headerlink" href="#citations.views.FundingStreamAPIView.serializer_class" title="Link to this definition"></a></dt>
+<dd><p>alias of <a class="reference internal" href="serializer.html#citations.serializers.FundingStreamsSerializer" title="citations.serializers.FundingStreamsSerializer"><code class="xref py py-class docutils literal notranslate"><span class="pre">FundingStreamsSerializer</span></code></a></p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="citations.views.CitationAPIView">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">CitationAPIView</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#CitationAPIView"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.CitationAPIView" title="Link to this definition"></a></dt>
+<dd><p>List all funding streams.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.CitationAPIView.model">
+<span class="sig-name descname"><span class="pre">model</span></span><a class="headerlink" href="#citations.views.CitationAPIView.model" title="Link to this definition"></a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">Citations</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.CitationAPIView.serializer_class">
+<span class="sig-name descname"><span class="pre">serializer_class</span></span><a class="headerlink" href="#citations.views.CitationAPIView.serializer_class" title="Link to this definition"></a></dt>
+<dd><p>alias of <a class="reference internal" href="serializer.html#citations.serializers.CitationsSerializer" title="citations.serializers.CitationsSerializer"><code class="xref py py-class docutils literal notranslate"><span class="pre">CitationsSerializer</span></code></a></p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="citations.views.SpecificCitationAPIView">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">SpecificCitationAPIView</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#SpecificCitationAPIView"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.SpecificCitationAPIView" title="Link to this definition"></a></dt>
+<dd><p>List all funding streams.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.SpecificCitationAPIView.model">
+<span class="sig-name descname"><span class="pre">model</span></span><a class="headerlink" href="#citations.views.SpecificCitationAPIView.model" title="Link to this definition"></a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">Citations</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.SpecificCitationAPIView.serializer_class">
+<span class="sig-name descname"><span class="pre">serializer_class</span></span><a class="headerlink" href="#citations.views.SpecificCitationAPIView.serializer_class" title="Link to this definition"></a></dt>
+<dd><p>alias of <a class="reference internal" href="serializer.html#citations.serializers.CitationsSerializer" title="citations.serializers.CitationsSerializer"><code class="xref py py-class docutils literal notranslate"><span class="pre">CitationsSerializer</span></code></a></p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="citations.views.CitationFormMixin">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">CitationFormMixin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#CitationFormMixin"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.CitationFormMixin" title="Link to this definition"></a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.CitationFormMixin.model">
+<span class="sig-name descname"><span class="pre">model</span></span><a class="headerlink" href="#citations.views.CitationFormMixin.model" title="Link to this definition"></a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">Citations</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.CitationFormMixin.serializer_class">
+<span class="sig-name descname"><span class="pre">serializer_class</span></span><a class="headerlink" href="#citations.views.CitationFormMixin.serializer_class" title="Link to this definition"></a></dt>
+<dd><p>alias of <a class="reference internal" href="serializer.html#citations.serializers.CitationsSerializer" title="citations.serializers.CitationsSerializer"><code class="xref py py-class docutils literal notranslate"><span class="pre">CitationsSerializer</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.CitationFormMixin.dispatch">
+<span class="sig-name descname"><span class="pre">dispatch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#CitationFormMixin.dispatch"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.CitationFormMixin.dispatch" title="Link to this definition"></a></dt>
+<dd><p>Setup for form view</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.CitationFormMixin.get_context_data">
+<span class="sig-name descname"><span class="pre">get_context_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#CitationFormMixin.get_context_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.CitationFormMixin.get_context_data" title="Link to this definition"></a></dt>
+<dd><p>Adds the CEDA branding or generic base for rendering.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.CitationFormMixin.clean_formset_data">
+<span class="sig-name descname"><span class="pre">clean_formset_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">formset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">serializer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">allow_update</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="reference internal" href="_modules/citations/views.html#CitationFormMixin.clean_formset_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.CitationFormMixin.clean_formset_data" title="Link to this definition"></a></dt>
+<dd><p>Clean data from a formset and determine if updates are required</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="citations.views.NewCitationFormView">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">NewCitationFormView</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#NewCitationFormView"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.NewCitationFormView" title="Link to this definition"></a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.NewCitationFormView.form_class">
+<span class="sig-name descname"><span class="pre">form_class</span></span><a class="headerlink" href="#citations.views.NewCitationFormView.form_class" title="Link to this definition"></a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">NewCitationForm</span></code></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.NewCitationFormView.form_valid">
+<span class="sig-name descname"><span class="pre">form_valid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">form</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#NewCitationFormView.form_valid"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.NewCitationFormView.form_valid" title="Link to this definition"></a></dt>
+<dd><p>If the form is valid, redirect to the supplied URL.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.NewCitationFormView.get_initial">
+<span class="sig-name descname"><span class="pre">get_initial</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#NewCitationFormView.get_initial"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.NewCitationFormView.get_initial" title="Link to this definition"></a></dt>
+<dd><p>Return the initial data to use for forms on this view.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.NewCitationFormView.get_context_data">
+<span class="sig-name descname"><span class="pre">get_context_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#NewCitationFormView.get_context_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.NewCitationFormView.get_context_data" title="Link to this definition"></a></dt>
+<dd><p>Adds the CEDA branding or generic base for rendering.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="citations.views.EditCitationFormView">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">EditCitationFormView</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#EditCitationFormView"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.EditCitationFormView" title="Link to this definition"></a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.EditCitationFormView.form_class">
+<span class="sig-name descname"><span class="pre">form_class</span></span><a class="headerlink" href="#citations.views.EditCitationFormView.form_class" title="Link to this definition"></a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">EditCitationForm</span></code></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.EditCitationFormView.form_valid">
+<span class="sig-name descname"><span class="pre">form_valid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">form</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#EditCitationFormView.form_valid"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.EditCitationFormView.form_valid" title="Link to this definition"></a></dt>
+<dd><p>If the form is valid, redirect to the supplied URL.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.EditCitationFormView.get_initial">
+<span class="sig-name descname"><span class="pre">get_initial</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#EditCitationFormView.get_initial"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.EditCitationFormView.get_initial" title="Link to this definition"></a></dt>
+<dd><p>Return the initial data to use for forms on this view.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.EditCitationFormView.get_context_data">
+<span class="sig-name descname"><span class="pre">get_context_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">title</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#EditCitationFormView.get_context_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.EditCitationFormView.get_context_data" title="Link to this definition"></a></dt>
+<dd><p>Adds the CEDA branding or generic base for rendering.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="citations.views.ConfirmDeleteCitationView">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">ConfirmDeleteCitationView</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#ConfirmDeleteCitationView"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.ConfirmDeleteCitationView" title="Link to this definition"></a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.ConfirmDeleteCitationView.model">
+<span class="sig-name descname"><span class="pre">model</span></span><a class="headerlink" href="#citations.views.ConfirmDeleteCitationView.model" title="Link to this definition"></a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">Citations</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.ConfirmDeleteCitationView.serializer_class">
+<span class="sig-name descname"><span class="pre">serializer_class</span></span><a class="headerlink" href="#citations.views.ConfirmDeleteCitationView.serializer_class" title="Link to this definition"></a></dt>
+<dd><p>alias of <a class="reference internal" href="serializer.html#citations.serializers.CitationsSerializer" title="citations.serializers.CitationsSerializer"><code class="xref py py-class docutils literal notranslate"><span class="pre">CitationsSerializer</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.ConfirmDeleteCitationView.get_context_data">
+<span class="sig-name descname"><span class="pre">get_context_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pk</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#ConfirmDeleteCitationView.get_context_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.ConfirmDeleteCitationView.get_context_data" title="Link to this definition"></a></dt>
+<dd><p>Adds the CEDA branding or generic base for rendering.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="citations.views.ReviewerRequestView">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">ReviewerRequestView</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#ReviewerRequestView"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.ReviewerRequestView" title="Link to this definition"></a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.ReviewerRequestView.form_class">
+<span class="sig-name descname"><span class="pre">form_class</span></span><a class="headerlink" href="#citations.views.ReviewerRequestView.form_class" title="Link to this definition"></a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">InstitutionIdForm</span></code></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.ReviewerRequestView.get_context_data">
+<span class="sig-name descname"><span class="pre">get_context_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#ReviewerRequestView.get_context_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.ReviewerRequestView.get_context_data" title="Link to this definition"></a></dt>
+<dd><p>Adds the CEDA branding or generic base for rendering.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.ReviewerRequestView.get_form_kwargs">
+<span class="sig-name descname"><span class="pre">get_form_kwargs</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#ReviewerRequestView.get_form_kwargs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.ReviewerRequestView.get_form_kwargs" title="Link to this definition"></a></dt>
+<dd><p>Return the keyword arguments for instantiating the form.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.ReviewerRequestView.form_valid">
+<span class="sig-name descname"><span class="pre">form_valid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">form</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#ReviewerRequestView.form_valid"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.ReviewerRequestView.form_valid" title="Link to this definition"></a></dt>
+<dd><p>If the form is valid, redirect to the supplied URL.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="serializer.html" class="btn btn-neutral float-left" title="Citation Auto Generation (Serializer Classes)" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="dois.html" class="btn btn-neutral float-right" title="DOI Minting Service" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022-2024, Centre of Environmental Data Analysis Developers,Scientific and Technical Facilities Council (STFC),UK Research and Innovation (UKRI). BSD 2-Clause License. All rights reserved.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

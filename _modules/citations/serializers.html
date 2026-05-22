@@ -1,0 +1,1104 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>citations.serializers &mdash; CEDA CMIP7 Citation Service 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            CEDA CMIP7 Citation Service
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Developer Guides</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../serializer.html">Citation Auto Generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../views.html">Citation Views and Rendering</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dois.html">DOI Minting Service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../kafka.html">Kafka Queue Systems &amp; Listener</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../stac.html">STAC ESGF Integration</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">CEDA CMIP7 Citation Service</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">citations.serializers</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for citations.serializers</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">hashlib</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Union</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">django.conf</span><span class="w"> </span><span class="kn">import</span> <span class="n">settings</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">django.core.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">ValidationError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">django.db</span><span class="w"> </span><span class="kn">import</span> <span class="n">models</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rest_framework</span><span class="w"> </span><span class="kn">import</span> <span class="n">serializers</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rest_framework.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">MethodNotAllowed</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">citations.consumer.write</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_instance</span><span class="p">,</span> <span class="n">update_instance</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">citations.external</span><span class="w"> </span><span class="kn">import</span> <span class="n">publish_record</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">citations.facet_mappings</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">BACKUP_REPOS</span><span class="p">,</span>
+    <span class="n">ESGVOC_FACET_LABELS</span><span class="p">,</span>
+    <span class="n">ESGVOC_TITLE_LABELS</span><span class="p">,</span>
+    <span class="n">FACET_ABSTRACT_DESCRIPTIONS</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">citations.models</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Citations</span><span class="p">,</span>
+    <span class="n">FundingStreams</span><span class="p">,</span>
+    <span class="n">Institutions</span><span class="p">,</span>
+    <span class="n">Parties</span><span class="p">,</span>
+    <span class="n">References</span><span class="p">,</span>
+    <span class="n">extract_from_orcid</span><span class="p">,</span>
+    <span class="n">locate_institute</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">citations.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">logstream</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">citations.validators</span><span class="w"> </span><span class="kn">import</span> <span class="n">validate_component</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">esgvoc.api</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ev</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">ev</span> <span class="o">=</span> <span class="kc">None</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">logstream</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">propagate</span> <span class="o">=</span> <span class="kc">False</span>
+
+
+<div class="viewcode-block" id="mint_doi_for_data">
+<a class="viewcode-back" href="../../serializer.html#citations.serializers.mint_doi_for_data">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">mint_doi_for_data</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    &#39;Data&#39; is the partially serialized content for the record to be published.</span>
+
+<span class="sd">    - Expand all creators (proper serialization)</span>
+<span class="sd">    - Expand all funders</span>
+<span class="sd">    - Expand all references</span>
+<span class="sd">    - Send data to publish record</span>
+
+<span class="sd">    This function is considered a &#39;core&#39; function because it relies on access</span>
+<span class="sd">    to the models of this application.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+    <span class="n">creators</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">PartiesSerializer</span><span class="p">(</span><span class="n">instance</span><span class="o">=</span><span class="n">Parties</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;primary_id&quot;</span><span class="p">]))</span><span class="o">.</span><span class="n">data</span>
+    <span class="p">]</span> <span class="o">+</span> <span class="p">[</span>
+        <span class="n">PartiesSerializer</span><span class="p">(</span><span class="n">instance</span><span class="o">=</span><span class="n">Parties</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">pk</span><span class="p">))</span><span class="o">.</span><span class="n">data</span>
+        <span class="k">for</span> <span class="n">pk</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;contacts&quot;</span><span class="p">]</span>
+    <span class="p">]</span>
+
+    <span class="n">data</span><span class="p">[</span><span class="s2">&quot;creators&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">creators</span>
+
+    <span class="n">funders</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">FundingStreamsSerializer</span><span class="p">(</span><span class="n">instance</span><span class="o">=</span><span class="n">FundingStreams</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">pk</span><span class="p">))</span><span class="o">.</span><span class="n">data</span>
+        <span class="k">for</span> <span class="n">pk</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;funders&quot;</span><span class="p">]</span>
+    <span class="p">]</span>
+
+    <span class="n">data</span><span class="p">[</span><span class="s2">&quot;funders&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">funders</span>
+
+    <span class="k">for</span> <span class="n">reltype</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;cites&quot;</span><span class="p">,</span> <span class="s2">&quot;is_cited_by&quot;</span><span class="p">,</span> <span class="s2">&quot;is_referenced_by&quot;</span><span class="p">]:</span>
+        <span class="n">data</span><span class="p">[</span><span class="n">reltype</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">ReferencesSerializer</span><span class="p">(</span><span class="n">instance</span><span class="o">=</span><span class="n">References</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">pk</span><span class="p">))</span><span class="o">.</span><span class="n">data</span>
+            <span class="k">for</span> <span class="n">pk</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">reltype</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="p">]</span>
+
+    <span class="n">status</span><span class="p">,</span> <span class="n">pubdata</span> <span class="o">=</span> <span class="n">publish_record</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">status</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">pubdata</span></div>
+
+
+
+<div class="viewcode-block" id="institution_mappings">
+<a class="viewcode-back" href="../../serializer.html#citations.serializers.institution_mappings">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">institution_mappings</span><span class="p">(</span><span class="n">institution_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">project_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;cmip7&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Apply known institution mappings given the institution_id which is most likely the acronym.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">ev</span><span class="p">:</span>
+        <span class="c1"># No ESGVOC - use either mapping or return basic info.</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">mappings</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">INSTITUTION_MAPPINGS_URL</span><span class="p">)</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">mappings</span><span class="p">[</span><span class="n">institution_id</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">institution_id</span><span class="p">,</span> <span class="s2">&quot;acronym&quot;</span><span class="p">:</span> <span class="n">institution_id</span><span class="p">}</span>
+
+    <span class="n">esgvoc_institution</span> <span class="o">=</span> <span class="p">{</span><span class="n">v</span><span class="p">:</span> <span class="n">k</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">ESGVOC_FACET_LABELS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">project_id</span><span class="p">,</span> <span class="p">{})}</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+        <span class="s2">&quot;institution_id&quot;</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">esgvoc_institution</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Institution not defined or project ID not known&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{}</span>
+
+    <span class="c1"># Get the institution from esgvoc</span>
+    <span class="n">component</span> <span class="o">=</span> <span class="n">ev</span><span class="o">.</span><span class="n">get_term_in_collection</span><span class="p">(</span>
+        <span class="n">project_id</span><span class="o">=</span><span class="n">project_id</span><span class="p">,</span> <span class="n">collection_id</span><span class="o">=</span><span class="s2">&quot;institution&quot;</span><span class="p">,</span> <span class="n">term_id</span><span class="o">=</span><span class="n">institution_id</span>
+    <span class="p">)</span> <span class="ow">or</span> <span class="n">ev</span><span class="o">.</span><span class="n">get_term_in_collection</span><span class="p">(</span>
+        <span class="n">project_id</span><span class="o">=</span><span class="n">project_id</span><span class="p">,</span>
+        <span class="n">collection_id</span><span class="o">=</span><span class="s2">&quot;institution&quot;</span><span class="p">,</span>
+        <span class="n">term_id</span><span class="o">=</span><span class="n">institution_id</span><span class="o">.</span><span class="n">lower</span><span class="p">(),</span>
+    <span class="p">)</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">institution_id</span><span class="p">,</span> <span class="s2">&quot;acronym&quot;</span><span class="p">:</span> <span class="n">institution_id</span><span class="p">}</span>
+    <span class="k">if</span> <span class="n">component</span><span class="p">:</span>
+
+        <span class="n">data</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">component</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">,</span> <span class="n">institution_id</span><span class="p">),</span>
+                <span class="s2">&quot;acronym&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">component</span><span class="p">,</span> <span class="s2">&quot;acronyms&quot;</span><span class="p">,</span> <span class="p">[</span><span class="n">institution_id</span><span class="p">])[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="p">}</span>
+        <span class="p">)</span>
+
+        <span class="n">country</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">country</span> <span class="o">=</span> <span class="n">component</span><span class="o">.</span><span class="n">members</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">location</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">country</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+        <span class="k">if</span> <span class="n">country</span><span class="p">:</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s2">&quot;country&quot;</span><span class="p">:</span> <span class="n">country</span><span class="p">})</span>
+    <span class="k">return</span> <span class="n">data</span></div>
+
+
+
+<div class="viewcode-block" id="title_from_facets">
+<a class="viewcode-back" href="../../serializer.html#citations.serializers.title_from_facets">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">title_from_facets</span><span class="p">(</span>
+    <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">raise_exceptions</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Validate by generating the expected title from the facets.</span>
+
+<span class="sd">    Facet title generation is `mip_era` specific. If the `mip_era` is not contained</span>
+<span class="sd">    in the data, this function should not be run, but will return a None value.&quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">bool</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;mip_era&quot;</span><span class="p">)):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="n">missing</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="n">project_id</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;mip_era&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+
+    <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">facet</span> <span class="ow">in</span> <span class="n">ESGVOC_FACET_LABELS</span><span class="p">[</span><span class="n">project_id</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">facet</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+            <span class="n">missing</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">facet</span><span class="p">)</span>
+        <span class="n">validate_component</span><span class="p">(</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">facet</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">(),</span>
+            <span class="n">label</span><span class="p">,</span>
+            <span class="n">project_id</span><span class="o">=</span><span class="n">project_id</span><span class="p">,</span>
+            <span class="n">raise_exception</span><span class="o">=</span><span class="n">raise_exceptions</span><span class="p">,</span>
+            <span class="n">repo</span><span class="o">=</span><span class="n">BACKUP_REPOS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">project_id</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">project_id</span> <span class="o">==</span> <span class="s2">&quot;cmip7&quot;</span><span class="p">:</span>
+        <span class="n">experiments</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">validate_component</span><span class="p">(</span>
+                <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;activity_id&quot;</span><span class="p">),</span>
+                <span class="s2">&quot;activity&quot;</span><span class="p">,</span>
+                <span class="n">project_id</span><span class="o">=</span><span class="n">project_id</span><span class="p">,</span>
+                <span class="n">requested</span><span class="o">=</span><span class="s2">&quot;experiments&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="ow">or</span> <span class="p">[]</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;experiment_id&quot;</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">experiments</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">raise_exceptions</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;experiment_id&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2"> not valid for </span><span class="si">{</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;activity_id&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">: Valid experiments are </span><span class="si">{</span><span class="n">experiments</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">missing</span>
+
+    <span class="k">return</span> <span class="s2">&quot;.&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">data</span><span class="p">[</span><span class="n">facet</span><span class="p">]</span> <span class="k">for</span> <span class="n">facet</span> <span class="ow">in</span> <span class="n">ESGVOC_TITLE_LABELS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">project_id</span><span class="p">)])</span></div>
+
+
+
+<div class="viewcode-block" id="obtain_all_references">
+<a class="viewcode-back" href="../../serializer.html#citations.serializers.obtain_all_references">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">obtain_all_references</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Obtain Citation references from the EMD (ESGVOC)</span>
+
+<span class="sd">    Prevent adding a reference if it already exists.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">ev</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{}</span>
+
+    <span class="n">project_id</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;mip_era&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+
+    <span class="n">cites</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">facet</span> <span class="ow">in</span> <span class="n">ESGVOC_FACET_LABELS</span><span class="p">[</span><span class="n">project_id</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">component</span> <span class="o">=</span> <span class="n">ev</span><span class="o">.</span><span class="n">get_term_in_collection</span><span class="p">(</span>
+            <span class="n">project_id</span><span class="o">=</span><span class="n">project_id</span><span class="p">,</span> <span class="n">collection_id</span><span class="o">=</span><span class="n">label</span><span class="p">,</span> <span class="n">term_id</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="n">facet</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">component</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">component</span><span class="p">,</span> <span class="s2">&quot;references&quot;</span><span class="p">):</span>
+            <span class="k">continue</span>
+
+        <span class="k">for</span> <span class="n">ref</span> <span class="ow">in</span> <span class="n">component</span><span class="o">.</span><span class="n">references</span><span class="p">:</span>
+
+            <span class="k">if</span> <span class="n">ref</span><span class="o">.</span><span class="n">doi</span> <span class="ow">in</span> <span class="n">ref</span><span class="o">.</span><span class="n">citation</span><span class="p">:</span>
+                <span class="n">citeas</span> <span class="o">=</span> <span class="n">ref</span><span class="o">.</span><span class="n">citation</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">citeas</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">ref</span><span class="o">.</span><span class="n">citation</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">ref</span><span class="o">.</span><span class="n">doi</span><span class="si">}</span><span class="s2">&quot;</span>
+
+            <span class="n">title</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">ref</span><span class="p">,</span> <span class="s2">&quot;title&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span>
+                <span class="sa">r</span><span class="s2">&quot;^.*?\d</span><span class="si">{4}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">ref</span><span class="o">.</span><span class="n">citation</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">cites</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="n">title</span><span class="p">,</span> <span class="s2">&quot;citeas&quot;</span><span class="p">:</span> <span class="n">citeas</span><span class="p">,</span> <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">ref</span><span class="o">.</span><span class="n">doi</span><span class="p">})</span>
+
+    <span class="k">return</span> <span class="n">cites</span></div>
+
+
+
+<div class="viewcode-block" id="get_drs_url">
+<a class="viewcode-back" href="../../serializer.html#citations.serializers.get_drs_url">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_drs_url</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Obtain the DRS URL expected for this record, given the set of search facets.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># No auto-DRS if no metagrid URL</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="s2">&quot;METAGRID_URL&quot;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;&quot;</span>
+
+    <span class="c1"># No auto-DRS if the mip era is not given</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">bool</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;mip_era&quot;</span><span class="p">)):</span>
+        <span class="k">return</span> <span class="s2">&quot;&quot;</span>
+
+    <span class="n">project_id</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;mip_era&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+
+    <span class="n">metagrid_base</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">settings</span><span class="o">.</span><span class="n">METAGRID_URL</span><span class="si">}</span><span class="s1">/search?project=</span><span class="si">{</span><span class="n">project_id</span><span class="si">}</span><span class="s1">+STAC&amp;activeFacets=%7B&quot;mip_era&quot;%3A&quot;</span><span class="si">{</span><span class="n">project_id</span><span class="si">}</span><span class="s1">&quot;&#39;</span>
+
+    <span class="n">queries</span> <span class="o">=</span> <span class="p">[</span><span class="n">metagrid_base</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">facet</span> <span class="ow">in</span> <span class="n">ESGVOC_FACET_LABELS</span><span class="p">[</span><span class="n">project_id</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+
+        <span class="c1"># No auto-DRS if any facet is missing</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">bool</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">facet</span><span class="p">,</span> <span class="kc">False</span><span class="p">)):</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">facet</span><span class="si">}</span><span class="s2"> is missing for </span><span class="si">{</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">, no DRS available&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="s2">&quot;&quot;</span>
+
+        <span class="n">queries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s1">&#39;&quot;</span><span class="si">{</span><span class="n">facet</span><span class="si">}</span><span class="s1">&quot;%3A&quot;</span><span class="si">{</span><span class="n">data</span><span class="p">[</span><span class="n">facet</span><span class="p">]</span><span class="si">}</span><span class="s1">&quot;&#39;</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="n">drs_url</span> <span class="o">=</span> <span class="s2">&quot;%2C&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">queries</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">drs_url</span></div>
+
+
+
+<div class="viewcode-block" id="assemble_license_info">
+<a class="viewcode-back" href="../../serializer.html#citations.serializers.assemble_license_info">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">assemble_license_info</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Determine the paragraph of text to use for the license.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">license</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="s2">&quot;GENERAL_INFO&quot;</span><span class="p">):</span>
+        <span class="n">license</span> <span class="o">+=</span> <span class="n">settings</span><span class="o">.</span><span class="n">GENERAL_INFO</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="s2">&quot;CITATION_GUIDANCE&quot;</span><span class="p">):</span>
+        <span class="n">license</span> <span class="o">+=</span> <span class="n">settings</span><span class="o">.</span><span class="n">CITATION_GUIDANCE</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span>
+
+    <span class="n">license</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Published under </span><span class="si">{</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;rights&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">.&#39;</span><span class="p">)</span>
+
+    <span class="n">license</span> <span class="o">=</span> <span class="p">[</span><span class="n">lp</span> <span class="k">for</span> <span class="n">lp</span> <span class="ow">in</span> <span class="n">license</span> <span class="k">if</span> <span class="n">lp</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)]</span>
+
+    <span class="k">return</span> <span class="s2">&quot;. &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">license</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="abstract_from_esgvoc">
+<a class="viewcode-back" href="../../serializer.html#citations.serializers.abstract_from_esgvoc">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">abstract_from_esgvoc</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Determine the paragraph of abstract text from esgvoc parameters.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># No auto-abstract if no ESGVOC integration.</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">ev</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;&quot;</span>
+
+    <span class="n">project_id</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;mip_era&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+
+    <span class="n">facet_labels</span> <span class="o">=</span> <span class="n">ESGVOC_FACET_LABELS</span><span class="p">[</span><span class="n">project_id</span><span class="p">]</span>
+
+    <span class="n">abstract</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">facet_desc</span> <span class="ow">in</span> <span class="n">FACET_ABSTRACT_DESCRIPTIONS</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">facet_labels</span><span class="p">:</span>
+            <span class="k">continue</span>
+
+        <span class="n">facet</span> <span class="o">=</span> <span class="n">facet_labels</span><span class="p">[</span><span class="n">label</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">bool</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">facet</span><span class="p">)):</span>
+            <span class="k">continue</span>
+
+        <span class="n">entry</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">component</span> <span class="o">=</span> <span class="n">ev</span><span class="o">.</span><span class="n">get_term_in_collection</span><span class="p">(</span>
+            <span class="n">project_id</span><span class="o">=</span><span class="n">project_id</span><span class="p">,</span> <span class="n">collection_id</span><span class="o">=</span><span class="n">label</span><span class="p">,</span> <span class="n">term_id</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="n">facet</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="p">)</span>
+
+        <span class="n">description</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">component</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="n">facet</span><span class="p">])</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">bool</span><span class="p">(</span><span class="n">description</span><span class="p">):</span>
+            <span class="n">description</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">facet</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+
+        <span class="n">entry</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">description</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">component</span><span class="p">,</span> <span class="s2">&quot;labels&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">entry</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">component</span><span class="o">.</span><span class="n">labels</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">facet_desc</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="c1"># Rendering institution description</span>
+            <span class="n">descs</span> <span class="o">=</span> <span class="n">facet_desc</span>
+            <span class="n">abstract</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="n">descs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="o">+</span> <span class="s2">&quot; - &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span>
+                <span class="o">+</span> <span class="n">descs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                <span class="o">+</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;source_id&quot;</span><span class="p">]</span>
+                <span class="o">+</span> <span class="n">descs</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+                <span class="o">+</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;experiment_id&quot;</span><span class="p">]</span>
+                <span class="o">+</span> <span class="n">descs</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">abstract</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">facet_desc</span> <span class="o">+</span> <span class="s2">&quot; - &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">entry</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">abstract</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="s2">&quot;GENERAL_INFO&quot;</span><span class="p">):</span>
+        <span class="n">abstract</span> <span class="o">+=</span> <span class="p">[</span><span class="n">settings</span><span class="o">.</span><span class="n">GENERAL_INFO</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">abstract</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="s2">&quot;CEDA_INFO&quot;</span><span class="p">):</span>
+        <span class="n">abstract</span> <span class="o">+=</span> <span class="p">[</span><span class="n">settings</span><span class="o">.</span><span class="n">CEDA_INFO</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">a</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">abstract</span><span class="p">])</span></div>
+
+
+
+<div class="viewcode-block" id="chain_new_objects">
+<a class="viewcode-back" href="../../serializer.html#citations.serializers.chain_new_objects">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">chain_new_objects</span><span class="p">(</span>
+    <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+    <span class="n">serializer</span><span class="p">:</span> <span class="n">serializers</span><span class="o">.</span><span class="n">ModelSerializer</span><span class="p">,</span>
+    <span class="n">model</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">],</span>
+    <span class="n">filter_kwargs</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+    <span class="n">optionals</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">allow_update</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create new model instances if required, or return the ID of the existing instance.</span>
+
+<span class="sd">    This includes locating the existing record based on some filter kwargs (normally just the ID)</span>
+<span class="sd">    to identify the existing instance.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">optionals</span> <span class="o">=</span> <span class="n">optionals</span> <span class="ow">or</span> <span class="p">[]</span>
+    <span class="n">filters</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">filter_kwargs</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">data</span><span class="p">}</span>
+    <span class="k">for</span> <span class="n">opt</span> <span class="ow">in</span> <span class="n">optionals</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">opt</span><span class="p">):</span>
+            <span class="n">filters</span><span class="p">[</span><span class="n">opt</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">opt</span><span class="p">]</span>
+    <span class="n">instance</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="o">**</span><span class="n">filters</span><span class="p">)</span>
+
+    <span class="c1"># Create instance if not specified.</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">instance</span><span class="p">:</span>
+        <span class="n">serial</span> <span class="o">=</span> <span class="n">serializer</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">serial</span><span class="o">.</span><span class="n">is_valid</span><span class="p">(</span><span class="n">raise_exception</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">serial</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+        <span class="n">inst_pk</span> <span class="o">=</span> <span class="n">serial</span><span class="o">.</span><span class="n">instance</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Update the existing record with new data - if allowed</span>
+        <span class="n">instance</span> <span class="o">=</span> <span class="n">instance</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">serial</span> <span class="o">=</span> <span class="n">serializer</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">instance</span><span class="o">=</span><span class="n">instance</span><span class="p">)</span>
+
+        <span class="n">serial</span><span class="o">.</span><span class="n">is_valid</span><span class="p">(</span><span class="n">raise_exception</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">update</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="c1"># Some record types cannot be updated using this mechanism.</span>
+        <span class="k">if</span> <span class="n">allow_update</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">v</span> <span class="o">!=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="n">k</span><span class="p">):</span>
+                    <span class="n">update</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="c1"># Save the record only if an update is required - will cut down on</span>
+        <span class="c1"># extra kafka messages if that is in place.</span>
+        <span class="k">if</span> <span class="n">update</span><span class="p">:</span>
+            <span class="n">serial</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+        <span class="n">inst_pk</span> <span class="o">=</span> <span class="n">serial</span><span class="o">.</span><span class="n">validated_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="n">instance</span><span class="o">.</span><span class="n">pk</span><span class="p">)</span>
+
+    <span class="c1"># Returns the id of the record</span>
+    <span class="c1"># NOTE: If the internal kafka queue is set up, it is possible the ID will be for a record that does not yet exist.</span>
+    <span class="k">return</span> <span class="n">inst_pk</span></div>
+
+
+
+<div class="viewcode-block" id="GenericSerializerMixin">
+<a class="viewcode-back" href="../../serializer.html#citations.serializers.GenericSerializerMixin">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">GenericSerializerMixin</span><span class="p">(</span><span class="n">serializers</span><span class="o">.</span><span class="n">ModelSerializer</span><span class="p">):</span>
+
+<div class="viewcode-block" id="GenericSerializerMixin.to_internal_value">
+<a class="viewcode-back" href="../../serializer.html#citations.serializers.GenericSerializerMixin.to_internal_value">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_internal_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+
+        <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;view&quot;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="s2">&quot;pk&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">context</span><span class="p">[</span><span class="s2">&quot;view&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">kwargs</span><span class="p">:</span>
+                <span class="n">data</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">context</span><span class="p">[</span><span class="s2">&quot;view&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;pk&quot;</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">data</span></div>
+
+
+<div class="viewcode-block" id="GenericSerializerMixin.filter_data">
+<a class="viewcode-back" href="../../serializer.html#citations.serializers.GenericSerializerMixin.filter_data">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">filter_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">validated_data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Filter out unrecognised parameters.</span>
+
+<span class="sd">        Also runs the `fill_data_parameters` method to auto-generate content.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">filtered_data</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">validated_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fill_data_parameters</span><span class="p">(</span><span class="n">validated_data</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">validated_data</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">fields</span>
+                <span class="ow">or</span> <span class="n">k</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_id&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">id_relations</span>
+                <span class="ow">or</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">internal_fields</span>
+            <span class="p">):</span>
+                <span class="n">filtered_data</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">validated_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">filtered_data</span></div>
+
+
+<div class="viewcode-block" id="GenericSerializerMixin.replace_id_relations">
+<a class="viewcode-back" href="../../serializer.html#citations.serializers.GenericSerializerMixin.replace_id_relations">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">replace_id_relations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">validated_data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Replace relations like `primary` in the citations model with `primary_id`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Meta</span><span class="p">,</span> <span class="s2">&quot;id_relations&quot;</span><span class="p">,</span> <span class="p">[]):</span>
+            <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">validated_data</span><span class="p">:</span>
+                <span class="n">validated_data</span><span class="p">[</span><span class="n">k</span> <span class="o">+</span> <span class="s2">&quot;_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">validated_data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">validated_data</span></div>
+
+
+<div class="viewcode-block" id="GenericSerializerMixin.create">
+<a class="viewcode-back" href="../../serializer.html#citations.serializers.GenericSerializerMixin.create">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">validated_data</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create and return a model instance given validated data.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">publish</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">validated_data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;publish&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">validated_data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;user_id&quot;</span><span class="p">,</span> <span class="s2">&quot;anon&quot;</span><span class="p">)</span>
+
+        <span class="n">filtered_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter_data</span><span class="p">(</span><span class="n">validated_data</span><span class="p">)</span>
+
+        <span class="c1"># Check for required fields</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">required_fields</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Meta</span><span class="p">,</span> <span class="s2">&quot;id_relations&quot;</span><span class="p">,</span> <span class="p">[]):</span>
+                <span class="k">if</span> <span class="n">k</span> <span class="o">+</span> <span class="s2">&quot;_id&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">filtered_data</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">MethodNotAllowed</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Submission without &quot;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s1">&quot; field&#39;</span><span class="p">)</span>
+                <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">filtered_data</span>
+                <span class="ow">and</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Meta</span><span class="p">,</span> <span class="s2">&quot;field_mappings&quot;</span><span class="p">,</span> <span class="nb">dict</span><span class="p">())</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+                <span class="ow">not</span> <span class="ow">in</span> <span class="n">filtered_data</span>
+            <span class="p">):</span>
+                <span class="k">raise</span> <span class="n">MethodNotAllowed</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Submission without &quot;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s1">&quot; field&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Determine ID of specific record to be created</span>
+        <span class="n">pk</span> <span class="o">=</span> <span class="n">filtered_data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">_meta</span><span class="o">.</span><span class="n">pk</span><span class="o">.</span><span class="n">name</span><span class="p">]</span>
+
+        <span class="n">filtered_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">replace_id_relations</span><span class="p">(</span><span class="n">filtered_data</span><span class="p">)</span>
+
+        <span class="c1"># If trying to create an existing record, switch to updating it.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">pk</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">pk</span><span class="p">),</span> <span class="n">filtered_data</span><span class="p">,</span> <span class="n">publish</span><span class="o">=</span><span class="n">publish</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Run publication (DOI Minting workflow)</span>
+        <span class="k">if</span> <span class="n">publish</span><span class="p">:</span>
+            <span class="n">pubdata</span> <span class="o">=</span> <span class="n">mint_doi_for_data</span><span class="p">(</span><span class="n">filtered_data</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">pk</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pubdata</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                <span class="n">filtered_data</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">pubdata</span><span class="p">)</span>
+
+        <span class="c1"># Use Kafka-enabled instance creation</span>
+        <span class="n">create_instance</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">model</span><span class="p">,</span>
+            <span class="n">user</span><span class="o">=</span><span class="n">user_id</span><span class="p">,</span>
+            <span class="n">update_handler</span><span class="o">=</span><span class="n">handle_update</span><span class="p">,</span>
+            <span class="n">required_fields</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">required_fields</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">filtered_data</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">filtered_data</span></div>
+
+
+<div class="viewcode-block" id="GenericSerializerMixin.update">
+<a class="viewcode-back" href="../../serializer.html#citations.serializers.GenericSerializerMixin.update">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">validated_data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Update and return an existing instance, given the validated data.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">publish</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">validated_data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;publish&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">validated_data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;user_id&quot;</span><span class="p">,</span> <span class="s2">&quot;anon&quot;</span><span class="p">)</span>
+
+        <span class="n">filtered_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter_data</span><span class="p">(</span><span class="n">validated_data</span><span class="p">)</span>
+        <span class="n">filtered_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">replace_id_relations</span><span class="p">(</span><span class="n">filtered_data</span><span class="p">)</span>
+        <span class="nb">id</span> <span class="o">=</span> <span class="n">filtered_data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">filtered_data</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">MethodNotAllowed</span><span class="p">(</span><span class="s2">&quot;No updates supplied&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Check attempts to change id-related fields that are immutable.</span>
+        <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Meta</span><span class="p">,</span> <span class="s2">&quot;immutable_fields&quot;</span><span class="p">,</span> <span class="p">[]):</span>
+            <span class="k">if</span> <span class="n">filtered_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">field</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">getattr</span><span class="p">(</span>
+                <span class="n">instance</span><span class="p">,</span> <span class="n">field</span>
+            <span class="p">)</span> <span class="ow">and</span> <span class="n">filtered_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">field</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">MethodNotAllowed</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;The field &quot;</span><span class="si">{</span><span class="n">field</span><span class="si">}</span><span class="s1">&quot; is immutable&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Run publication (DOI Minting workflow)</span>
+        <span class="k">if</span> <span class="n">publish</span><span class="p">:</span>
+            <span class="n">pubdata</span> <span class="o">=</span> <span class="n">mint_doi_for_data</span><span class="p">(</span><span class="n">filtered_data</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pubdata</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                <span class="n">filtered_data</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">pubdata</span><span class="p">)</span>
+
+        <span class="c1"># Use Kafka-enabled instance updating</span>
+        <span class="n">update_instance</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">model</span><span class="p">,</span>
+            <span class="n">user</span><span class="o">=</span><span class="n">user_id</span><span class="p">,</span>
+            <span class="n">update_handler</span><span class="o">=</span><span class="n">handle_update</span><span class="p">,</span>
+            <span class="nb">id</span><span class="o">=</span><span class="n">instance</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">filtered_data</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">filtered_data</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="InstitutionsSerializer">
+<a class="viewcode-back" href="../../serializer.html#citations.serializers.InstitutionsSerializer">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">InstitutionsSerializer</span><span class="p">(</span><span class="n">GenericSerializerMixin</span><span class="p">):</span>
+    <span class="k">class</span><span class="w"> </span><span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">Institutions</span>
+        <span class="n">required_fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span>
+        <span class="n">fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="s2">&quot;acronym&quot;</span><span class="p">,</span> <span class="s2">&quot;country&quot;</span><span class="p">,</span> <span class="s2">&quot;id&quot;</span><span class="p">]</span>
+        <span class="n">relations</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">internal_fields</span> <span class="o">=</span> <span class="p">[]</span>
+
+<div class="viewcode-block" id="InstitutionsSerializer.fill_data_parameters">
+<a class="viewcode-back" href="../../serializer.html#citations.serializers.InstitutionsSerializer.fill_data_parameters">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fill_data_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Auto-fill content into the data dict.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Only ID provided - fill values from ROR API calls</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;acronym&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;country&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">locate_institute</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]))</span>
+
+        <span class="n">data</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha1</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="PartiesSerializer">
+<a class="viewcode-back" href="../../serializer.html#citations.serializers.PartiesSerializer">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">PartiesSerializer</span><span class="p">(</span><span class="n">GenericSerializerMixin</span><span class="p">):</span>
+    <span class="n">affiliations</span> <span class="o">=</span> <span class="n">InstitutionsSerializer</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">many</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">class</span><span class="w"> </span><span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">Parties</span>
+        <span class="n">required_fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;first_name&quot;</span><span class="p">,</span> <span class="s2">&quot;last_name&quot;</span><span class="p">]</span>
+        <span class="n">immutable_fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;first_name&quot;</span><span class="p">,</span> <span class="s2">&quot;last_name&quot;</span><span class="p">,</span> <span class="s2">&quot;middle_names&quot;</span><span class="p">]</span>
+        <span class="n">fields</span> <span class="o">=</span> <span class="n">immutable_fields</span> <span class="o">+</span> <span class="p">[</span><span class="s2">&quot;email&quot;</span><span class="p">,</span> <span class="s2">&quot;orcid&quot;</span><span class="p">,</span> <span class="s2">&quot;affiliations&quot;</span><span class="p">,</span> <span class="s2">&quot;id&quot;</span><span class="p">]</span>
+        <span class="n">relations</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;affiliations&quot;</span><span class="p">]</span>
+        <span class="n">internal_fields</span> <span class="o">=</span> <span class="p">[]</span>
+
+<div class="viewcode-block" id="PartiesSerializer.fill_data_parameters">
+<a class="viewcode-back" href="../../serializer.html#citations.serializers.PartiesSerializer.fill_data_parameters">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fill_data_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Auto-fill content into the data dict.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Pull information from ORCID</span>
+        <span class="n">affiliation_data</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;orcid&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">affiliation_data</span> <span class="o">+=</span> <span class="n">extract_from_orcid</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;orcid&quot;</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;affiliations&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Properly connect non-blank affiliations</span>
+            <span class="n">affiliation_data</span> <span class="o">+=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;affiliations&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">affiliation_data</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="n">affiliation_data</span> <span class="o">=</span> <span class="p">[</span><span class="n">affiliation_data</span><span class="p">]</span>
+
+        <span class="c1"># Create new institutions from the affiliations for this Author/Party</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">affiliation_data</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;affiliations&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">chain_new_objects</span><span class="p">(</span>
+                    <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">a</span><span class="p">},</span>
+                    <span class="n">InstitutionsSerializer</span><span class="p">,</span>
+                    <span class="n">Institutions</span><span class="p">,</span>
+                    <span class="n">filter_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">a</span><span class="p">},</span>
+                <span class="p">)</span>
+                <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">affiliation_data</span>
+            <span class="p">]</span>
+
+        <span class="k">if</span> <span class="s2">&quot;id&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+            <span class="c1"># Add ID from hashed version of all names</span>
+            <span class="n">naming_hash</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">data</span><span class="p">[</span><span class="s2">&quot;first_name&quot;</span><span class="p">]</span>
+                <span class="o">+</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;middle_names&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+                <span class="o">+</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;last_name&quot;</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="n">party_id</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha1</span><span class="p">(</span><span class="n">naming_hash</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
+
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">party_id</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="FundingStreamsSerializer">
+<a class="viewcode-back" href="../../serializer.html#citations.serializers.FundingStreamsSerializer">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">FundingStreamsSerializer</span><span class="p">(</span><span class="n">GenericSerializerMixin</span><span class="p">):</span>
+    <span class="n">affiliation</span> <span class="o">=</span> <span class="n">serializers</span><span class="o">.</span><span class="n">StringRelatedField</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="k">class</span><span class="w"> </span><span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">FundingStreams</span>
+        <span class="n">required_fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span>
+        <span class="n">fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="s2">&quot;affiliation&quot;</span><span class="p">,</span> <span class="s2">&quot;id&quot;</span><span class="p">]</span>
+        <span class="n">relations</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">id_relations</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;affiliation&quot;</span><span class="p">]</span>
+        <span class="n">internal_fields</span> <span class="o">=</span> <span class="p">[]</span>
+
+<div class="viewcode-block" id="FundingStreamsSerializer.fill_data_parameters">
+<a class="viewcode-back" href="../../serializer.html#citations.serializers.FundingStreamsSerializer.fill_data_parameters">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fill_data_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Auto-fill content into the data dict.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="s2">&quot;affiliation&quot;</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+            <span class="n">affiliation</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;affiliation&quot;</span><span class="p">)</span>
+
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;affiliation_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">chain_new_objects</span><span class="p">(</span>
+                <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">affiliation</span><span class="p">},</span>
+                <span class="n">InstitutionsSerializer</span><span class="p">,</span>
+                <span class="n">Institutions</span><span class="p">,</span>
+                <span class="n">filter_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">affiliation</span><span class="p">},</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="s2">&quot;id&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha1</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">data</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="ReferencesSerializer">
+<a class="viewcode-back" href="../../serializer.html#citations.serializers.ReferencesSerializer">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ReferencesSerializer</span><span class="p">(</span><span class="n">GenericSerializerMixin</span><span class="p">):</span>
+
+    <span class="k">class</span><span class="w"> </span><span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">References</span>
+        <span class="n">fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">,</span> <span class="s2">&quot;citeas&quot;</span><span class="p">,</span> <span class="s2">&quot;id&quot;</span><span class="p">]</span>
+        <span class="n">required_fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span>
+        <span class="n">relations</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">id_relations</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">field_mappings</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;DOI&quot;</span><span class="p">:</span> <span class="s2">&quot;id&quot;</span><span class="p">}</span>
+        <span class="n">internal_fields</span> <span class="o">=</span> <span class="p">[]</span>
+
+<div class="viewcode-block" id="ReferencesSerializer.fill_data_parameters">
+<a class="viewcode-back" href="../../serializer.html#citations.serializers.ReferencesSerializer.fill_data_parameters">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fill_data_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        No data filling for references</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="CitationsSerializer">
+<a class="viewcode-back" href="../../serializer.html#citations.serializers.CitationsSerializer">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">CitationsSerializer</span><span class="p">(</span><span class="n">GenericSerializerMixin</span><span class="p">):</span>
+    <span class="n">primary</span> <span class="o">=</span> <span class="n">PartiesSerializer</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">contacts</span> <span class="o">=</span> <span class="n">PartiesSerializer</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">many</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">institutions</span> <span class="o">=</span> <span class="n">InstitutionsSerializer</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">many</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">funders</span> <span class="o">=</span> <span class="n">FundingStreamsSerializer</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">many</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">is_cited_by</span> <span class="o">=</span> <span class="n">ReferencesSerializer</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">many</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">is_referenced_by</span> <span class="o">=</span> <span class="n">ReferencesSerializer</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">many</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">cites</span> <span class="o">=</span> <span class="n">ReferencesSerializer</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">many</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">class</span><span class="w"> </span><span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">Citations</span>
+        <span class="n">citation_types</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;is_cited_by&quot;</span><span class="p">,</span> <span class="s2">&quot;is_referenced_by&quot;</span><span class="p">,</span> <span class="s2">&quot;cites&quot;</span><span class="p">]</span>
+
+        <span class="c1"># Core Facet Labels from the Database</span>
+        <span class="n">fields</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s2">&quot;title&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;abstract&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;drs_url&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;doi_url&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;rights&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;license&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;primary&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;contacts&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;institutions&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;funders&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;version&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;publication_year&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;mip_era&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;activity_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;domain_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;institution_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;source_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;experiment_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;cites&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;is_cited_by&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;is_referenced_by&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+        <span class="n">required_fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">,</span> <span class="s2">&quot;version&quot;</span><span class="p">,</span> <span class="s2">&quot;primary&quot;</span><span class="p">]</span>
+        <span class="n">non_replicating_fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;experiment_id&quot;</span><span class="p">,</span> <span class="s2">&quot;doi_url&quot;</span><span class="p">,</span> <span class="s2">&quot;publication_year&quot;</span><span class="p">]</span>
+        <span class="n">id_relations</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;primary&quot;</span><span class="p">]</span>
+
+        <span class="n">relations</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s2">&quot;contacts&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;institutions&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;funders&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;is_cited_by&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;is_referenced_by&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;cites&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+        <span class="n">internal_fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;editable&quot;</span><span class="p">,</span> <span class="s2">&quot;published&quot;</span><span class="p">]</span>
+
+<div class="viewcode-block" id="CitationsSerializer.create">
+<a class="viewcode-back" href="../../serializer.html#citations.serializers.CitationsSerializer.create">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">validated_data</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Apply extra validation to the citation record.</span>
+
+<span class="sd">        This validates the ``search_facets`` if they have been provided to this record.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Enforces valid facets for all records - but don&#39;t have to match title structure.</span>
+        <span class="k">if</span> <span class="s2">&quot;mip_era&quot;</span> <span class="ow">in</span> <span class="n">validated_data</span><span class="p">:</span>
+
+            <span class="c1"># Validate by assembling expected title - if the search facets are provided.</span>
+            <span class="n">title</span> <span class="o">=</span> <span class="n">title_from_facets</span><span class="p">(</span><span class="n">validated_data</span><span class="p">,</span> <span class="n">raise_exceptions</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">bool</span><span class="p">(</span><span class="n">validated_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">title</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span>
+                        <span class="s2">&quot;Missing the `mip_era` facet and no other title provided.&quot;</span>
+                    <span class="p">)</span>
+                <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">title</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Missing facets: </span><span class="si">{</span><span class="n">title</span><span class="si">}</span><span class="s2"> - unable to generate title and no title provided.&quot;</span>
+                    <span class="p">)</span>
+                <span class="n">validated_data</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">title</span>
+
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">validated_data</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="CitationsSerializer.fill_data_parameters">
+<a class="viewcode-back" href="../../serializer.html#citations.serializers.CitationsSerializer.fill_data_parameters">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fill_data_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Update the data in a POST request.</span>
+
+<span class="sd">        Locate or create references based on the provided information.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Only add references if they are not already present</span>
+        <span class="k">for</span> <span class="n">gr</span> <span class="ow">in</span> <span class="n">obtain_all_references</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+            <span class="n">new_ref</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">for</span> <span class="n">reftype</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">citation_types</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">gr</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="n">reftype</span><span class="p">]:</span>
+                    <span class="n">new_ref</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">if</span> <span class="n">new_ref</span><span class="p">:</span>
+                <span class="n">data</span><span class="p">[</span><span class="s2">&quot;cites&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gr</span><span class="p">)</span>
+
+        <span class="c1"># Auto-fill from ESGVOC</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">bool</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;abstract&quot;</span><span class="p">)):</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;abstract&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">abstract_from_esgvoc</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">bool</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;rights&quot;</span><span class="p">)):</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;rights&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">DEFAULT_RIGHTS</span>  <span class="c1"># &#39;CC-BY-4.0&#39; SPDX identifier</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">bool</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;license&quot;</span><span class="p">)):</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;license&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">assemble_license_info</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">bool</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;drs_url&quot;</span><span class="p">)):</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;drs_url&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">get_drs_url</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+        <span class="c1"># Chain create institution</span>
+        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;institution_id&quot;</span><span class="p">):</span>
+            <span class="c1"># Create new institution as below, and add to the main affiliated institutions</span>
+
+            <span class="n">inst_data</span> <span class="o">=</span> <span class="n">institution_mappings</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;institution_id&quot;</span><span class="p">])</span>
+
+            <span class="n">institution</span> <span class="o">=</span> <span class="n">chain_new_objects</span><span class="p">(</span>
+                <span class="n">inst_data</span><span class="p">,</span>
+                <span class="n">InstitutionsSerializer</span><span class="p">,</span>
+                <span class="n">Institutions</span><span class="p">,</span>
+                <span class="n">filter_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">inst_data</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]},</span>
+                <span class="n">allow_update</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="s2">&quot;institutions&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+                <span class="n">data</span><span class="p">[</span><span class="s2">&quot;institutions&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;institutions&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">institution</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+
+            <span class="c1"># Version is auto-assigned</span>
+            <span class="n">version</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">]))</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;version&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">version</span>
+
+            <span class="c1"># Identifier is auto-assigned</span>
+            <span class="nb">id</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;_v&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;version&quot;</span><span class="p">])</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">id</span>
+
+        <span class="n">optional_party</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+            <span class="nb">set</span><span class="p">(</span><span class="n">PartiesSerializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">immutable_fields</span><span class="p">)</span>
+            <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">PartiesSerializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">required_fields</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="c1"># Unpack primaries, contacts</span>
+        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;primary&quot;</span><span class="p">):</span>
+            <span class="n">primary</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;primary&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">primary</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                <span class="c1"># This does not correctly create institution objects</span>
+                <span class="n">search_primary</span> <span class="o">=</span> <span class="n">chain_new_objects</span><span class="p">(</span>
+                    <span class="n">primary</span><span class="p">,</span>
+                    <span class="n">PartiesSerializer</span><span class="p">,</span>
+                    <span class="n">Parties</span><span class="p">,</span>
+                    <span class="n">filter_kwargs</span><span class="o">=</span><span class="n">PartiesSerializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">required_fields</span><span class="p">,</span>
+                    <span class="n">optionals</span><span class="o">=</span><span class="n">optional_party</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">primary</span> <span class="o">=</span> <span class="n">search_primary</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;primary_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">primary</span>
+
+        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;contacts&quot;</span><span class="p">):</span>
+            <span class="n">contacts</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">contact</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;contacts&quot;</span><span class="p">):</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">contact</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                    <span class="n">search_contact</span> <span class="o">=</span> <span class="n">chain_new_objects</span><span class="p">(</span>
+                        <span class="n">contact</span><span class="p">,</span>
+                        <span class="n">PartiesSerializer</span><span class="p">,</span>
+                        <span class="n">Parties</span><span class="p">,</span>
+                        <span class="n">filter_kwargs</span><span class="o">=</span><span class="n">PartiesSerializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">required_fields</span><span class="p">,</span>
+                        <span class="n">optionals</span><span class="o">=</span><span class="n">optional_party</span><span class="p">,</span>
+                    <span class="p">)</span>
+                    <span class="n">contacts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">search_contact</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">contacts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">contact</span><span class="p">)</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;contacts&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">contacts</span>
+
+        <span class="c1"># Unpack funders</span>
+        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;funders&quot;</span><span class="p">):</span>
+            <span class="n">funders</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">funder</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;funders&quot;</span><span class="p">):</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">funder</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                    <span class="n">search_funder</span> <span class="o">=</span> <span class="n">chain_new_objects</span><span class="p">(</span>
+                        <span class="n">funder</span><span class="p">,</span>
+                        <span class="n">FundingStreamsSerializer</span><span class="p">,</span>
+                        <span class="n">FundingStreams</span><span class="p">,</span>
+                        <span class="n">filter_kwargs</span><span class="o">=</span><span class="n">FundingStreamsSerializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">required_fields</span><span class="p">,</span>
+                    <span class="p">)</span>
+                    <span class="n">funders</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">search_funder</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">funders</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">funder</span><span class="p">)</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;funders&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">funders</span>
+
+        <span class="c1"># Unpack institutions</span>
+        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;institutions&quot;</span><span class="p">):</span>
+            <span class="n">institutions</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">institution</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;institutions&quot;</span><span class="p">):</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">institution</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                    <span class="n">search_institution</span> <span class="o">=</span> <span class="n">chain_new_objects</span><span class="p">(</span>
+                        <span class="n">institution</span><span class="p">,</span>
+                        <span class="n">InstitutionsSerializer</span><span class="p">,</span>
+                        <span class="n">Institutions</span><span class="p">,</span>
+                        <span class="n">filter_kwargs</span><span class="o">=</span><span class="n">InstitutionsSerializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">required_fields</span><span class="p">,</span>
+                    <span class="p">)</span>
+                    <span class="n">institutions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">search_institution</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">institutions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">institution</span><span class="p">)</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;institutions&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">institutions</span>
+
+        <span class="c1"># Unpack references - obtained via ESGVOC or UI</span>
+        <span class="k">for</span> <span class="n">citation_type</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">citation_types</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">citation_type</span><span class="p">):</span>
+                <span class="k">continue</span>
+            <span class="n">references</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">ref</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">citation_type</span><span class="p">):</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ref</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                    <span class="n">reference</span> <span class="o">=</span> <span class="n">chain_new_objects</span><span class="p">(</span>
+                        <span class="n">ref</span><span class="p">,</span>
+                        <span class="n">ReferencesSerializer</span><span class="p">,</span>
+                        <span class="n">References</span><span class="p">,</span>
+                        <span class="n">filter_kwargs</span><span class="o">=</span><span class="n">ReferencesSerializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">required_fields</span><span class="p">,</span>
+                        <span class="n">allow_update</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="p">)</span>
+                    <span class="n">references</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">reference</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">references</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ref</span><span class="p">)</span>
+            <span class="n">data</span><span class="p">[</span><span class="n">citation_type</span><span class="p">]</span> <span class="o">=</span> <span class="n">references</span>
+
+        <span class="n">data</span><span class="p">[</span><span class="s2">&quot;published&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;doi_url&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;published&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="k">return</span> <span class="n">data</span></div>
+</div>
+
+
+
+<span class="n">dj_tables</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;citations&quot;</span><span class="p">:</span> <span class="n">Citations</span><span class="p">,</span>
+    <span class="s2">&quot;institutions&quot;</span><span class="p">:</span> <span class="n">Institutions</span><span class="p">,</span>
+    <span class="s2">&quot;fundingstreams&quot;</span><span class="p">:</span> <span class="n">FundingStreams</span><span class="p">,</span>
+    <span class="s2">&quot;parties&quot;</span><span class="p">:</span> <span class="n">Parties</span><span class="p">,</span>
+    <span class="s2">&quot;references&quot;</span><span class="p">:</span> <span class="n">References</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">dj_serializers</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;citations&quot;</span><span class="p">:</span> <span class="n">CitationsSerializer</span><span class="p">,</span>
+    <span class="s2">&quot;institutions&quot;</span><span class="p">:</span> <span class="n">InstitutionsSerializer</span><span class="p">,</span>
+    <span class="s2">&quot;fundingstreams&quot;</span><span class="p">:</span> <span class="n">FundingStreamsSerializer</span><span class="p">,</span>
+    <span class="s2">&quot;parties&quot;</span><span class="p">:</span> <span class="n">PartiesSerializer</span><span class="p">,</span>
+    <span class="s2">&quot;references&quot;</span><span class="p">:</span> <span class="n">ReferencesSerializer</span><span class="p">,</span>
+<span class="p">}</span>
+
+
+<div class="viewcode-block" id="handle_update">
+<a class="viewcode-back" href="../../serializer.html#citations.serializers.handle_update">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">handle_update</span><span class="p">(</span><span class="n">table</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">method</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">content</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Handle ANY ORM Request updates here.</span>
+
+<span class="sd">    This function is passed to the Kafka update system, and will be called directly</span>
+<span class="sd">    if the Kafka Internal Queue is disabled.&quot;&quot;&quot;</span>
+
+    <span class="n">model</span> <span class="o">=</span> <span class="n">dj_tables</span><span class="p">[</span><span class="n">table</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span>
+    <span class="n">serializer</span> <span class="o">=</span> <span class="n">dj_serializers</span><span class="p">[</span><span class="n">table</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span>
+    <span class="n">pk</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">_meta</span><span class="o">.</span><span class="n">pk</span><span class="o">.</span><span class="n">name</span>
+
+    <span class="k">match</span> <span class="n">method</span><span class="p">:</span>
+        <span class="k">case</span> <span class="s2">&quot;create&quot;</span><span class="p">:</span>
+            <span class="n">instance</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+                <span class="o">**</span><span class="p">{</span>
+                    <span class="n">c</span><span class="p">:</span> <span class="n">v</span>
+                    <span class="k">for</span> <span class="n">c</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">content</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">serializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">relations</span>
+                <span class="p">}</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">serializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">relations</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">content</span><span class="p">:</span>
+                    <span class="nb">getattr</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">content</span><span class="p">[</span><span class="n">r</span><span class="p">])</span>
+            <span class="n">instance</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+
+        <span class="k">case</span> <span class="s2">&quot;update&quot;</span><span class="p">:</span>
+            <span class="c1"># Must have already validated that the primary key exists and does not change - frontend</span>
+            <span class="n">instance</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="o">**</span><span class="p">{</span><span class="n">pk</span><span class="p">:</span> <span class="n">content</span><span class="p">[</span><span class="n">pk</span><span class="p">]})</span>
+            <span class="n">content</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">pk</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">attr</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">content</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">attr</span> <span class="ow">in</span> <span class="n">serializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">relations</span><span class="p">:</span>
+                    <span class="n">attr_i</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="n">attr</span><span class="p">)</span>
+                    <span class="n">attr_i</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="nb">setattr</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="n">attr</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+            <span class="n">instance</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+
+        <span class="k">case</span> <span class="s2">&quot;delete&quot;</span><span class="p">:</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="o">**</span><span class="p">{</span><span class="n">pk</span><span class="p">:</span> <span class="n">content</span><span class="p">[</span><span class="n">pk</span><span class="p">]})</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022-2024, Centre of Environmental Data Analysis Developers,Scientific and Technical Facilities Council (STFC),UK Research and Innovation (UKRI). BSD 2-Clause License. All rights reserved.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

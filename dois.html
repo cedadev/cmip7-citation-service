@@ -1,0 +1,149 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DOI Minting Service &mdash; CEDA CMIP7 Citation Service 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Kafka Queue Systems &amp; Listener" href="kafka.html" />
+    <link rel="prev" title="Citation Views and Rendering" href="views.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            CEDA CMIP7 Citation Service
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Developer Guides</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="serializer.html">Citation Auto Generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="views.html">Citation Views and Rendering</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">DOI Minting Service</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#citations.external.minting.get_ror_link"><code class="docutils literal notranslate"><span class="pre">get_ror_link()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.external.minting.mint_doi_for_record"><code class="docutils literal notranslate"><span class="pre">mint_doi_for_record()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.external.minting.resolve_drs"><code class="docutils literal notranslate"><span class="pre">resolve_drs()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.external.minting.publish_record"><code class="docutils literal notranslate"><span class="pre">publish_record()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="kafka.html">Kafka Queue Systems &amp; Listener</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stac.html">STAC ESGF Integration</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">CEDA CMIP7 Citation Service</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">DOI Minting Service</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/dois.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="doi-minting-service">
+<h1>DOI Minting Service<a class="headerlink" href="#doi-minting-service" title="Link to this heading"></a></h1>
+<p>A DOI is minted via a request to the DataCite API with the relevant info. This is attempted if the UI checkbox <code class="docutils literal notranslate"><span class="pre">Publish</span> <span class="pre">on</span> <span class="pre">Save</span></code> is clicked before saving the record, or if the value <code class="docutils literal notranslate"><span class="pre">publish_on_save</span></code> is set as <code class="docutils literal notranslate"><span class="pre">true</span></code> in an API POST/PUT request made to the citation service.</p>
+<dl class="py function" id="module-citations.external.minting">
+<dt class="sig sig-object py" id="citations.external.minting.get_ror_link">
+<span class="sig-prename descclassname"><span class="pre">citations.external.minting.</span></span><span class="sig-name descname"><span class="pre">get_ror_link</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inst</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/external/minting.html#get_ror_link"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.external.minting.get_ror_link" title="Link to this definition"></a></dt>
+<dd><p>Fetch the unique ROR id link for an institution.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="citations.external.minting.mint_doi_for_record">
+<span class="sig-prename descclassname"><span class="pre">citations.external.minting.</span></span><span class="sig-name descname"><span class="pre">mint_doi_for_record</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">publication_year</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_citation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="_modules/citations/external/minting.html#mint_doi_for_record"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.external.minting.mint_doi_for_record" title="Link to this definition"></a></dt>
+<dd><p>Apply to mint a DOI via DataCite for the information in this record.</p>
+<p>Create the DOI request and send to DataCite. This includes assembling the DataCite-compliant JSON payload.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="citations.external.minting.resolve_drs">
+<span class="sig-prename descclassname"><span class="pre">citations.external.minting.</span></span><span class="sig-name descname"><span class="pre">resolve_drs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">drs_url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/external/minting.html#resolve_drs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.external.minting.resolve_drs" title="Link to this definition"></a></dt>
+<dd><p>Resolve a DRS URL to check if data exists.</p>
+<p>This should return False if the DRS (Data Access) URL returns a 404 or
+some other response to indicate the data is not available. This function prevents
+DOIs being minted for records where the data is not yet accessible.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="citations.external.minting.publish_record">
+<span class="sig-prename descclassname"><span class="pre">citations.external.minting.</span></span><span class="sig-name descname"><span class="pre">publish_record</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="_modules/citations/external/minting.html#publish_record"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.external.minting.publish_record" title="Link to this definition"></a></dt>
+<dd><p>Apply to mint a DOI via DataCite for the information in this record.</p>
+<p>Assemble the <code class="docutils literal notranslate"><span class="pre">published</span></code> flag and set the publication year in the resulting data.</p>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="views.html" class="btn btn-neutral float-left" title="Citation Views and Rendering" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="kafka.html" class="btn btn-neutral float-right" title="Kafka Queue Systems &amp; Listener" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022-2024, Centre of Environmental Data Analysis Developers,Scientific and Technical Facilities Council (STFC),UK Research and Innovation (UKRI). BSD 2-Clause License. All rights reserved.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

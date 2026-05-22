@@ -1,0 +1,312 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>citations.external.minting &mdash; CEDA CMIP7 Citation Service 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            CEDA CMIP7 Citation Service
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Developer Guides</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../serializer.html">Citation Auto Generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../views.html">Citation Views and Rendering</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../dois.html">DOI Minting Service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../kafka.html">Kafka Queue Systems &amp; Listener</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../stac.html">STAC ESGF Integration</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">CEDA CMIP7 Citation Service</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">citations.external.minting</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for citations.external.minting</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">base64</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">django.conf</span><span class="w"> </span><span class="kn">import</span> <span class="n">settings</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">citations.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">logstream</span>
+
+<span class="c1"># from esgf_core_utils.models.kafka.consumer import KafkaConsumer</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">logstream</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">propagate</span> <span class="o">=</span> <span class="kc">False</span>
+
+
+<div class="viewcode-block" id="get_ror_link">
+<a class="viewcode-back" href="../../../dois.html#citations.external.minting.get_ror_link">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_ror_link</span><span class="p">(</span><span class="n">inst</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Fetch the unique ROR id link for an institution.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">inst</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="n">ROR_api</span> <span class="o">=</span> <span class="s2">&quot;https://api.ror.org/v2/organizations?query=&quot;</span> <span class="o">+</span> <span class="s2">&quot;%20&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+        <span class="n">inst</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">ROR_api</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">status_code</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">300</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Institute not found&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="n">resp</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+    <span class="n">found</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">inst_count</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">while</span> <span class="ow">not</span> <span class="n">found</span> <span class="ow">and</span> <span class="n">inst_count</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">:</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="n">resp</span><span class="p">[</span><span class="s2">&quot;items&quot;</span><span class="p">][</span><span class="n">inst_count</span><span class="p">][</span><span class="s2">&quot;names&quot;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;value&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">inst</span><span class="p">:</span>
+                <span class="n">found</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">break</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">found</span><span class="p">:</span>
+            <span class="n">inst_count</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="k">if</span> <span class="n">found</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">resp</span><span class="p">[</span><span class="s2">&quot;items&quot;</span><span class="p">][</span><span class="n">inst_count</span><span class="p">][</span><span class="s2">&quot;id&quot;</span><span class="p">]</span>
+    <span class="k">return</span> <span class="kc">None</span></div>
+
+
+
+<div class="viewcode-block" id="mint_doi_for_record">
+<a class="viewcode-back" href="../../../dois.html#citations.external.minting.mint_doi_for_record">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">mint_doi_for_record</span><span class="p">(</span>
+    <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">publication_year</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">return_citation</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Apply to mint a DOI via DataCite for the information in this record.</span>
+
+<span class="sd">    Create the DOI request and send to DataCite. This includes assembling the DataCite-compliant JSON payload.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="s2">&quot;DATACITE_API_URL&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="n">creator_info</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;creators&quot;</span><span class="p">]</span>
+
+    <span class="n">creators</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">creator</span> <span class="ow">in</span> <span class="n">creator_info</span><span class="p">:</span>
+
+        <span class="n">affiliations</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">affil</span> <span class="ow">in</span> <span class="n">creator</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;affiliations&quot;</span><span class="p">,</span> <span class="p">[]):</span>
+            <span class="n">affiliations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;affiliationIdentifier&quot;</span><span class="p">:</span> <span class="n">get_ror_link</span><span class="p">(</span><span class="n">affil</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">)),</span>
+                    <span class="s2">&quot;affiliationIdentifierScheme&quot;</span><span class="p">:</span> <span class="s2">&quot;ROR&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">affil</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">),</span>
+                    <span class="s2">&quot;schemeUri&quot;</span><span class="p">:</span> <span class="s2">&quot;https://ror.org/&quot;</span><span class="p">,</span>
+                <span class="p">}</span>
+            <span class="p">)</span>
+
+        <span class="n">creator_data</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">creator</span><span class="p">[</span><span class="s1">&#39;last_name&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">creator</span><span class="p">[</span><span class="s1">&#39;first_name&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">creator</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;middle_names&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;affiliation&quot;</span><span class="p">:</span> <span class="n">affiliations</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="n">creator</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;orcid&quot;</span><span class="p">):</span>
+            <span class="n">creator_data</span><span class="p">[</span><span class="s2">&quot;nameIdentifiers&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;schemeUri&quot;</span><span class="p">:</span> <span class="s2">&quot;https://orcid.org&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;nameIdentifier&quot;</span><span class="p">:</span> <span class="s2">&quot;https://orcid.org/&quot;</span> <span class="o">+</span> <span class="n">creator</span><span class="p">[</span><span class="s2">&quot;orcid&quot;</span><span class="p">],</span>
+                    <span class="s2">&quot;nameIdentifierScheme&quot;</span><span class="p">:</span> <span class="s2">&quot;ORCID&quot;</span><span class="p">,</span>
+                <span class="p">}</span>
+            <span class="p">]</span>
+        <span class="n">creators</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">creator_data</span><span class="p">)</span>
+
+    <span class="n">funds</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">fund</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;funders&quot;</span><span class="p">,</span> <span class="p">[]):</span>
+        <span class="n">funds</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="p">{</span><span class="s2">&quot;awardTitle&quot;</span><span class="p">:</span> <span class="n">fund</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">),</span> <span class="s2">&quot;funderName&quot;</span><span class="p">:</span> <span class="n">fund</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;affiliation&quot;</span><span class="p">)}</span>
+        <span class="p">)</span>
+
+    <span class="n">related_identifiers</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">reltype</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;cites&quot;</span><span class="p">,</span> <span class="s2">&quot;is_cited_by&quot;</span><span class="p">,</span> <span class="s2">&quot;is_referenced_by&quot;</span><span class="p">]:</span>
+        <span class="k">for</span> <span class="n">rel</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">reltype</span><span class="p">,</span> <span class="p">[]):</span>
+            <span class="n">related_identifiers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;relatedIdentifier&quot;</span><span class="p">:</span> <span class="n">rel</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">],</span>
+                    <span class="s2">&quot;relatedIdentifierType&quot;</span><span class="p">:</span> <span class="s2">&quot;URL&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;relationType&quot;</span><span class="p">:</span> <span class="n">reltype</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">)</span><span class="o">.</span><span class="n">title</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
+                <span class="p">}</span>
+            <span class="p">)</span>
+
+    <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;dois&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;attributes&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;prefix&quot;</span><span class="p">:</span> <span class="n">settings</span><span class="o">.</span><span class="n">DOI_PREFIX</span><span class="p">,</span>
+                <span class="s2">&quot;creators&quot;</span><span class="p">:</span> <span class="n">creators</span><span class="p">,</span>
+                <span class="s2">&quot;titles&quot;</span><span class="p">:</span> <span class="p">[</span>
+                    <span class="p">{</span>
+                        <span class="s2">&quot;lang&quot;</span><span class="p">:</span> <span class="s2">&quot;en&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;ESGF-NG </span><span class="si">{</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> version </span><span class="si">{</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;version&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                    <span class="p">}</span>
+                <span class="p">],</span>
+                <span class="s2">&quot;publisher&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;STFC&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;publisherIdentifier&quot;</span><span class="p">:</span> <span class="s2">&quot;https://ror.org/057g20z61&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;publisherIdentifierScheme&quot;</span><span class="p">:</span> <span class="s2">&quot;ROR&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;schemeUri&quot;</span><span class="p">:</span> <span class="s2">&quot;https://ror.org/&quot;</span><span class="p">,</span>
+                <span class="p">},</span>
+                <span class="s2">&quot;publicationYear&quot;</span><span class="p">:</span> <span class="n">publication_year</span><span class="p">,</span>  <span class="c1"># Do we want this as a field in the citation service?</span>
+                <span class="s2">&quot;types&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;resourceTypeGeneral&quot;</span><span class="p">:</span> <span class="s2">&quot;Text&quot;</span><span class="p">},</span>
+                <span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="n">settings</span><span class="o">.</span><span class="n">SERVICE_URL</span> <span class="o">+</span> <span class="s2">&quot;/citation/&quot;</span> <span class="o">+</span> <span class="nb">id</span><span class="p">,</span>
+                <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;version&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;rightsList&quot;</span><span class="p">:</span> <span class="p">[],</span>
+                <span class="s2">&quot;fundingReferences&quot;</span><span class="p">:</span> <span class="n">funds</span><span class="p">,</span>
+                <span class="s2">&quot;relatedIdentifiers&quot;</span><span class="p">:</span> <span class="n">related_identifiers</span><span class="p">,</span>
+            <span class="p">},</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="s2">&quot;test&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">settings</span><span class="o">.</span><span class="n">DATACITE_API_URL</span><span class="p">:</span>
+        <span class="n">payload</span><span class="p">[</span><span class="s2">&quot;attributes&quot;</span><span class="p">][</span><span class="s2">&quot;event&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;publish&quot;</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Sending Request to: </span><span class="si">{</span><span class="n">settings</span><span class="o">.</span><span class="n">DATACITE_API_URL</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">return_citation</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">payload</span>
+
+    <span class="n">token</span> <span class="o">=</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64encode</span><span class="p">(</span>
+        <span class="nb">bytes</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">settings</span><span class="o">.</span><span class="n">DATACITE_USERNAME</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">settings</span><span class="o">.</span><span class="n">DATACITE_PASSWORD</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+
+    <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;accept&quot;</span><span class="p">:</span> <span class="s2">&quot;application/vnd.api+json&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;content-type&quot;</span><span class="p">:</span> <span class="s2">&quot;application/json&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;authorization&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Basic </span><span class="si">{</span><span class="n">token</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+    <span class="p">}</span>
+
+    <span class="n">r</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">DATACITE_API_URL</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">payload</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">status_code</span> <span class="o">&gt;=</span> <span class="mi">300</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;DOI Minting Failed: </span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">content</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;https://doi.org/</span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">json</span><span class="p">()[</span><span class="s1">&#39;data&#39;</span><span class="p">][</span><span class="s1">&#39;id&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span></div>
+
+
+
+<div class="viewcode-block" id="resolve_drs">
+<a class="viewcode-back" href="../../../dois.html#citations.external.minting.resolve_drs">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">resolve_drs</span><span class="p">(</span><span class="n">drs_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Resolve a DRS URL to check if data exists.</span>
+
+<span class="sd">    This should return False if the DRS (Data Access) URL returns a 404 or</span>
+<span class="sd">    some other response to indicate the data is not available. This function prevents</span>
+<span class="sd">    DOIs being minted for records where the data is not yet accessible.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Placeholder implementation - replace with actual resolution logic</span>
+    <span class="k">return</span> <span class="kc">False</span></div>
+
+
+
+<div class="viewcode-block" id="publish_record">
+<a class="viewcode-back" href="../../../dois.html#citations.external.minting.publish_record">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">publish_record</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Apply to mint a DOI via DataCite for the information in this record.</span>
+
+<span class="sd">    Assemble the ``published`` flag and set the publication year in the resulting data.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">publication</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">resolve_drs</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;drs_url&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)):</span>
+        <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;published&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span>
+
+    <span class="n">pub_yr</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">year</span><span class="p">)</span>
+    <span class="n">publication</span><span class="p">[</span><span class="s2">&quot;doi_url&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mint_doi_for_record</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">pub_yr</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">publication</span><span class="p">[</span><span class="s2">&quot;doi_url&quot;</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;published&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span>
+
+    <span class="n">publication</span><span class="p">[</span><span class="s2">&quot;publication_year&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pub_yr</span>
+
+    <span class="k">return</span> <span class="kc">True</span><span class="p">,</span> <span class="n">publication</span> <span class="o">|</span> <span class="p">{</span><span class="s2">&quot;published&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;editable&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022-2024, Centre of Environmental Data Analysis Developers,Scientific and Technical Facilities Council (STFC),UK Research and Innovation (UKRI). BSD 2-Clause License. All rights reserved.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
