@@ -164,7 +164,7 @@ def resolve_drs(drs_url: str):
     DOIs being minted for records where the data is not yet accessible.
     """
     # Placeholder implementation - replace with actual resolution logic
-    return True
+    return False
 
 def publish_record(data: dict, id: str) -> str:
     """
