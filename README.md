@@ -5,6 +5,8 @@ Phase 7 builds on previous phases executed under the leadership of the Program f
 
 The CMIP7 Citation Service is hosted at https://cmip7-citations.ceda.ac.uk and allows the creation of citation records for ESGF-NG datasets (CMIP7, CORDEX-CMIP6) directly via the UI, using the service REST API or automatically as part of the ESGF-NG publication workflow.
 
+Developer Documentation at https://cedadev.github.io/cmip7-citation-service/
+
 NOTE: The ESGF-NG Publication Workflow Listener (KafkaListener) is not in production as of 14/05/2026 while the production Kafka systems are being assembled. Only the manual UI/API methods are available for creating records
 
 ## Information for Citation Record DOI Minting
