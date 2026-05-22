@@ -89,7 +89,7 @@ class Migration(migrations.Migration):
                 (
                     "title",
                     models.CharField(
-                        max_length=300, validators=[citations.validators.validate_title]
+                        max_length=300
                     ),
                 ),
                 ("version", models.IntegerField()),

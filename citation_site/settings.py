@@ -139,7 +139,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 try:
     from .settings_local import *
 except ImportError:
-    pass
+    CV_REPO = None
+    DEBUG = True
 
 SITE_ID = 1
 
