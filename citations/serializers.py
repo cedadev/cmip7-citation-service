@@ -601,6 +601,11 @@ class CitationsSerializer(GenericSerializerMixin):
         internal_fields=['editable', 'published']
 
     def create(self, validated_data):
+        """
+        Apply extra validation to the citation record.
+        
+        This validates the ``search_facets`` if they have been provided to this record.
+        """
 
         # Enforces valid facets for all records - but don't have to match title structure.
         if 'mip_era' in validated_data:
@@ -616,9 +621,6 @@ class CitationsSerializer(GenericSerializerMixin):
                 validated_data['title'] = title
 
         return super().create(validated_data)
-    
-    def update(self, instance, validated_data):
-        return super().update(instance, validated_data)
 
     def fill_data_parameters(self, data: dict):
         """
