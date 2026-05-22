@@ -233,7 +233,7 @@ class CitationForm(forms.ModelForm):
         } | POPOVER_ATTRS),
         required=False
     )
-    activity = forms.CharField(
+    activity_id = forms.CharField(
         label = 'Activity',
         widget=forms.TextInput(attrs={
             'placeholder':"Activity Facet",
@@ -241,7 +241,7 @@ class CitationForm(forms.ModelForm):
         } | POPOVER_ATTRS),
         required=False
     )
-    institution = forms.CharField(
+    institution_id = forms.CharField(
         label = 'Institution',
         widget=forms.TextInput(attrs={
             'placeholder':"Institution Facet",
@@ -249,21 +249,24 @@ class CitationForm(forms.ModelForm):
         } | POPOVER_ATTRS),
         required=False
     )
-    source = forms.CharField(
+    source_id = forms.CharField(
+        label = 'Source',
         widget=forms.TextInput(attrs={
             'placeholder':"Source Facet",
             'data-bs-content':'Validated against CMIP CVs.'
         } | POPOVER_ATTRS),
         required=False
     )
-    experiment = forms.CharField(
+    experiment_id = forms.CharField(
+        label = 'Experiment',
         widget=forms.TextInput(attrs={
             'placeholder':"(Driving) Experiment Facet",
             'data-bs-content':'Validated against CMIP CVs.'
         } | POPOVER_ATTRS),
         required=False
     )
-    domain = forms.CharField(
+    domain_id = forms.CharField(
+        label = 'Domain',
         widget=forms.TextInput(attrs={
             'placeholder':"Domain Facet",
             'data-bs-content':'Validated against CORDEX CVs.'
@@ -291,11 +294,11 @@ class CitationForm(forms.ModelForm):
         'drs_url',
         'doi_url',
         'mip_era',
-        'activity',
-        'institution',
-        'source',
-        'experiment',
-        'domain',
+        'activity_id',
+        'institution_id',
+        'source_id',
+        'experiment_id',
+        'domain_id',
         'rights',
         'license'
     ]
