@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('citations', '0001_initial'),
+        ("citations", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='citations',
-            name='domain_id',
-            field=models.CharField(default='unknown', max_length=30),
+            model_name="citations",
+            name="domain_id",
+            field=models.CharField(default="unknown", max_length=30),
         ),
     ]

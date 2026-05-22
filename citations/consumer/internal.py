@@ -8,39 +8,40 @@ import logging
 from typing import Any, Callable, Union
 
 from confluent_kafka import Consumer, KafkaException, Producer
+from django.conf import settings
 
 from citations.utils import logstream
 
-from django.conf import settings
-
-#from esgf_core_utils.models.kafka.consumer import KafkaConsumer
+# from esgf_core_utils.models.kafka.consumer import KafkaConsumer
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logstream)
 logger.propagate = False
 
-class CitationInternalMessageProcessor: # MessageProcessor
+
+class CitationInternalMessageProcessor:  # MessageProcessor
 
     def __init__(self, handler: Callable):
         self.handler = handler
 
     def ingest(self, message):
 
-        if hasattr(settings, 'FROM_KAFKA_TIMESTAMP'):
+        if hasattr(settings, "FROM_KAFKA_TIMESTAMP"):
             if message.timestamp < settings.FROM_KAFKA_TIMESTAMP:
                 return
 
         # Ignore messages before a specific timestamp as needed.
         self.handler(**dict(message))
 
-    def direct_message(self, table: str, method: str, content: dict[str,Any]):
+    def direct_message(self, table: str, method: str, content: dict[str, Any]):
         self.handler(table=table, method=method, content=content)
+
 
 # Temporary class - replace with import from esgf core utils package.
 class TempKafkaConsumer:
     def __init__(
         self,
-        message_processor: CitationInternalMessageProcessor, 
+        message_processor: CitationInternalMessageProcessor,
         config: Union[dict, None] = None,
         topics: Union[list, None] = None,
         timeout: Union[int, None] = None,
@@ -103,7 +104,8 @@ class TempKafkaConsumer:
 
             self.consumer.close()
 
-class CitationKafkaConsumer(TempKafkaConsumer): # KafkaConsumer from ESGF
+
+class CitationKafkaConsumer(TempKafkaConsumer):  # KafkaConsumer from ESGF
 
     def __init__(self, update_handler: str, *args, **kwargs):
         message_processor = CitationInternalMessageProcessor(update_handler)
@@ -119,12 +121,14 @@ class CitationKafkaConsumer(TempKafkaConsumer): # KafkaConsumer from ESGF
         If the consumer is defined the message system will be utilised for write
         requesting. Otherwise the write can be made directly to the database.
         """
-        logger.info(f'Write Request from {user}: {table}:{method} - {content}')
+        logger.info(f"Write Request from {user}: {table}:{method} - {content}")
 
         if self.consumer is not None:
             self.send_message(table=table, method=method, content=content, user=user)
         else:
-            self.message_processor.direct_message(table=table, method=method, content=content)
+            self.message_processor.direct_message(
+                table=table, method=method, content=content
+            )
 
     def send_message(self, table: str, method: str, content: dict, user: str):
         """

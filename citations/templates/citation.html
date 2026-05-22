@@ -72,7 +72,7 @@
                 {% if cite_as %}
                 <tr>
                     <th>Cite As</th>
-                    <td style="word-break: break-all;"><b>{{ cite_as.title }}.</b> {{ cite_as.rotc }}.<a href="{{ citation.doi_url }}"> {{ citation.doi_url }}</a></td>
+                    <td style="word-break: break-all;"><b>{{ cite_as.title }}</b> {{ cite_as.rotc }}<a href="{{ citation.doi_url }}"> {{ citation.doi_url }}</a></td>
                 {% endif %}
                 <tr>
                     <th>Rights</th>
@@ -91,7 +91,7 @@
                     <th>Activity</th>
                     <td>{{ citation.activity_id }}</td>
                 </tr>
-                {% if citation.domain_id != 'unknown' %}
+                {% if citation.domain_id %}
                 <tr>
                     <th>Domain</th>
                     <td>{{ citation.domain_id }}</td>

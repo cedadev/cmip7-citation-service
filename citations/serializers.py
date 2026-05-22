@@ -1,28 +1,48 @@
+import copy
 import hashlib
 import json
+import logging
 import re
+from typing import Union
 
 import requests
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from rest_framework import serializers
 from rest_framework.exceptions import MethodNotAllowed
 
 from citations.consumer.write import create_instance, update_instance
 from citations.external import publish_record
-from citations.models import (Citations, FundingStreams, Institutions, Parties,
-                              References, extract_from_orcid, locate_institute)
-from citations.validators import validate_cmip7_facets, validate_cordex_facets
-from citations.utils import LABEL_MAPPINGS, ESGVOC_FACET_LABELS, CORE_FACETS
-
-from typing import Union
+from citations.facet_mappings import (
+    BACKUP_REPOS,
+    ESGVOC_FACET_LABELS,
+    ESGVOC_TITLE_LABELS,
+    FACET_ABSTRACT_DESCRIPTIONS,
+)
+from citations.models import (
+    Citations,
+    FundingStreams,
+    Institutions,
+    Parties,
+    References,
+    extract_from_orcid,
+    locate_institute,
+)
+from citations.utils import logstream
+from citations.validators import validate_component
 
 try:
     import esgvoc.api as ev
 except ImportError:
     ev = None
 
-def mint_doi_for_data(data: dict):
+logger = logging.getLogger(__name__)
+logger.addHandler(logstream)
+logger.propagate = False
+
+
+def mint_doi_for_data(data: dict, id: str) -> dict | None:
     """
     'Data' is the partially serialized content for the record to be published.
 
@@ -30,98 +50,160 @@ def mint_doi_for_data(data: dict):
     - Expand all funders
     - Expand all references
     - Send data to publish record
-    
+
+    This function is considered a 'core' function because it relies on access
+    to the models of this application.
     """
+    data = copy.deepcopy(data)
 
-    creators = [PartiesSerializer(instance=Parties.objects.get(pk=data['primary_id'])).data] + \
-        [PartiesSerializer(instance=Parties.objects.get(pk=pk)).data for pk in data['contacts']]
-        
-    
-    data['creators'] = creators
-
-    funders = [
-        FundingStreamsSerializer(
-            instance=FundingStreams.objects.get(pk=pk)).data for pk in data['funders']
+    creators = [
+        PartiesSerializer(instance=Parties.objects.get(pk=data["primary_id"])).data
+    ] + [
+        PartiesSerializer(instance=Parties.objects.get(pk=pk)).data
+        for pk in data["contacts"]
     ]
 
-    data['funders'] = funders
+    data["creators"] = creators
 
-    for reltype in ['cites','is_cited_by','is_referenced_by']:
+    funders = [
+        FundingStreamsSerializer(instance=FundingStreams.objects.get(pk=pk)).data
+        for pk in data["funders"]
+    ]
+
+    data["funders"] = funders
+
+    for reltype in ["cites", "is_cited_by", "is_referenced_by"]:
         data[reltype] = [
-            ReferencesSerializer(
-                instance=References.objects.get(pk=pk)).data for pk in data.get(reltype,[])
+            ReferencesSerializer(instance=References.objects.get(pk=pk)).data
+            for pk in data.get(reltype, [])
         ]
-    
-    status, pubdata = publish_record(data)
+
+    status, pubdata = publish_record(data, id=id)
     if status:
         return pubdata
 
-def institution_mappings(institution_id: str) -> str:
 
-    try:
-        mappings = requests.get(settings.INSTITUTION_MAPPINGS_URL).json()
-        return mappings[institution_id.lower()]
-    except Exception:
-        if not ev:
-            return {'name': institution_id, 'acronym': institution_id}
-        
+def institution_mappings(institution_id: str, project_id: str = "cmip7") -> str:
+    """
+    Apply known institution mappings given the institution_id which is most likely the acronym.
+    """
+
+    if not ev:
+        # No ESGVOC - use either mapping or return basic info.
+        try:
+            mappings = requests.get(settings.INSTITUTION_MAPPINGS_URL).json()
+            return mappings[institution_id.lower()]
+        except Exception:
+            return {"name": institution_id, "acronym": institution_id}
+
+    esgvoc_institution = {v: k for k, v in ESGVOC_FACET_LABELS.get(project_id, {})}.get(
+        "institution_id"
+    )
+
+    if not esgvoc_institution:
+        logger.info("Institution not defined or project ID not known")
+        return {}
+
     # Get the institution from esgvoc
     component = ev.get_term_in_collection(
-        project_id='cmip7',
-        collection_id='institution',
-        term_id=institution_id) or ev.get_term_in_collection(
-        project_id='cmip7',
-        collection_id='institution',
-        term_id=institution_id.lower())
-    
-    data = {'name': institution_id, 'acronym': institution_id}
+        project_id=project_id, collection_id="institution", term_id=institution_id
+    ) or ev.get_term_in_collection(
+        project_id=project_id,
+        collection_id="institution",
+        term_id=institution_id.lower(),
+    )
+
+    data = {"name": institution_id, "acronym": institution_id}
     if component:
+
+        data.update(
+            {
+                "name": getattr(component, "description", institution_id),
+                "acronym": getattr(component, "acronyms", [institution_id])[0],
+            }
+        )
+
         country = None
         try:
             country = component.members[0].location[0].country
         except Exception as e:
             pass
 
-        data.update({
-            'name': getattr(component,'description',institution_id), 
-            'acronym': getattr(component,'acronyms',[institution_id])[0],
-        })
-        if country: 
-            data.update({'country': country})
+        if country:
+            data.update({"country": country})
     return data
-    
-     
-def title_from_facets(data: dict, validate_all: bool = False, raise_exceptions: bool = True):
 
-    if bool(data.get('domain_id')):
-        # CORDEX Data
-        if validate_all:
-            validate_cordex_facets(data, raise_exceptions=raise_exceptions)
 
-        return f'{data["mip_era"]}.{data["activity_id"]}.{data["domain_id"]}.{data["institution_id"]}.{data["experiment_id"]}.{data["source_id"]}'
-    
-    if validate_all:
-        validate_cmip7_facets(data, raise_exceptions=raise_exceptions)
-    
-    return f'{data["mip_era"]}.{data["activity_id"]}.{data["institution_id"]}.{data["source_id"]}.{data["experiment_id"]}'
+def title_from_facets(
+    data: dict, raise_exceptions: bool = True
+) -> Union[str, list, None]:
+    """
+    Validate by generating the expected title from the facets.
+
+    Facet title generation is `mip_era` specific. If the `mip_era` is not contained
+    in the data, this function should not be run, but will return a None value."""
+
+    if not bool(data.get("mip_era")):
+        return None
+
+    missing = []
+
+    project_id = data["mip_era"].lower()
+
+    for label, facet in ESGVOC_FACET_LABELS[project_id].items():
+        if facet not in data:
+            missing.append(facet)
+        validate_component(
+            data.get(facet).lower(),
+            label,
+            project_id=project_id,
+            raise_exception=raise_exceptions,
+            repo=BACKUP_REPOS.get(project_id),
+        )
+
+    if project_id == "cmip7":
+        experiments = (
+            validate_component(
+                data.get("activity_id"),
+                "activity",
+                project_id=project_id,
+                requested="experiments",
+            )
+            or []
+        )
+        if data.get("experiment_id") not in experiments:
+            if raise_exceptions:
+                raise ValidationError(
+                    f"{data.get('experiment_id')} not valid for {data.get('activity_id')}: Valid experiments are {experiments}"
+                )
+
+    if len(missing) > 0:
+        return missing
+
+    return ".".join([data[facet] for facet in ESGVOC_TITLE_LABELS.get(project_id)])
+
 
 def obtain_all_references(data: dict) -> dict:
     """
     Obtain Citation references from the EMD (ESGVOC)
-    
+
     Prevent adding a reference if it already exists.
     """
 
     if not ev:
         return {}
-    
+
+    project_id = data.get("mip_era").lower()
+
     cites = []
-    for fl in ESGVOC_FACET_LABELS:
-        component = ev.get_term_in_collection(project_id='cmip7',collection_id=fl,term_id=data[LABEL_MAPPINGS.get(fl,fl)].lower())
+    for label, facet in ESGVOC_FACET_LABELS[project_id].items():
+        component = ev.get_term_in_collection(
+            project_id=project_id, collection_id=label, term_id=data[facet].lower()
+        )
 
         if not component:
             continue
-        if not hasattr(component,'references'):
+        if not hasattr(component, "references"):
             continue
 
         for ref in component.references:
@@ -129,120 +211,140 @@ def obtain_all_references(data: dict) -> dict:
             if ref.doi in ref.citation:
                 citeas = ref.citation
             else:
-                citeas = f'{ref.citation} {ref.doi}'
+                citeas = f"{ref.citation} {ref.doi}"
 
-            title = getattr(ref,'title',None) or re.search(r'^.*?\d{4}', ref.citation).group(0)
-            cites.append({
-                'title':title,
-                'citeas':citeas,
-                'id':ref.doi
-            })
+            title = getattr(ref, "title", None) or re.search(
+                r"^.*?\d{4}", ref.citation
+            ).group(0)
+            cites.append({"title": title, "citeas": citeas, "id": ref.doi})
 
     return cites
 
-def get_drs_url(data: dict) -> Union[str,None]:
 
-    if not hasattr(settings, 'METAGRID_URL'):
-        return ''
-    
-    for facet in CORE_FACETS:
-        if not bool(data.get(facet,False)):
-            return ''
+def get_drs_url(data: dict) -> Union[str, None]:
+    """
+    Obtain the DRS URL expected for this record, given the set of search facets.
+    """
 
-    if data.get('domain_id') is not None:
-        return "%2C".join([
-            f'{settings.METAGRID_URL}/search?project={data["mip_era"]}+STAC&activeFacets=%7B"mip_era"%3A"{data["mip_era"]}"',
-            f'"institution_id"%3A"{data["institution_id"]}"',
-            f'"activity_id"%3A"{data["activity_id"]}"',
-            f'"source_id"%3A"{data["source_id"]}"',
-            f'"driving_experiment_id"%3A"{data["experiment_id"]}"',
-            f'"domain_id"%3A"{data["domain_id"]}'
-        ])
-    else:
-        return "%2C".join([
-            f'{settings.METAGRID_URL}/search?project={data["mip_era"]}+STAC&activeFacets=%7B"mip_era"%3A"{data["mip_era"]}"',
-            f'"institution_id"%3A"{data["institution_id"]}"',
-            f'"activity_id"%3A"{data["activity_id"]}"',
-            f'"source_id"%3A"{data["source_id"]}"',
-            f'"experiment_id"%3A"{data["experiment_id"]}"'
-        ])
+    # No auto-DRS if no metagrid URL
+    if not hasattr(settings, "METAGRID_URL"):
+        return ""
+
+    # No auto-DRS if the mip era is not given
+    if not bool(data.get("mip_era")):
+        return ""
+
+    project_id = data["mip_era"].lower()
+
+    metagrid_base = f'{settings.METAGRID_URL}/search?project={project_id}+STAC&activeFacets=%7B"mip_era"%3A"{project_id}"'
+
+    queries = [metagrid_base]
+    for facet in ESGVOC_FACET_LABELS[project_id].values():
+
+        # No auto-DRS if any facet is missing
+        if not bool(data.get(facet, False)):
+            logger.info(f"{facet} is missing for {data['title']}, no DRS available")
+            return ""
+
+        queries.append(
+            f'"{facet}"%3A"{data[facet]}"',
+        )
+
+    drs_url = "%2C".join(queries)
+
+    return drs_url
+
 
 def assemble_license_info(data: dict) -> str:
     """
     Determine the paragraph of text to use for the license.
     """
     license = []
-    if hasattr(settings, 'GENERAL_INFO'):
-        license += settings.GENERAL_INFO.split('.')
-    if hasattr(settings, 'CITATION_GUIDANCE'):
-        license += settings.CITATION_GUIDANCE.split('.')
+    if hasattr(settings, "GENERAL_INFO"):
+        license += settings.GENERAL_INFO.split(".")
+    if hasattr(settings, "CITATION_GUIDANCE"):
+        license += settings.CITATION_GUIDANCE.split(".")
 
     license.append(f'Published under {data["rights"]}.')
 
-    license = [lp for lp in license if lp.replace('\n','')]
+    license = [lp for lp in license if lp.replace("\n", "")]
 
-    return '. '.join(license).replace('\n','')
-    
+    return ". ".join(license).replace("\n", "")
+
+
 def abstract_from_esgvoc(data: dict):
     """
     Determine the paragraph of abstract text from esgvoc parameters.
     """
 
+    # No auto-abstract if no ESGVOC integration.
     if not ev:
-        return ''
-    
-    facet_descs = {
-        'activity': '',
-        'source': '',
-        'institution': ['Produced by: ', ' (Using Model/Source: ', ' with Experiment ',')'],
-        'mip_era': 'MIP Era: ',
-        'experiment': '',
-        'domain': 'CORDEX Domain: '
-    }
+        return ""
+
+    project_id = data.get("mip_era").lower()
+
+    facet_labels = ESGVOC_FACET_LABELS[project_id]
 
     abstract = []
-    for fl in ESGVOC_FACET_LABELS:
+    for label, facet_desc in FACET_ABSTRACT_DESCRIPTIONS.items():
+        if label not in facet_labels:
+            continue
+
+        facet = facet_labels[label]
+        if not bool(data.get(facet)):
+            continue
+
         entry = []
-        if not bool(data.get(LABEL_MAPPINGS.get(fl,fl))):
-            continue
+        component = ev.get_term_in_collection(
+            project_id=project_id, collection_id=label, term_id=data[facet].lower()
+        )
 
-        component = ev.get_term_in_collection(project_id='cmip7',collection_id=fl,term_id=data[LABEL_MAPPINGS.get(fl,fl)].lower())
+        description = getattr(component, "description", data[facet])
+        if not bool(description):
+            description = data[facet].lower()
 
-        entry.append(getattr(component,"description",data[LABEL_MAPPINGS.get(fl,fl)]))
+        entry.append(description)
 
-        if getattr(component,"labels",None):
-            entry.append(','.join(component.labels))
+        if getattr(component, "labels", None):
+            entry.append(",".join(component.labels))
 
-        if not entry:
-            continue
-
-        if isinstance(facet_descs[fl],list):
+        if isinstance(facet_desc, list):
             # Rendering institution description
-            descs = facet_descs[fl]
+            descs = facet_desc
             abstract.append(
-                descs[0] + ' - '.join(entry) + descs[1] + data['source_id'] + descs[2] + data['experiment_id'] + descs[3]
+                descs[0]
+                + " - ".join(entry)
+                + descs[1]
+                + data["source_id"]
+                + descs[2]
+                + data["experiment_id"]
+                + descs[3]
             )
         else:
-            abstract.append(facet_descs[fl] + ' - '.join(entry))
+            abstract.append(facet_desc + " - ".join(entry))
 
-    if abstract and hasattr(settings, 'GENERAL_INFO'):
+    if abstract and hasattr(settings, "GENERAL_INFO"):
         abstract += [settings.GENERAL_INFO]
 
-    if abstract and hasattr(settings, 'CEDA_INFO'):
+    if abstract and hasattr(settings, "CEDA_INFO"):
         abstract += [settings.CEDA_INFO]
 
-    return '\n\n'.join([a.replace('\n','') for a in abstract])
+    return "\n\n".join([a.replace("\n", "") for a in abstract])
+
 
 def chain_new_objects(
-        data: dict, 
-        serializer: serializers.ModelSerializer, 
-        model: type[models.Model], 
-        filter_kwargs: list, 
-        optionals: list = None,
-        allow_update: bool = False,
-    ) -> str:
+    data: dict,
+    serializer: serializers.ModelSerializer,
+    model: type[models.Model],
+    filter_kwargs: list,
+    optionals: list = None,
+    allow_update: bool = False,
+) -> str:
     """
-    Validate new model instances.
+    Create new model instances if required, or return the ID of the existing instance.
+
+    This includes locating the existing record based on some filter kwargs (normally just the ID)
+    to identify the existing instance.
     """
 
     optionals = optionals or []
@@ -257,289 +359,362 @@ def chain_new_objects(
         serial = serializer(data=data)
         serial.is_valid(raise_exception=True)
         serial.save()
-        inst_pk = serial.instance['id']
+        inst_pk = serial.instance["id"]
     else:
+        # Update the existing record with new data - if allowed
         instance = instance[0]
         serial = serializer(data=data, instance=instance)
 
         serial.is_valid(raise_exception=True)
         update = False
+
+        # Some record types cannot be updated using this mechanism.
         if allow_update:
-            for k,v in data.items():
+            for k, v in data.items():
                 if v != getattr(instance, k):
                     update = True
 
+        # Save the record only if an update is required - will cut down on
+        # extra kafka messages if that is in place.
         if update:
             serial.save()
-        inst_pk = serial.validated_data.get('id',instance.pk)
+        inst_pk = serial.validated_data.get("id", instance.pk)
 
-    # Should return newly created instance or existing one
+    # Returns the id of the record
+    # NOTE: If the internal kafka queue is set up, it is possible the ID will be for a record that does not yet exist.
     return inst_pk
+
 
 class GenericSerializerMixin(serializers.ModelSerializer):
 
     def to_internal_value(self, data):
 
         data = data.copy()
-        if self.context.get('view'):
-            if 'pk' in self.context['view'].kwargs:
-                data['id'] = self.context['view'].kwargs['pk']
+        if self.context.get("view"):
+            if "pk" in self.context["view"].kwargs:
+                data["id"] = self.context["view"].kwargs["pk"]
 
         return data
 
     def filter_data(self, validated_data: dict) -> dict:
+        """
+        Filter out unrecognised parameters.
+
+        Also runs the `fill_data_parameters` method to auto-generate content.
+        """
         filtered_data = {}
         validated_data = self.fill_data_parameters(validated_data)
         for k in list(validated_data.keys()):
-            if k in self.Meta.fields or k.replace('_id','') in self.Meta.id_relations or k in self.Meta.internal_fields:
-                filtered_data[k] = validated_data.get(k,None)
-        
-        return filtered_data
-    
-    def replace_id_relations(self, validated_data: dict) -> dict:
+            if (
+                k in self.Meta.fields
+                or k.replace("_id", "") in self.Meta.id_relations
+                or k in self.Meta.internal_fields
+            ):
+                filtered_data[k] = validated_data.get(k, None)
 
-        for k in getattr(self.Meta, 'id_relations',[]):
+        return filtered_data
+
+    def replace_id_relations(self, validated_data: dict) -> dict:
+        """
+        Replace relations like `primary` in the citations model with `primary_id`
+        """
+
+        for k in getattr(self.Meta, "id_relations", []):
             if k in validated_data:
-                validated_data[k+'_id'] = validated_data.pop(k)
+                validated_data[k + "_id"] = validated_data.pop(k)
         return validated_data
 
     def create(self, validated_data):
         """
-        Create and return an Institution instance given validated data.
+        Create and return a model instance given validated data.
         """
 
-        publish: bool = validated_data.pop('publish',False)
-        user_id: str  = validated_data.pop('user_id','anon')
+        publish: bool = validated_data.pop("publish", False)
+        user_id: str = validated_data.pop("user_id", "anon")
 
-        filtered_data  = self.filter_data(validated_data)
+        filtered_data = self.filter_data(validated_data)
 
+        # Check for required fields
         for k in self.Meta.required_fields:
-            if k in getattr(self.Meta,'id_relations',[]):
-                if k+'_id' not in filtered_data:
+            if k in getattr(self.Meta, "id_relations", []):
+                if k + "_id" not in filtered_data:
                     raise MethodNotAllowed(f'Submission without "{k}" field')
                 continue
 
-            if k not in filtered_data and getattr(self.Meta,'field_mappings',dict()).get(k) not in filtered_data:
+            if (
+                k not in filtered_data
+                and getattr(self.Meta, "field_mappings", dict()).get(k)
+                not in filtered_data
+            ):
                 raise MethodNotAllowed(f'Submission without "{k}" field')
 
-        pk    = filtered_data[self.Meta.model._meta.pk.name]
+        # Determine ID of specific record to be created
+        pk = filtered_data[self.Meta.model._meta.pk.name]
 
         filtered_data = self.replace_id_relations(filtered_data)
 
+        # If trying to create an existing record, switch to updating it.
         if self.Meta.model.objects.filter(pk=pk):
             return self.update(
-                self.Meta.model.objects.get(pk=pk),
-                filtered_data,
-                publish=publish
+                self.Meta.model.objects.get(pk=pk), filtered_data, publish=publish
             )
-        
+
+        # Run publication (DOI Minting workflow)
         if publish:
-            pubdata = mint_doi_for_data(validated_data)
-            if pubdata:
+            pubdata = mint_doi_for_data(filtered_data, id=pk)
+            if isinstance(pubdata, dict):
                 filtered_data.update(pubdata)
-        
-        create_instance(self.Meta.model, user=user_id, update_handler=handle_update, required_fields=self.Meta.required_fields, **filtered_data)
+
+        # Use Kafka-enabled instance creation
+        create_instance(
+            self.Meta.model,
+            user=user_id,
+            update_handler=handle_update,
+            required_fields=self.Meta.required_fields,
+            **filtered_data,
+        )
         return filtered_data
-    
+
     def update(self, instance, validated_data: dict):
         """
-        Update and return an existing `Snippet` instance, given the validated data.
+        Update and return an existing instance, given the validated data.
         """
 
-        publish: bool = validated_data.pop('publish',False)
-        user_id: str  = validated_data.pop('user_id','anon')
+        publish: bool = validated_data.pop("publish", False)
+        user_id: str = validated_data.pop("user_id", "anon")
 
-        # "Quirky behaviour" allows creation of a new instance via this mechanism.
-        # Need to experiment deleting the old instance.
-
-        filtered_data  = self.filter_data(validated_data)
-        filtered_data  = self.replace_id_relations(filtered_data)
-        filtered_data.pop('id',None)
+        filtered_data = self.filter_data(validated_data)
+        filtered_data = self.replace_id_relations(filtered_data)
+        id = filtered_data.pop("id", None)
 
         if len(filtered_data.keys()) == 0:
-            raise MethodNotAllowed('No updates supplied')
+            raise MethodNotAllowed("No updates supplied")
 
-        for field in getattr(self.Meta,'immutable_fields',[]):
-            if filtered_data.get(field) != getattr(instance, field) and filtered_data.get(field,None):
+        # Check attempts to change id-related fields that are immutable.
+        for field in getattr(self.Meta, "immutable_fields", []):
+            if filtered_data.get(field) != getattr(
+                instance, field
+            ) and filtered_data.get(field, None):
                 raise MethodNotAllowed(f'The field "{field}" is immutable')
-            
+
+        # Run publication (DOI Minting workflow)
         if publish:
-            pubdata = mint_doi_for_data(validated_data)
-            if pubdata:
+            pubdata = mint_doi_for_data(filtered_data, id=id)
+            if isinstance(pubdata, dict):
                 filtered_data.update(pubdata)
 
-        update_instance(self.Meta.model, user=user_id, update_handler=handle_update, id=instance.id, **filtered_data)
+        # Use Kafka-enabled instance updating
+        update_instance(
+            self.Meta.model,
+            user=user_id,
+            update_handler=handle_update,
+            id=instance.id,
+            **filtered_data,
+        )
         return filtered_data
+
 
 class InstitutionsSerializer(GenericSerializerMixin):
     class Meta:
         model = Institutions
-        required_fields = ['name']
-        fields = ['name','acronym','country','id']
-        relations=[]
-        internal_fields=[]
+        required_fields = ["name"]
+        fields = ["name", "acronym", "country", "id"]
+        relations = []
+        internal_fields = []
 
     def fill_data_parameters(self, data):
+        """
+        Auto-fill content into the data dict.
+        """
 
-        if not data.get('acronym',None) and not data.get('country',None):
-            data.update(locate_institute(data['name']))
+        # Only ID provided - fill values from ROR API calls
+        if not data.get("acronym", None) and not data.get("country", None):
+            data.update(locate_institute(data["name"]))
 
-        data['id'] = hashlib.sha1(data['name'].encode()).hexdigest()
+        data["id"] = hashlib.sha1(data["name"].encode()).hexdigest()
         return data
+
 
 class PartiesSerializer(GenericSerializerMixin):
     affiliations = InstitutionsSerializer(required=False, many=True)
+
     class Meta:
         model = Parties
-        required_fields = ['first_name', 'last_name']
-        immutable_fields = ['first_name', 'last_name', 'middle_names']
-        fields = immutable_fields + ['email','orcid','affiliations','id']
-        relations = ['affiliations']
-        internal_fields=[]
+        required_fields = ["first_name", "last_name"]
+        immutable_fields = ["first_name", "last_name", "middle_names"]
+        fields = immutable_fields + ["email", "orcid", "affiliations", "id"]
+        relations = ["affiliations"]
+        internal_fields = []
 
     def fill_data_parameters(self, data):
+        """
+        Auto-fill content into the data dict.
+        """
 
+        # Pull information from ORCID
         affiliation_data = []
-        if data.get('orcid',None):
-            affiliation_data += extract_from_orcid(data['orcid'])
+        if data.get("orcid", None):
+            affiliation_data += extract_from_orcid(data["orcid"])
 
-        if data.get('affiliations',None) is not None:
+        if data.get("affiliations", None) is not None:
             # Properly connect non-blank affiliations
-            affiliation_data += json.loads(data.pop('affiliations')[0])
+            affiliation_data += json.loads(data.pop("affiliations")[0])
 
         if not isinstance(affiliation_data, list):
             affiliation_data = [affiliation_data]
 
+        # Create new institutions from the affiliations for this Author/Party
         if len(affiliation_data) > 0:
-            data['affiliations'] = [chain_new_objects(
-                {'name':a},
-                InstitutionsSerializer,
-                Institutions,
-                filter_kwargs={'name':a},
-            ) for a in affiliation_data]
+            data["affiliations"] = [
+                chain_new_objects(
+                    {"name": a},
+                    InstitutionsSerializer,
+                    Institutions,
+                    filter_kwargs={"name": a},
+                )
+                for a in affiliation_data
+            ]
 
-        if 'id' not in data:
-            # Add ID from hashed version of first and last names?
-            naming_hash = data['first_name'] + data.get('middle_names','') + data.get('last_name')
+        if "id" not in data:
+            # Add ID from hashed version of all names
+            naming_hash = (
+                data["first_name"]
+                + data.get("middle_names", "")
+                + data.get("last_name")
+            )
             party_id = hashlib.sha1(naming_hash.encode()).hexdigest()
 
-            data['id'] = party_id
+            data["id"] = party_id
         return data
+
 
 class FundingStreamsSerializer(GenericSerializerMixin):
     affiliation = serializers.StringRelatedField(required=False)
-    
+
     class Meta:
         model = FundingStreams
-        required_fields = ['name']
-        fields = ['name','affiliation','id']
-        relations=[]
-        id_relations = ['affiliation']
-        internal_fields=[]
+        required_fields = ["name"]
+        fields = ["name", "affiliation", "id"]
+        relations = []
+        id_relations = ["affiliation"]
+        internal_fields = []
 
     def fill_data_parameters(self, data):
+        """
+        Auto-fill content into the data dict.
+        """
 
-        if 'affiliation' in data:
-            affiliation = data.pop('affiliation')
+        if "affiliation" in data:
+            affiliation = data.pop("affiliation")
 
-            data['affiliation_id'] = chain_new_objects(
-                {'name': affiliation}, 
-                InstitutionsSerializer, 
-                Institutions, 
-                filter_kwargs={'name':affiliation}
+            data["affiliation_id"] = chain_new_objects(
+                {"name": affiliation},
+                InstitutionsSerializer,
+                Institutions,
+                filter_kwargs={"name": affiliation},
             )
 
-        if 'id' not in data:
-            data['id'] = hashlib.sha1(data['name'].encode()).hexdigest()
+        if "id" not in data:
+            data["id"] = hashlib.sha1(data["name"].encode()).hexdigest()
 
         return data
+
 
 class ReferencesSerializer(GenericSerializerMixin):
 
     class Meta:
         model = References
-        fields = ['title','citeas','id']
-        required_fields = ['id']
+        fields = ["title", "citeas", "id"]
+        required_fields = ["id"]
         relations = []
         id_relations = []
-        field_mappings = {
-            'DOI':'id'
-        }
-        internal_fields=[]
+        field_mappings = {"DOI": "id"}
+        internal_fields = []
 
     def fill_data_parameters(self, data):
+        """
+        No data filling for references
+        """
         return data
 
+
 class CitationsSerializer(GenericSerializerMixin):
-    primary      = PartiesSerializer(required=False)
-    contacts     = PartiesSerializer(required=False, many=True)
+    primary = PartiesSerializer(required=False)
+    contacts = PartiesSerializer(required=False, many=True)
     institutions = InstitutionsSerializer(required=False, many=True)
-    funders      = FundingStreamsSerializer(required=False, many=True)
-    is_cited_by        = ReferencesSerializer(required=False, many=True)
-    is_referenced_by   = ReferencesSerializer(required=False, many=True)
-    cites              = ReferencesSerializer(required=False, many=True)
+    funders = FundingStreamsSerializer(required=False, many=True)
+    is_cited_by = ReferencesSerializer(required=False, many=True)
+    is_referenced_by = ReferencesSerializer(required=False, many=True)
+    cites = ReferencesSerializer(required=False, many=True)
 
     class Meta:
         model = Citations
-        citation_types = ['is_cited_by', 'is_referenced_by','cites']
+        citation_types = ["is_cited_by", "is_referenced_by", "cites"]
+
+        # Core Facet Labels from the Database
         fields = [
-            'title', 'abstract', 'drs_url',
-            'doi_url', 'rights', 'license',
-            'primary', 'contacts', 'institutions',
-            'funders','id', 'version', 'publication_year',
-            'mip_era','activity_id','domain_id','institution_id',
-            'source_id','experiment_id', 'cites', 'is_cited_by', 'is_referenced_by'
+            "title",
+            "abstract",
+            "drs_url",
+            "doi_url",
+            "rights",
+            "license",
+            "primary",
+            "contacts",
+            "institutions",
+            "funders",
+            "id",
+            "version",
+            "publication_year",
+            "mip_era",
+            "activity_id",
+            "domain_id",
+            "institution_id",
+            "source_id",
+            "experiment_id",
+            "cites",
+            "is_cited_by",
+            "is_referenced_by",
         ]
-        required_fields=[
-            'title','version', 'primary'
-        ]
-        non_replicating_fields=['experiment_id','doi_url', 'publication_year']
-        id_relations = ['primary']
+        required_fields = ["title", "version", "primary"]
+        non_replicating_fields = ["experiment_id", "doi_url", "publication_year"]
+        id_relations = ["primary"]
 
         relations = [
-            'contacts','institutions','funders',
-            'is_cited_by','is_referenced_by','cites'
+            "contacts",
+            "institutions",
+            "funders",
+            "is_cited_by",
+            "is_referenced_by",
+            "cites",
         ]
-        internal_fields=['editable', 'published']
+        internal_fields = ["editable", "published"]
 
     def create(self, validated_data):
+        """
+        Apply extra validation to the citation record.
 
-        # Only run if the data title is new
-
-        # No longer pulling facets from title - these are provided and validated or they are not provided at all.
-        # if 'title' in validated_data:
-        #     facets = validate_title(validated_data['title'], raise_exceptions=True)
-        #     for k in facets.keys():
-
-        #         data_facet = validated_data.get(k,None)
-        #         if data_facet is not None and data_facet != facets[k]:
-        #             raise ParseError(f'Facet "{k}" does not match title facet: {facets[k]}')
-
-        #         # Fill if not overridden by input.
-        #         if data_facet is None:
-        #             validated_data[k] = facets[k]
-        # else:
-
-        # If no title, must have all facets to construct title.
+        This validates the ``search_facets`` if they have been provided to this record.
+        """
 
         # Enforces valid facets for all records - but don't have to match title structure.
-        title = title_from_facets(validated_data, validate_all=True, raise_exceptions=True)
-        if not bool(validated_data.get('title',False)):
-            validated_data['title'] = title
+        if "mip_era" in validated_data:
+
+            # Validate by assembling expected title - if the search facets are provided.
+            title = title_from_facets(validated_data, raise_exceptions=True)
+
+            if not bool(validated_data.get("title", False)):
+                if not title:
+                    raise ValidationError(
+                        "Missing the `mip_era` facet and no other title provided."
+                    )
+                elif isinstance(title, list):
+                    raise ValidationError(
+                        f"Missing facets: {title} - unable to generate title and no title provided."
+                    )
+                validated_data["title"] = title
 
         return super().create(validated_data)
-    
-    def update(self, instance, validated_data):
-
-        if instance.published and not instance.doi_url:
-            validated_data['published'] = False
-
-        if validated_data.get('doi_url'):
-            if instance.doi_url is not None or True:
-                validated_data['editable'] = False
-            validated_data['published'] = True
-
-        return super().update(instance, validated_data)
 
     def fill_data_parameters(self, data: dict):
         """
@@ -548,151 +723,182 @@ class CitationsSerializer(GenericSerializerMixin):
         Locate or create references based on the provided information.
         """
 
-        # Only add references if they are not already present
+        # Only add references if they are not already present
         for gr in obtain_all_references(data):
             new_ref = True
             for reftype in self.Meta.citation_types:
-                if gr['id'] in data[reftype]:
+                if gr["id"] in data[reftype]:
                     new_ref = False
             if new_ref:
-                data['cites'].append(gr)
+                data["cites"].append(gr)
 
-        # Auto-fills
-        if not bool(data.get('abstract')):
-            data['abstract'] = abstract_from_esgvoc(data)
-        if not bool(data.get('rights')):
-            data['rights'] = settings.DEFAULT_RIGHTS # 'CC-BY-4.0' SPDX identifier
-        if not bool(data.get('license')):
-            data['license'] = assemble_license_info(data)
-        if not bool(data.get('drs_url')):
-            data['drs_url'] = get_drs_url(data)
-        
-        if data.get('institution_id'):
+        # Auto-fill from ESGVOC
+        if not bool(data.get("abstract")):
+            data["abstract"] = abstract_from_esgvoc(data)
+        if not bool(data.get("rights")):
+            data["rights"] = settings.DEFAULT_RIGHTS  # 'CC-BY-4.0' SPDX identifier
+        if not bool(data.get("license")):
+            data["license"] = assemble_license_info(data)
+        if not bool(data.get("drs_url")):
+            data["drs_url"] = get_drs_url(data)
+
+        # Chain create institution
+        if data.get("institution_id"):
             # Create new institution as below, and add to the main affiliated institutions
 
-            inst_data = institution_mappings(data['institution_id'])
+            inst_data = institution_mappings(data["institution_id"])
 
             institution = chain_new_objects(
                 inst_data,
                 InstitutionsSerializer,
                 Institutions,
-                filter_kwargs={'name': inst_data['name']},
-                allow_update=True
+                filter_kwargs={"name": inst_data["name"]},
+                allow_update=True,
             )
-            if 'institutions' not in data:
-                data['institutions'] = []
+            if "institutions" not in data:
+                data["institutions"] = []
 
-            data['institutions'].append(institution)
+            data["institutions"].append(institution)
 
-        if data.get('version') is None and data.get('id') is None:
-            
+        if data.get("version") is None and data.get("id") is None:
+
             # Version is auto-assigned
-            version = len(self.Meta.model.objects.filter(title=data['title'])) + 1
-            data['version'] = version
+            version = len(self.Meta.model.objects.filter(title=data["title"])) + 1
+            data["version"] = version
 
             # Identifier is auto-assigned
-            id = data['title'] + '_v' + str(data['version'])
-            data['id'] = id
+            id = data["title"] + "_v" + str(data["version"])
+            data["id"] = id
 
-        optional_party = list(set(PartiesSerializer.Meta.immutable_fields) - set(PartiesSerializer.Meta.required_fields))
+        optional_party = list(
+            set(PartiesSerializer.Meta.immutable_fields)
+            - set(PartiesSerializer.Meta.required_fields)
+        )
         # Unpack primaries, contacts
-        if data.get('primary'):
-            primary = data.pop('primary')
-            if isinstance(primary,dict):
+        if data.get("primary"):
+            primary = data.pop("primary")
+            if isinstance(primary, dict):
                 # This does not correctly create institution objects
-                search_primary = chain_new_objects(primary, PartiesSerializer, Parties, 
-                                                filter_kwargs=PartiesSerializer.Meta.required_fields,
-                                                optionals=optional_party)
+                search_primary = chain_new_objects(
+                    primary,
+                    PartiesSerializer,
+                    Parties,
+                    filter_kwargs=PartiesSerializer.Meta.required_fields,
+                    optionals=optional_party,
+                )
                 primary = search_primary
-            data['primary_id'] = primary
+            data["primary_id"] = primary
 
-        if data.get('contacts'):
+        if data.get("contacts"):
             contacts = []
-            for contact in data.pop('contacts'):
-                if isinstance(contact,dict):
-                    search_contact = chain_new_objects(contact, PartiesSerializer, Parties,
-                                                        filter_kwargs=PartiesSerializer.Meta.required_fields,
-                                                        optionals=optional_party)
+            for contact in data.pop("contacts"):
+                if isinstance(contact, dict):
+                    search_contact = chain_new_objects(
+                        contact,
+                        PartiesSerializer,
+                        Parties,
+                        filter_kwargs=PartiesSerializer.Meta.required_fields,
+                        optionals=optional_party,
+                    )
                     contacts.append(search_contact)
                 else:
                     contacts.append(contact)
-            data['contacts'] = contacts
+            data["contacts"] = contacts
 
         # Unpack funders
-        if data.get('funders'):
+        if data.get("funders"):
             funders = []
-            for funder in data.pop('funders'):
+            for funder in data.pop("funders"):
                 if isinstance(funder, dict):
-                    search_funder = chain_new_objects(funder, FundingStreamsSerializer, FundingStreams,
-                                                    filter_kwargs=FundingStreamsSerializer.Meta.required_fields,
+                    search_funder = chain_new_objects(
+                        funder,
+                        FundingStreamsSerializer,
+                        FundingStreams,
+                        filter_kwargs=FundingStreamsSerializer.Meta.required_fields,
                     )
                     funders.append(search_funder)
                 else:
                     funders.append(funder)
-            data['funders'] = funders
+            data["funders"] = funders
 
         # Unpack institutions
-        if data.get('institutions'):
+        if data.get("institutions"):
             institutions = []
-            for institution in data.pop('institutions'):
+            for institution in data.pop("institutions"):
                 if isinstance(institution, dict):
-                    search_institution = chain_new_objects(institution, InstitutionsSerializer, Institutions,
-                                                        filter_kwargs=InstitutionsSerializer.Meta.required_fields,
-                                                        )
+                    search_institution = chain_new_objects(
+                        institution,
+                        InstitutionsSerializer,
+                        Institutions,
+                        filter_kwargs=InstitutionsSerializer.Meta.required_fields,
+                    )
                     institutions.append(search_institution)
                 else:
                     institutions.append(institution)
-            data['institutions'] = institutions
+            data["institutions"] = institutions
 
-        # Unpack references
+        # Unpack references - obtained via ESGVOC or UI
         for citation_type in self.Meta.citation_types:
             if not data.get(citation_type):
                 continue
             references = []
             for ref in data.pop(citation_type):
                 if isinstance(ref, dict):
-                    reference = chain_new_objects(ref, ReferencesSerializer, References, 
-                                                  filter_kwargs=ReferencesSerializer.Meta.required_fields,
-                                                  allow_update=True)
+                    reference = chain_new_objects(
+                        ref,
+                        ReferencesSerializer,
+                        References,
+                        filter_kwargs=ReferencesSerializer.Meta.required_fields,
+                        allow_update=True,
+                    )
                     references.append(reference)
                 else:
                     references.append(ref)
             data[citation_type] = references
 
-        data['published'] = False
-        if data.get('doi_url',None):
-            data['published'] = True
+        data["published"] = False
+        if data.get("doi_url", None):
+            data["published"] = True
 
         return data
 
+
 dj_tables = {
-    'citations':Citations,
-    'institutions': Institutions,
-    'fundingstreams': FundingStreams,
-    'parties': Parties,
-    'references': References,
+    "citations": Citations,
+    "institutions": Institutions,
+    "fundingstreams": FundingStreams,
+    "parties": Parties,
+    "references": References,
 }
 
 dj_serializers = {
-    'citations': CitationsSerializer,
-    'institutions': InstitutionsSerializer,
-    'fundingstreams': FundingStreamsSerializer,
-    'parties': PartiesSerializer,
-    'references': ReferencesSerializer
+    "citations": CitationsSerializer,
+    "institutions": InstitutionsSerializer,
+    "fundingstreams": FundingStreamsSerializer,
+    "parties": PartiesSerializer,
+    "references": ReferencesSerializer,
 }
-    
+
+
 def handle_update(table: str, method: str, content: dict):
     """
-    Handle ANY ORM Request updates here."""
+    Handle ANY ORM Request updates here.
 
-    model      = dj_tables[table.lower()]
+    This function is passed to the Kafka update system, and will be called directly
+    if the Kafka Internal Queue is disabled."""
+
+    model = dj_tables[table.lower()]
     serializer = dj_serializers[table.lower()]
     pk = model._meta.pk.name
 
     match method:
         case "create":
             instance = model.objects.create(
-                **{c:v for c,v in content.items() if c not in serializer.Meta.relations}
+                **{
+                    c: v
+                    for c, v in content.items()
+                    if c not in serializer.Meta.relations
+                }
             )
             for r in serializer.Meta.relations:
                 if r in content:

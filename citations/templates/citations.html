@@ -41,7 +41,10 @@
             {% for citation in citations.object_list %}
             <tr>
                 <th><a href="{% url 'citations:citation' title=citation.title %}?version={{ citation.version }}">{{ citation.title }}</a></th>
-                <th>{{ citation.version }}</th>
+                <th>{{ citation.version }} 
+                    {% if citation.doi_url %}
+                        (citable)
+                    {% endif %}</th>
                 <th><a href="{% url 'citations:party' pk=citation.primary.id %}">{{ citation.primary.fullname }}</a></th>
             </tr>
             {% endfor %}

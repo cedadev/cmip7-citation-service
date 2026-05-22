@@ -1,3 +1,4 @@
 .venv
 citation_site/settings_local.py
 *.pyc
+docs/build
