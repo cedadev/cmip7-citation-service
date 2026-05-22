@@ -44,7 +44,9 @@ def get_ror_link(inst: str):
 
 def mint_doi_for_record(data: dict, publication_year: int, id: str, return_citation: bool = False) -> str:
     """
-    Apply to mint a DOI via DataCite for the information in this record
+    Apply to mint a DOI via DataCite for the information in this record.
+
+    Create the DOI request and send to DataCite. This includes assembling the DataCite-compliant JSON payload.
     """
 
     if not getattr(settings,"DATACITE_API_URL",None):
@@ -96,13 +98,12 @@ def mint_doi_for_record(data: dict, publication_year: int, id: str, return_citat
         "data": {
             "type":"dois",
             "attributes":{
-                #"event" : "publish", # For live publication
                 "prefix":settings.DOI_PREFIX,
                 "creators": creators,
                 "titles":[
                     {
                         "lang": "en",
-                        "title": f"ESGF-NG CMIP7 {data['title']}"
+                        "title": f"ESGF-NG {data['title']} version {data['version']}"
                     }
                 ],
                 "publisher": {
@@ -123,6 +124,10 @@ def mint_doi_for_record(data: dict, publication_year: int, id: str, return_citat
             }
         }
     }
+
+    if 'test' not in settings.DATACITE_API_URL:
+        payload['attributes']['event'] = "publish"
+
     logger.info(f'Sending Request to: {settings.DATACITE_API_URL}')
 
     if return_citation:
@@ -152,14 +157,20 @@ def mint_doi_for_record(data: dict, publication_year: int, id: str, return_citat
 
 def resolve_drs(drs_url: str):
     """
-    Resolve a DRS URL to check if data exists
+    Resolve a DRS URL to check if data exists.
+
+    This should return False if the DRS (Data Access) URL returns a 404 or 
+    some other response to indicate the data is not available. This function prevents
+    DOIs being minted for records where the data is not yet accessible.
     """
     # Placeholder implementation - replace with actual resolution logic
     return True
 
 def publish_record(data: dict, id: str) -> str:
     """
-    Apply to mint a DOI via DataCite for the information in this record
+    Apply to mint a DOI via DataCite for the information in this record.
+
+    Assemble the ``published`` flag and set the publication year in the resulting data.
     """
     publication = {}
 
