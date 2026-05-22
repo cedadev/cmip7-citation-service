@@ -17,10 +17,11 @@ class Institutions(models.Model):
     acronym = models.CharField(max_length=10)
     country = models.CharField(max_length=120)
 
-
     id = models.CharField(max_length=120, primary_key=True)
+
     def __str__(self):
         return self.name
+
 
 class Parties(models.Model):
     """
@@ -38,11 +39,13 @@ class Parties(models.Model):
 
     # Hashlib of name elements
     id = models.CharField(primary_key=True)
+
     def __str__(self):
-        if self.middle_names is not None and self.middle_names != '':
-            return f'{self.first_name} ({self.middle_names}) {self.last_name} <{self.email}>'
-        return f'{self.first_name} {self.last_name} <{self.email}>'
-       
+        if self.middle_names is not None and self.middle_names != "":
+            return f"{self.first_name} ({self.middle_names}) {self.last_name} <{self.email}>"
+        return f"{self.first_name} {self.last_name} <{self.email}>"
+
+
 class FundingStreams(models.Model):
     """
     Model for Funding Streams associated with a single Institute.
@@ -55,9 +58,11 @@ class FundingStreams(models.Model):
     affiliation = models.ForeignKey(Institutions, blank=True, on_delete=models.CASCADE)
 
     id = models.CharField(max_length=120, primary_key=True)
+
     def __str__(self):
-        return f'{self.name}'
-    
+        return f"{self.name}"
+
+
 class References(models.Model):
     """
     Store external references to the CMIP7 citation service
@@ -70,8 +75,9 @@ class References(models.Model):
     id = models.CharField(max_length=200, primary_key=True)
 
     def __str__(self):
-        return f'{self.title}'
-    
+        return f"{self.title}"
+
+
 class Citations(models.Model):
     """
     Model for citations that have multiple links on creation
@@ -81,29 +87,32 @@ class Citations(models.Model):
 
     # Still would be good to create citations/parties etc in any order
 
-    id        = models.CharField(max_length=300, primary_key=True)
-    title     = models.CharField(max_length=300)
-    version   = models.IntegerField()
+    id = models.CharField(max_length=300, primary_key=True)
+    title = models.CharField(max_length=300)
+    version = models.IntegerField()
 
     publication_year = models.IntegerField(null=True, blank=True)
 
     abstract = models.TextField()
-    drs_url  = models.CharField()
-    doi_url  = models.CharField()
-    rights   = models.CharField(max_length=30)
-    license  = models.TextField()
-    primary  = models.ForeignKey(
-        Parties, on_delete=models.PROTECT, # Primary author cannot be deleted.
-        related_name='primary_party')
+    drs_url = models.CharField()
+    doi_url = models.CharField()
+    rights = models.CharField(max_length=30)
+    license = models.TextField()
+    primary = models.ForeignKey(
+        Parties,
+        on_delete=models.PROTECT,  # Primary author cannot be deleted.
+        related_name="primary_party",
+    )
     contacts = models.ManyToManyField(
-        Parties, related_name='contact_parties', blank=True, null=True)
+        Parties, related_name="contact_parties", blank=True, null=True
+    )
     institutions = models.ManyToManyField(Institutions, blank=True, null=True)
-    funders  = models.ManyToManyField(FundingStreams, blank=True, null=True)
+    funders = models.ManyToManyField(FundingStreams, blank=True, null=True)
 
     editable = models.BooleanField(default=True)
     published = models.BooleanField(default=False)
 
-    mip_era     = models.CharField(max_length=30, null=True, blank=True)
+    mip_era = models.CharField(max_length=30, null=True, blank=True)
     activity_id = models.CharField(max_length=30, null=True, blank=True)
     institution_id = models.CharField(max_length=30, null=True, blank=True)
     source_id = models.CharField(max_length=30, null=True, blank=True)
@@ -118,37 +127,40 @@ class Citations(models.Model):
 
     # References
     is_cited_by = models.ManyToManyField(
-        References, blank=True, null=True, related_name='is_cited_by'
+        References, blank=True, null=True, related_name="is_cited_by"
     )
 
     cites = models.ManyToManyField(
-        References, blank=True, null=True, related_name='cites'
+        References, blank=True, null=True, related_name="cites"
     )
 
     is_referenced_by = models.ManyToManyField(
-        References, blank=True, null=True, related_name='is_referenced_by'
+        References, blank=True, null=True, related_name="is_referenced_by"
     )
 
     # An endpoint for obtaining a list of ESGF urls that can be rendered
-    #data_access = 
+    # data_access =
+
 
 def locate_institute(inst: str):
     """
     Use ROR lookup API to find institute-level metadata
     """
-    ROR_api = 'https://api.ror.org/v2/organizations?query=' + '%20'.join(inst.split(' '))
+    ROR_api = "https://api.ror.org/v2/organizations?query=" + "%20".join(
+        inst.split(" ")
+    )
     r = requests.get(ROR_api)
     if int(r.status_code) >= 300:
-        print('Institute not found')
-        return {'name':inst}
-    
+        print("Institute not found")
+        return {"name": inst}
+
     resp = r.json()
     found = False
     inst_count = 0
     while not found and inst_count < 10:
-        names = resp['items'][inst_count]['names']
+        names = resp["items"][inst_count]["names"]
         for entry in names:
-            if entry['value'] == inst:
+            if entry["value"] == inst:
                 found = True
                 break
 
@@ -158,32 +170,39 @@ def locate_institute(inst: str):
     if found:
 
         acronym = None
-        for n in resp['items'][inst_count]['names']:
-            if 'acronym' in n['types']:
-                acronym = n['value']
+        for n in resp["items"][inst_count]["names"]:
+            if "acronym" in n["types"]:
+                acronym = n["value"]
 
         return {
-            'name':inst,
-            'acronym': acronym or ''.join([i[0] for i in inst.split(' ')]),
-            'country': resp['items'][inst_count]['locations'][0]['geonames_details']['country_name']
+            "name": inst,
+            "acronym": acronym or "".join([i[0] for i in inst.split(" ")]),
+            "country": resp["items"][inst_count]["locations"][0]["geonames_details"][
+                "country_name"
+            ],
         }
     else:
-        return {'name':inst}
+        return {"name": inst}
+
 
 def extract_from_orcid(orcid):
-    r = xmltodict.parse(
-        requests.get(
-            f'https://pub.orcid.org/v3.0/expanded-search/?q=orcid%3A{orcid}'
-        ).text
-    ).get('expanded-search:expanded-search',{}).get('expanded-search:expanded-result',None)
-    
+    r = (
+        xmltodict.parse(
+            requests.get(
+                f"https://pub.orcid.org/v3.0/expanded-search/?q=orcid%3A{orcid}"
+            ).text
+        )
+        .get("expanded-search:expanded-search", {})
+        .get("expanded-search:expanded-result", None)
+    )
+
     # Demo loader for loading ORCID institutions to Party (if already known)
     if r is None:
         return None
-    
+
     institutions = []
     for k, v in r.items():
-        if k != 'expanded-search:institution-name':
+        if k != "expanded-search:institution-name":
             continue
 
         if isinstance(v, str):
@@ -191,5 +210,5 @@ def extract_from_orcid(orcid):
 
         for inst in v:
             institutions.append(inst)
-    
+
     return institutions

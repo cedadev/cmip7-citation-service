@@ -1,16 +1,20 @@
 from django.contrib.auth.models import User
-from rest_framework.authtoken.models import Token
 from django.core.management.base import BaseCommand
+from rest_framework.authtoken.models import Token
+
 
 class Command(BaseCommand):
     help = "Runs backend listener"
 
     def add_arguments(self, parser):
-        parser.add_argument('username', type=str, help="Username")
-        parser.add_argument('-f','--force_create', dest='force_create', action='store_true')
+        parser.add_argument("username", type=str, help="Username")
+        parser.add_argument(
+            "-f", "--force_create", dest="force_create", action="store_true"
+        )
 
     def handle(self, username: str, force_create: bool = False, **kwargs):
         token(username, force_create=force_create)
+
 
 def token(username: str, force_create: bool):
 

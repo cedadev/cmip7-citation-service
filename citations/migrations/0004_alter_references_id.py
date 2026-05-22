@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('citations', '0003_alter_citations_activity_id_and_more'),
+        ("citations", "0003_alter_citations_activity_id_and_more"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='references',
-            name='id',
+            model_name="references",
+            name="id",
             field=models.CharField(max_length=200, primary_key=True, serialize=False),
         ),
     ]

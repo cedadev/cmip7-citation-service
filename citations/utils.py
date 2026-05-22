@@ -8,5 +8,5 @@ else:
     logging.basicConfig(level=logging.INFO)
 logstream = logging.StreamHandler()
 
-formatter = logging.Formatter('%(levelname)s [%(name)s]: %(message)s')
+formatter = logging.Formatter("%(levelname)s [%(name)s]: %(message)s")
 logstream.setFormatter(formatter)

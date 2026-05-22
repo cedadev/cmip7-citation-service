@@ -6,43 +6,43 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('citations', '0002_citations_domain_id'),
+        ("citations", "0002_citations_domain_id"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='citations',
-            name='activity_id',
+            model_name="citations",
+            name="activity_id",
             field=models.CharField(blank=True, max_length=30, null=True),
         ),
         migrations.AlterField(
-            model_name='citations',
-            name='domain_id',
+            model_name="citations",
+            name="domain_id",
             field=models.CharField(blank=True, max_length=30, null=True),
         ),
         migrations.AlterField(
-            model_name='citations',
-            name='experiment_id',
+            model_name="citations",
+            name="experiment_id",
             field=models.CharField(blank=True, max_length=30, null=True),
         ),
         migrations.AlterField(
-            model_name='citations',
-            name='institution_id',
+            model_name="citations",
+            name="institution_id",
             field=models.CharField(blank=True, max_length=30, null=True),
         ),
         migrations.AlterField(
-            model_name='citations',
-            name='mip_era',
+            model_name="citations",
+            name="mip_era",
             field=models.CharField(blank=True, max_length=30, null=True),
         ),
         migrations.AlterField(
-            model_name='citations',
-            name='source_id',
+            model_name="citations",
+            name="source_id",
             field=models.CharField(blank=True, max_length=30, null=True),
         ),
         migrations.AlterField(
-            model_name='citations',
-            name='title',
+            model_name="citations",
+            name="title",
             field=models.CharField(max_length=300),
         ),
     ]
