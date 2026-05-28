@@ -14,6 +14,7 @@ For Citation Service users and reviewers, please go to the main site at `https:/
    :maxdepth: 1
    :caption: Developer Guides
    
+   Citation Flow Diagram <flow_diagram>
    Citation Auto Generation <serializer>
    Citation Views and Rendering <views>
    DOI Minting Service <dois>
