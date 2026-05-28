@@ -49,7 +49,6 @@
 <li class="toctree-l2"><a class="reference internal" href="#citations.serializers.institution_mappings"><code class="docutils literal notranslate"><span class="pre">institution_mappings()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#citations.serializers.title_from_facets"><code class="docutils literal notranslate"><span class="pre">title_from_facets()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#citations.serializers.obtain_all_references"><code class="docutils literal notranslate"><span class="pre">obtain_all_references()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#citations.serializers.get_drs_url"><code class="docutils literal notranslate"><span class="pre">get_drs_url()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#citations.serializers.assemble_license_info"><code class="docutils literal notranslate"><span class="pre">assemble_license_info()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#citations.serializers.abstract_from_esgvoc"><code class="docutils literal notranslate"><span class="pre">abstract_from_esgvoc()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#citations.serializers.chain_new_objects"><code class="docutils literal notranslate"><span class="pre">chain_new_objects()</span></code></a></li>
@@ -169,12 +168,6 @@ in the data, this function should not be run, but will return a None value.</p>
 <span class="sig-prename descclassname"><span class="pre">citations.serializers.</span></span><span class="sig-name descname"><span class="pre">obtain_all_references</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="_modules/citations/serializers.html#obtain_all_references"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.obtain_all_references" title="Link to this definition"></a></dt>
 <dd><p>Obtain Citation references from the EMD (ESGVOC)</p>
 <p>Prevent adding a reference if it already exists.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="citations.serializers.get_drs_url">
-<span class="sig-prename descclassname"><span class="pre">citations.serializers.</span></span><span class="sig-name descname"><span class="pre">get_drs_url</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="_modules/citations/serializers.html#get_drs_url"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.get_drs_url" title="Link to this definition"></a></dt>
-<dd><p>Obtain the DRS URL expected for this record, given the set of search facets.</p>
 </dd></dl>
 
 <dl class="py function">

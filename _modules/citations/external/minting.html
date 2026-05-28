@@ -80,7 +80,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">django.conf</span><span class="w"> </span><span class="kn">import</span> <span class="n">settings</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">citations.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">logstream</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">citations.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">logstream</span><span class="p">,</span> <span class="n">get_drs_url</span>
 
 <span class="c1"># from esgf_core_utils.models.kafka.consumer import KafkaConsumer</span>
 
@@ -245,7 +245,7 @@
 
 <div class="viewcode-block" id="resolve_drs">
 <a class="viewcode-back" href="../../../dois.html#citations.external.minting.resolve_drs">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">resolve_drs</span><span class="p">(</span><span class="n">drs_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">resolve_drs</span><span class="p">(</span><span class="n">drs_url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Resolve a DRS URL to check if data exists.</span>
 
@@ -253,7 +253,11 @@
 <span class="sd">    some other response to indicate the data is not available. This function prevents</span>
 <span class="sd">    DOIs being minted for records where the data is not yet accessible.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Placeholder implementation - replace with actual resolution logic</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">bool</span><span class="p">(</span><span class="n">drs_url</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    
+    <span class="c1"># Data Access Check for DRS URL here.</span>
     <span class="k">return</span> <span class="kc">False</span></div>
 
 
@@ -268,7 +272,11 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">publication</span> <span class="o">=</span> <span class="p">{}</span>
 
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">resolve_drs</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;drs_url&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)):</span>
+    <span class="n">drs_url</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;drs_url&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">bool</span><span class="p">(</span><span class="n">drs_url</span><span class="p">):</span>
+        <span class="n">drs_url</span> <span class="o">=</span> <span class="n">get_drs_url</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">resolve_drs</span><span class="p">(</span><span class="n">drs_url</span><span class="p">):</span>
         <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;published&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span>
 
     <span class="n">pub_yr</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">year</span><span class="p">)</span>
