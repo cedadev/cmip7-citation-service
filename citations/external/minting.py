@@ -5,7 +5,7 @@ from datetime import datetime
 import requests
 from django.conf import settings
 
-from citations.utils import logstream
+from citations.utils import logstream, get_drs_url
 
 # from esgf_core_utils.models.kafka.consumer import KafkaConsumer
 
@@ -162,7 +162,7 @@ def mint_doi_for_record(
     return f"https://doi.org/{r.json()['data']['id']}"
 
 
-def resolve_drs(drs_url: str):
+def resolve_drs(drs_url: str | None) -> bool:
     """
     Resolve a DRS URL to check if data exists.
 
@@ -170,7 +170,11 @@ def resolve_drs(drs_url: str):
     some other response to indicate the data is not available. This function prevents
     DOIs being minted for records where the data is not yet accessible.
     """
-    # Placeholder implementation - replace with actual resolution logic
+
+    if not bool(drs_url):
+        return False
+    
+    # Data Access Check for DRS URL here.
     return False
 
 
@@ -182,7 +186,11 @@ def publish_record(data: dict, id: str) -> str:
     """
     publication = {}
 
-    if not resolve_drs(data.get("drs_url", "")):
+    drs_url = data.get("drs_url", "")
+    if not bool(drs_url):
+        drs_url = get_drs_url(data)
+
+    if not resolve_drs(drs_url):
         return False, {"published": False}
 
     pub_yr = int(datetime.now().year)

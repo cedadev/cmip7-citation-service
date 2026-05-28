@@ -53,7 +53,12 @@ from citations.serializers import (
     handle_update,
     title_from_facets,
 )
+from citations.utils import logstream, get_drs_url
+import logging
 
+logger = logging.getLogger(__name__)
+logger.addHandler(logstream)
+logger.propagate = False
 
 def create_new_permission(user, institution_id: str):
     """
@@ -695,6 +700,12 @@ class CitationView(GenericRenderedView):
 
         # 5. Render Abstract
         context["abstract"] = render_abstract(citation_data)
+
+        # 6. Render Data Access
+        if bool(citation_data.get('drs_url')):
+            context['data_access'] = citation_data['drs_url']
+        else:
+            context['data_access'] = get_drs_url(citation_data)
 
         context["citation"] = citation_data
         return context

@@ -63,10 +63,10 @@
                     <th>Abstract</th>
                     <td>{{ abstract|safe|linebreaksbr }}</td>
                 </tr>
-                {% if drs_url %}
+                {% if data_access %}
                 <tr>
                     <th>Data Access URL</th>
-                    <td style="word-break: break-all;"><a href="{{ drs_url }}">{{ drs_url }}</a></td>
+                    <td style="word-break: break-all;"><a href="{{ data_access }}">{{ data_access }}</a></td>
                 </tr>
                 {% endif %}
                 {% if cite_as %}

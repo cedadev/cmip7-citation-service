@@ -221,40 +221,6 @@ def obtain_all_references(data: dict) -> dict:
     return cites
 
 
-def get_drs_url(data: dict) -> Union[str, None]:
-    """
-    Obtain the DRS URL expected for this record, given the set of search facets.
-    """
-
-    # No auto-DRS if no metagrid URL
-    if not hasattr(settings, "METAGRID_URL"):
-        return ""
-
-    # No auto-DRS if the mip era is not given
-    if not bool(data.get("mip_era")):
-        return ""
-
-    project_id = data["mip_era"].lower()
-
-    metagrid_base = f'{settings.METAGRID_URL}/search?project={project_id}+STAC&activeFacets=%7B"mip_era"%3A"{project_id}"'
-
-    queries = [metagrid_base]
-    for facet in ESGVOC_FACET_LABELS[project_id].values():
-
-        # No auto-DRS if any facet is missing
-        if not bool(data.get(facet, False)):
-            logger.info(f"{facet} is missing for {data['title']}, no DRS available")
-            return ""
-
-        queries.append(
-            f'"{facet}"%3A"{data[facet]}"',
-        )
-
-    drs_url = "%2C".join(queries)
-
-    return drs_url
-
-
 def assemble_license_info(data: dict) -> str:
     """
     Determine the paragraph of text to use for the license.
@@ -739,8 +705,6 @@ class CitationsSerializer(GenericSerializerMixin):
             data["rights"] = settings.DEFAULT_RIGHTS  # 'CC-BY-4.0' SPDX identifier
         if not bool(data.get("license")):
             data["license"] = assemble_license_info(data)
-        if not bool(data.get("drs_url")):
-            data["drs_url"] = get_drs_url(data)
 
         # Chain create institution
         if data.get("institution_id"):
