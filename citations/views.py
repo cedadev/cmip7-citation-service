@@ -645,6 +645,7 @@ class CitationView(GenericRenderedView):
 
     def get(self, request, *args, **kwargs):
 
+        # Allow JSON header response from landing page directly.
         if 'application/json' in request.headers.get('Accept',''):
             if request.GET.get('version'):
                 title = kwargs['title'] + '_v' + request.GET.get('version')
