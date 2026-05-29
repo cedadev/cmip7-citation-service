@@ -4,6 +4,7 @@ import json
 import logging
 import re
 from typing import Union
+from datetime import datetime
 
 import requests
 from django.conf import settings
@@ -96,7 +97,7 @@ def institution_mappings(institution_id: str, project_id: str = "cmip7") -> str:
         except Exception:
             return {"name": institution_id, "acronym": institution_id}
 
-    esgvoc_institution = {v: k for k, v in ESGVOC_FACET_LABELS.get(project_id, {})}.get(
+    esgvoc_institution = {v: k for k, v in ESGVOC_FACET_LABELS.get(project_id, {}).items()}.get(
         "institution_id"
     )
 
@@ -631,7 +632,7 @@ class CitationsSerializer(GenericSerializerMixin):
             "funders",
             "id",
             "version",
-            "publication_year",
+            "publication_timestamp",
             "mip_era",
             "activity_id",
             "domain_id",
@@ -643,7 +644,7 @@ class CitationsSerializer(GenericSerializerMixin):
             "is_referenced_by",
         ]
         required_fields = ["title", "version", "primary"]
-        non_replicating_fields = ["experiment_id", "doi_url", "publication_year"]
+        non_replicating_fields = ["experiment_id", "doi_url", "publication_timestamp"]
         id_relations = ["primary"]
 
         relations = [
@@ -710,7 +711,7 @@ class CitationsSerializer(GenericSerializerMixin):
         if data.get("institution_id"):
             # Create new institution as below, and add to the main affiliated institutions
 
-            inst_data = institution_mappings(data["institution_id"])
+            inst_data = institution_mappings(data["institution_id"], data['mip_era'].lower())
 
             institution = chain_new_objects(
                 inst_data,
@@ -823,6 +824,13 @@ class CitationsSerializer(GenericSerializerMixin):
         data["published"] = False
         if data.get("doi_url", None):
             data["published"] = True
+
+            # If a record contains a DOI but no publication_timestamp 
+            # it was not published by the citation service, thus the 
+            # publication timestamp is generated.
+            
+            if not bool(data.get('publication_timestamp')):
+                data["publication_timestamp"] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
 
         return data
 

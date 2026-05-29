@@ -2,6 +2,7 @@ import ast
 import copy
 import json
 from typing import Union
+from datetime import datetime
 
 from django.conf import settings
 from django.contrib import messages
@@ -16,6 +17,7 @@ from django.http import Http404, HttpResponseForbidden, HttpResponseRedirect
 from django.urls import reverse
 from django.views.generic.base import TemplateView
 from django.views.generic.edit import FormView
+from django.shortcuts import redirect
 from rest_framework import generics, mixins, permissions, status
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.response import Response
@@ -80,6 +82,7 @@ def create_new_permission(user, institution_id: str):
             raise PermissionDenied(
                 "Cannot create a record for an institution you are not allowed to review."
             )
+        return
 
     pm = Permission.objects.create(
         codename=f"edit_{institution_id}",
@@ -154,9 +157,13 @@ def render_cite_as(citation: Citations):
     for contact in citation.contacts.all():
         all_authors.append(get_citable_party(contact))
 
+    yyyymmdd = citation.publication_timestamp.split('T')[0].replace('-','')
+    yyyy = yyyymmdd[:4]
+
+    # Add version to cite as?
     return {
-        "title": f'{";".join(all_authors)}. ({getattr(citation,"publication_year", "2026")}).',
-        "rotc": f"{citation.title}. {settings.PUBLISHER}.",
+        "title": f'{";".join(all_authors)}. ({yyyy}).',
+        "rotc": f"{citation.title}. v{yyyymmdd}. {settings.PUBLISHER}.",
     }
 
 
@@ -296,7 +303,7 @@ def check_publish_ok(request, data: dict):
         data = {"warnings": "publication unsuccessful"} | data
     else:
         messages.success(
-            request, f"DOI '{data['doi_url']}' ({data['publication_year']}) minted."
+            request, f"DOI '{data['doi_url']}' minted at {data['publication_timestamp']}"
         )
 
     return data, status
@@ -636,8 +643,21 @@ class CitationsView(PaginatedListView):
 class CitationView(GenericRenderedView):
     template_name = "citation.html"
 
+    def get(self, request, *args, **kwargs):
+
+        if 'application/json' in request.headers.get('Accept',''):
+            if request.GET.get('version'):
+                title = kwargs['title'] + '_v' + request.GET.get('version')
+            else:
+                title = kwargs['title']
+            return redirect('citations:citation_api', pk=title)
+        return super().get(request, *args, **kwargs)
+
+
     def get_context_data(self, title, **kwargs):
         context = super().get_context_data(**kwargs)
+        if self.request.headers.get('Accept') == 'application/json':
+            return redirect()
 
         version = None
         if Citations.objects.filter(id=title):
@@ -685,6 +705,12 @@ class CitationView(GenericRenderedView):
         # 1. Render cite_as property
         if citation.published:
             context["cite_as"] = render_cite_as(citation)
+
+            context['publication_time'] = datetime.strftime(
+                datetime.strptime(
+                    citation.publication_timestamp, 
+                    '%Y-%m-%dT%H:%M:%SZ'),
+                "%d/%m/%Y at %H:%M:%S (UK)")
 
         # 2. Render References
         for reference_type in CitationsSerializer.Meta.citation_types:
@@ -1265,13 +1291,13 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
 
     def replicate_data(self, instance=None, data=None):
 
-        project_id = data.get("mip_era", "").lower()
-        # Remap External to Internal Labels
-        # for label, facet in ESGVOC_FACET_LABELS.get(project_id,{}).items():
-        #     data[facet] = data.pop(label,None)
-
         pubstatus = True
         publish = self.request.POST.get("publish")
+
+        pub_date = data.pop('doi_pub_date')
+
+        if pub_date:
+            data['publication_timestamp'] = pub_date.strftime('%Y-%m-%dT%H:%M:%SZ')
 
         serializer = self.serializer_class(instance=instance, data=data)
 

@@ -49,7 +49,7 @@ urlpatterns = [
     path("api/parties/", PartyAPIView.as_view()),
     path("api/party/<str:pk>", SpecificPartyAPIView.as_view()),
     path("api/fundings/", FundingStreamAPIView.as_view()),
-    path("api/citations/", CitationAPIView.as_view(), name="citation_api"),
-    path("api/citation/<str:pk>", SpecificCitationAPIView.as_view()),
+    path("api/citations/", CitationAPIView.as_view(), name="citations_api"),
+    path("api/citation/<str:pk>", SpecificCitationAPIView.as_view(), name='citation_api'),
     path("reviewer_request/", ReviewerRequestView.as_view(), name="reviewer_request"),
 ]

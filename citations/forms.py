@@ -230,6 +230,18 @@ class CitationForm(forms.ModelForm):
         required=False,
     )
 
+    doi_pub_date = forms.DateField(
+        label="DOI Publication Date",
+        widget=forms.DateInput(
+            attrs={
+                "type":"date",
+                "data-bs-content": "Only provide if data has pre-existing DOI already published.",
+            }
+            | POPOVER_ATTRS
+        ),
+        required=False,
+    )
+
     rights = forms.CharField(
         widget=forms.Textarea(
             attrs={
@@ -320,7 +332,7 @@ class CitationForm(forms.ModelForm):
     )
 
     field_groups = {
-        "General Information": ["Title", "Abstract", "Data Access URL", "DOI URL"],
+        "General Information": ["Title", "Abstract", "Data Access URL", "DOI URL", "DOI Publication Date"],
         "Search Facets": [
             "MIP Era",
             "Activity",
@@ -340,6 +352,7 @@ class CitationForm(forms.ModelForm):
         "abstract",
         "drs_url",
         "doi_url",
+        "doi_pub_date",
         "mip_era",
         "activity_id",
         "institution_id",
