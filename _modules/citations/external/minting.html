@@ -129,7 +129,7 @@
 <div class="viewcode-block" id="mint_doi_for_record">
 <a class="viewcode-back" href="../../../dois.html#citations.external.minting.mint_doi_for_record">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">mint_doi_for_record</span><span class="p">(</span>
-    <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">publication_year</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">return_citation</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">publication_timestamp</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">return_citation</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Apply to mint a DOI via DataCite for the information in this record.</span>
@@ -187,6 +187,9 @@
                 <span class="p">}</span>
             <span class="p">)</span>
 
+    <span class="n">yyyymmdd</span> <span class="o">=</span> <span class="n">publication_timestamp</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;T&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">,</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="n">yyyy</span> <span class="o">=</span> <span class="n">yyyymmdd</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span>
+
     <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span>
         <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">{</span>
             <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;dois&quot;</span><span class="p">,</span>
@@ -205,7 +208,7 @@
                     <span class="s2">&quot;publisherIdentifierScheme&quot;</span><span class="p">:</span> <span class="s2">&quot;ROR&quot;</span><span class="p">,</span>
                     <span class="s2">&quot;schemeUri&quot;</span><span class="p">:</span> <span class="s2">&quot;https://ror.org/&quot;</span><span class="p">,</span>
                 <span class="p">},</span>
-                <span class="s2">&quot;publicationYear&quot;</span><span class="p">:</span> <span class="n">publication_year</span><span class="p">,</span>  <span class="c1"># Do we want this as a field in the citation service?</span>
+                <span class="s2">&quot;publicationYear&quot;</span><span class="p">:</span> <span class="n">yyyy</span><span class="p">,</span>  <span class="c1"># Do we want this as a field in the citation service?</span>
                 <span class="s2">&quot;types&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;resourceTypeGeneral&quot;</span><span class="p">:</span> <span class="s2">&quot;Text&quot;</span><span class="p">},</span>
                 <span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="n">settings</span><span class="o">.</span><span class="n">SERVICE_URL</span> <span class="o">+</span> <span class="s2">&quot;/citation/&quot;</span> <span class="o">+</span> <span class="nb">id</span><span class="p">,</span>
                 <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;version&quot;</span><span class="p">],</span>
@@ -280,12 +283,12 @@
     <span class="k">if</span> <span class="ow">not</span> <span class="n">resolve_drs</span><span class="p">(</span><span class="n">drs_url</span><span class="p">):</span>
         <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;published&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span>
 
-    <span class="n">pub_yr</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">year</span><span class="p">)</span>
-    <span class="n">publication</span><span class="p">[</span><span class="s2">&quot;doi_url&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mint_doi_for_record</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">pub_yr</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+    <span class="n">pub_ts</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1">T%H:%M:%SZ&#39;</span><span class="p">)</span>
+    <span class="n">publication</span><span class="p">[</span><span class="s2">&quot;doi_url&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mint_doi_for_record</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">pub_ts</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">publication</span><span class="p">[</span><span class="s2">&quot;doi_url&quot;</span><span class="p">]:</span>
         <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;published&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span>
 
-    <span class="n">publication</span><span class="p">[</span><span class="s2">&quot;publication_year&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pub_yr</span>
+    <span class="n">publication</span><span class="p">[</span><span class="s2">&quot;publication_timestamp&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pub_ts</span>
 
     <span class="k">return</span> <span class="kc">True</span><span class="p">,</span> <span class="n">publication</span> <span class="o">|</span> <span class="p">{</span><span class="s2">&quot;published&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;editable&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span></div>
 

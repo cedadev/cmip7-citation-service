@@ -306,6 +306,18 @@
         <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span>
 
+    <span class="n">doi_pub_date</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">DateField</span><span class="p">(</span>
+        <span class="n">label</span><span class="o">=</span><span class="s2">&quot;DOI Publication Date&quot;</span><span class="p">,</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">DateInput</span><span class="p">(</span>
+            <span class="n">attrs</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;type&quot;</span><span class="p">:</span><span class="s2">&quot;date&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;data-bs-content&quot;</span><span class="p">:</span> <span class="s2">&quot;Only provide if data has pre-existing DOI already published.&quot;</span><span class="p">,</span>
+            <span class="p">}</span>
+            <span class="o">|</span> <span class="n">POPOVER_ATTRS</span>
+        <span class="p">),</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span>
+
     <span class="n">rights</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
         <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">Textarea</span><span class="p">(</span>
             <span class="n">attrs</span><span class="o">=</span><span class="p">{</span>
@@ -396,7 +408,7 @@
     <span class="p">)</span>
 
     <span class="n">field_groups</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="s2">&quot;General Information&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Title&quot;</span><span class="p">,</span> <span class="s2">&quot;Abstract&quot;</span><span class="p">,</span> <span class="s2">&quot;Data Access URL&quot;</span><span class="p">,</span> <span class="s2">&quot;DOI URL&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;General Information&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Title&quot;</span><span class="p">,</span> <span class="s2">&quot;Abstract&quot;</span><span class="p">,</span> <span class="s2">&quot;Data Access URL&quot;</span><span class="p">,</span> <span class="s2">&quot;DOI URL&quot;</span><span class="p">,</span> <span class="s2">&quot;DOI Publication Date&quot;</span><span class="p">],</span>
         <span class="s2">&quot;Search Facets&quot;</span><span class="p">:</span> <span class="p">[</span>
             <span class="s2">&quot;MIP Era&quot;</span><span class="p">,</span>
             <span class="s2">&quot;Activity&quot;</span><span class="p">,</span>
@@ -416,6 +428,7 @@
         <span class="s2">&quot;abstract&quot;</span><span class="p">,</span>
         <span class="s2">&quot;drs_url&quot;</span><span class="p">,</span>
         <span class="s2">&quot;doi_url&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;doi_pub_date&quot;</span><span class="p">,</span>
         <span class="s2">&quot;mip_era&quot;</span><span class="p">,</span>
         <span class="s2">&quot;activity_id&quot;</span><span class="p">,</span>
         <span class="s2">&quot;institution_id&quot;</span><span class="p">,</span>

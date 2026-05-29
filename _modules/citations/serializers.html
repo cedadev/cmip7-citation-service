@@ -80,6 +80,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Union</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">django.conf</span><span class="w"> </span><span class="kn">import</span> <span class="n">settings</span>
@@ -177,7 +178,7 @@
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">institution_id</span><span class="p">,</span> <span class="s2">&quot;acronym&quot;</span><span class="p">:</span> <span class="n">institution_id</span><span class="p">}</span>
 
-    <span class="n">esgvoc_institution</span> <span class="o">=</span> <span class="p">{</span><span class="n">v</span><span class="p">:</span> <span class="n">k</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">ESGVOC_FACET_LABELS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">project_id</span><span class="p">,</span> <span class="p">{})}</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+    <span class="n">esgvoc_institution</span> <span class="o">=</span> <span class="p">{</span><span class="n">v</span><span class="p">:</span> <span class="n">k</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">ESGVOC_FACET_LABELS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">project_id</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
         <span class="s2">&quot;institution_id&quot;</span>
     <span class="p">)</span>
 
@@ -772,7 +773,7 @@
             <span class="s2">&quot;funders&quot;</span><span class="p">,</span>
             <span class="s2">&quot;id&quot;</span><span class="p">,</span>
             <span class="s2">&quot;version&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;publication_year&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;publication_timestamp&quot;</span><span class="p">,</span>
             <span class="s2">&quot;mip_era&quot;</span><span class="p">,</span>
             <span class="s2">&quot;activity_id&quot;</span><span class="p">,</span>
             <span class="s2">&quot;domain_id&quot;</span><span class="p">,</span>
@@ -784,7 +785,7 @@
             <span class="s2">&quot;is_referenced_by&quot;</span><span class="p">,</span>
         <span class="p">]</span>
         <span class="n">required_fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">,</span> <span class="s2">&quot;version&quot;</span><span class="p">,</span> <span class="s2">&quot;primary&quot;</span><span class="p">]</span>
-        <span class="n">non_replicating_fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;experiment_id&quot;</span><span class="p">,</span> <span class="s2">&quot;doi_url&quot;</span><span class="p">,</span> <span class="s2">&quot;publication_year&quot;</span><span class="p">]</span>
+        <span class="n">non_replicating_fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;experiment_id&quot;</span><span class="p">,</span> <span class="s2">&quot;doi_url&quot;</span><span class="p">,</span> <span class="s2">&quot;publication_timestamp&quot;</span><span class="p">]</span>
         <span class="n">id_relations</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;primary&quot;</span><span class="p">]</span>
 
         <span class="n">relations</span> <span class="o">=</span> <span class="p">[</span>
@@ -856,7 +857,7 @@
         <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;institution_id&quot;</span><span class="p">):</span>
             <span class="c1"># Create new institution as below, and add to the main affiliated institutions</span>
 
-            <span class="n">inst_data</span> <span class="o">=</span> <span class="n">institution_mappings</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;institution_id&quot;</span><span class="p">])</span>
+            <span class="n">inst_data</span> <span class="o">=</span> <span class="n">institution_mappings</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;institution_id&quot;</span><span class="p">],</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;mip_era&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
 
             <span class="n">institution</span> <span class="o">=</span> <span class="n">chain_new_objects</span><span class="p">(</span>
                 <span class="n">inst_data</span><span class="p">,</span>
@@ -969,6 +970,13 @@
         <span class="n">data</span><span class="p">[</span><span class="s2">&quot;published&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;doi_url&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
             <span class="n">data</span><span class="p">[</span><span class="s2">&quot;published&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+
+            <span class="c1"># If a record contains a DOI but no publication_timestamp </span>
+            <span class="c1"># it was not published by the citation service, thus the </span>
+            <span class="c1"># publication timestamp is generated.</span>
+            
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">bool</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;publication_timestamp&#39;</span><span class="p">)):</span>
+                <span class="n">data</span><span class="p">[</span><span class="s2">&quot;publication_timestamp&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1">T%H:%M:%SZ&#39;</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">data</span></div>
 </div>
