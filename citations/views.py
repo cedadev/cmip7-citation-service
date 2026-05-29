@@ -1295,7 +1295,6 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
         publish = self.request.POST.get("publish")
 
         pub_date = data.pop('doi_pub_date')
-
         if pub_date:
             data['publication_timestamp'] = pub_date.strftime('%Y-%m-%dT%H:%M:%SZ')
 
