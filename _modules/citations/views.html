@@ -89,7 +89,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">django.core.paginator</span><span class="w"> </span><span class="kn">import</span> <span class="n">Paginator</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">django.db.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">CharField</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">,</span> <span class="n">Q</span><span class="p">,</span> <span class="n">TextField</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">django.db.models.functions</span><span class="w"> </span><span class="kn">import</span> <span class="n">Lower</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">django.http</span><span class="w"> </span><span class="kn">import</span> <span class="n">Http404</span><span class="p">,</span> <span class="n">HttpResponseForbidden</span><span class="p">,</span> <span class="n">HttpResponseRedirect</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">django.http</span><span class="w"> </span><span class="kn">import</span> <span class="n">Http404</span><span class="p">,</span> <span class="n">HttpResponseForbidden</span><span class="p">,</span> <span class="n">HttpResponseRedirect</span><span class="p">,</span> <span class="n">JsonResponse</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">django.urls</span><span class="w"> </span><span class="kn">import</span> <span class="n">reverse</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">django.views.generic.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">TemplateView</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">django.views.generic.edit</span><span class="w"> </span><span class="kn">import</span> <span class="n">FormView</span>
@@ -822,12 +822,18 @@
 
     <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 
+        <span class="c1"># Allow JSON header response from landing page directly.</span>
         <span class="k">if</span> <span class="s1">&#39;application/json&#39;</span> <span class="ow">in</span> <span class="n">request</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Accept&#39;</span><span class="p">,</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;version&#39;</span><span class="p">):</span>
                 <span class="n">title</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;_v&#39;</span> <span class="o">+</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;version&#39;</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">title</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span>
-            <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;citations:citation_api&#39;</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="n">title</span><span class="p">)</span>
+
+            <span class="n">data</span> <span class="o">=</span> <span class="n">CitationsSerializer</span><span class="p">(</span>
+                <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">title</span><span class="p">)</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">data</span>
+
+            <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
         <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
 
@@ -1710,12 +1716,6 @@
             <span class="p">)</span>
 
         <span class="n">citation_data</span> <span class="o">=</span> <span class="n">CitationsSerializer</span><span class="p">(</span><span class="n">citation</span><span class="p">)</span><span class="o">.</span><span class="n">data</span>
-
-        <span class="n">project_id</span> <span class="o">=</span> <span class="n">citation_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;mip_era&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
-
-        <span class="c1"># # Map Internal to External Labels</span>
-        <span class="c1"># for label, facet in ESGVOC_FACET_LABELS.get(project_id,{}).items():</span>
-        <span class="c1">#     citation_data[label] = citation_data.pop(facet,None)</span>
 
         <span class="n">initial</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_initial</span><span class="p">()</span> <span class="o">|</span> <span class="n">citation_data</span>
         <span class="k">return</span> <span class="n">initial</span></div>
