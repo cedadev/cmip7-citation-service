@@ -91,7 +91,7 @@ class Citations(models.Model):
     title = models.CharField(max_length=300)
     version = models.IntegerField()
 
-    publication_year = models.IntegerField(null=True, blank=True)
+    publication_timestamp = models.CharField(null=True, blank=True)
 
     abstract = models.TextField()
     drs_url = models.CharField()

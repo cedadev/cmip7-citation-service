@@ -48,7 +48,7 @@ def get_ror_link(inst: str):
 
 
 def mint_doi_for_record(
-    data: dict, publication_year: int, id: str, return_citation: bool = False
+    data: dict, publication_timestamp: str, id: str, return_citation: bool = False
 ) -> str:
     """
     Apply to mint a DOI via DataCite for the information in this record.
@@ -106,6 +106,9 @@ def mint_doi_for_record(
                 }
             )
 
+    yyyymmdd = publication_timestamp.split('T')[0].replace('-','')
+    yyyy = yyyymmdd[:4]
+
     payload = {
         "data": {
             "type": "dois",
@@ -124,7 +127,7 @@ def mint_doi_for_record(
                     "publisherIdentifierScheme": "ROR",
                     "schemeUri": "https://ror.org/",
                 },
-                "publicationYear": publication_year,  # Do we want this as a field in the citation service?
+                "publicationYear": yyyy,  # Do we want this as a field in the citation service?
                 "types": {"resourceTypeGeneral": "Text"},
                 "url": settings.SERVICE_URL + "/citation/" + id,
                 "version": data["version"],
@@ -193,11 +196,11 @@ def publish_record(data: dict, id: str) -> str:
     if not resolve_drs(drs_url):
         return False, {"published": False}
 
-    pub_yr = int(datetime.now().year)
-    publication["doi_url"] = mint_doi_for_record(data, pub_yr, id=id)
+    pub_ts = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
+    publication["doi_url"] = mint_doi_for_record(data, pub_ts, id=id)
     if not publication["doi_url"]:
         return False, {"published": False}
 
-    publication["publication_year"] = pub_yr
+    publication["publication_timestamp"] = pub_ts
 
     return True, publication | {"published": True, "editable": False}
