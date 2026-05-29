@@ -1523,7 +1523,6 @@
         <span class="n">publish</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;publish&quot;</span><span class="p">)</span>
 
         <span class="n">pub_date</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;doi_pub_date&#39;</span><span class="p">)</span>
-
         <span class="k">if</span> <span class="n">pub_date</span><span class="p">:</span>
             <span class="n">data</span><span class="p">[</span><span class="s1">&#39;publication_timestamp&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pub_date</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1">T%H:%M:%SZ&#39;</span><span class="p">)</span>
 

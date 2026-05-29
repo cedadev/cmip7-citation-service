@@ -86,22 +86,30 @@
 <p>The diagram above provides a visual aid to understanding the workflow of the citation service from a top-level perspective, including the integration with the ESGF publication workflow via a Listener service, the publication of datacite records to mint DOIs based on Citation Landing pages, the searchability of Citation and other record types, and the ability for reviewers to log in and create/edit records as needed.</p>
 <section id="altering-citation-information">
 <h2>Altering Citation Information<a class="headerlink" href="#altering-citation-information" title="Link to this heading"></a></h2>
-<p>Upon creating/editing a citation record, the following information is extracted to auto-fill relevant information for each record. This information is primarily extracted from the ESGVOC package which provides an interface to Essential Model Documentation (EMD):
-- Project References
-- Abstract Information
-- Rights &amp; License Information
-- Affiliated Institutions
-- Party Affiliations (further institutions)</p>
+<dl class="simple">
+<dt>Upon creating/editing a citation record, the following information is extracted to auto-fill relevant information for each record. This information is primarily extracted from the ESGVOC package which provides an interface to Essential Model Documentation (EMD):</dt><dd><ul class="simple">
+<li><p>Project References</p></li>
+<li><p>Abstract Information</p></li>
+<li><p>Rights &amp; License Information</p></li>
+<li><p>Affiliated Institutions</p></li>
+<li><p>Party Affiliations (further institutions)</p></li>
+</ul>
+</dd>
+</dl>
 <p>These properties can therefore be refreshed simply by removing the current value and updating the record - which will then be refilled with the currently extractable values for the above.</p>
 </section>
 <section id="rendered-citation-information">
 <h2>Rendered Citation Information<a class="headerlink" href="#rendered-citation-information" title="Link to this heading"></a></h2>
-<p>The following information types are determined only on rendering the citation landing page for any given citation. This allows for changes to the configuration details that affect multiple records, without having to individually adjust each record. These include:
-- Data Access URL/DRS URL
-- Citable Information (<code class="docutils literal notranslate"><span class="pre">Cite</span> <span class="pre">As</span></code>)
-- Abstract Reference Links
-- Licence Links
-- Code Snippet for Data Access</p>
+<dl class="simple">
+<dt>The following information types are determined only on rendering the citation landing page for any given citation. This allows for changes to the configuration details that affect multiple records, without having to individually adjust each record. These include:</dt><dd><ul class="simple">
+<li><p>Data Access URL/DRS URL</p></li>
+<li><p>Citable Information (<code class="docutils literal notranslate"><span class="pre">Cite</span> <span class="pre">As</span></code>)</p></li>
+<li><p>Abstract Reference Links</p></li>
+<li><p>Licence Links</p></li>
+<li><p>Code Snippet for Data Access</p></li>
+</ul>
+</dd>
+</dl>
 </section>
 </section>
 
