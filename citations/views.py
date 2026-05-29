@@ -13,7 +13,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.db.models import CharField, ForeignKey, Q, TextField
 from django.db.models.functions import Lower
-from django.http import Http404, HttpResponseForbidden, HttpResponseRedirect
+from django.http import Http404, HttpResponseForbidden, HttpResponseRedirect, JsonResponse
 from django.urls import reverse
 from django.views.generic.base import TemplateView
 from django.views.generic.edit import FormView
@@ -650,7 +650,12 @@ class CitationView(GenericRenderedView):
                 title = kwargs['title'] + '_v' + request.GET.get('version')
             else:
                 title = kwargs['title']
-            return redirect('citations:citation_api', pk=title)
+
+            data = CitationsSerializer(
+                Citations.objects.get(pk=title)
+            ).data
+
+            return JsonResponse(data)
         return super().get(request, *args, **kwargs)
 
 
@@ -1462,12 +1467,6 @@ class EditCitationFormView(CitationFormMixin):
             )
 
         citation_data = CitationsSerializer(citation).data
-
-        project_id = citation_data.get("mip_era", "").lower()
-
-        # # Map Internal to External Labels
-        # for label, facet in ESGVOC_FACET_LABELS.get(project_id,{}).items():
-        #     citation_data[label] = citation_data.pop(facet,None)
 
         initial = super().get_initial() | citation_data
         return initial
