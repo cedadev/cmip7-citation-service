@@ -1,6 +1,6 @@
 [project]
 name = "cmip7-citation-service"
-version = "1.0.0"
+version = "1.0.0a"
 description = "A citation service for the CMIP7 project"
 authors = [
     {name = "Daniel Westwood",email = "daniel.westwood@stfc.ac.uk"}
