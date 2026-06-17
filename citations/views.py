@@ -1,4 +1,3 @@
-import ast
 import copy
 import json
 from typing import Union
@@ -24,7 +23,7 @@ from rest_framework.response import Response
 from slack_sdk import WebClient
 
 from citations.consumer.write import delete_instance
-from citations.external import resolve_drs
+from citations.external import resolve_drs, resolve_stac_query
 from citations.facet_mappings import ESGVOC_FACET_LABELS, STAC_LABELS
 from citations.forms import (
     ContactFormSet,
@@ -127,7 +126,7 @@ def render_code_snippet(citation_data: dict) -> Union[str, None]:
             return None
 
         query.append(
-            f'      "cmip7:{STAC_LABELS.get(label,facet)}={citation_data[facet]}",'
+            f'      "{project_id}:{STAC_LABELS.get(label,facet)}={citation_data[facet]}",'
         )
 
     code_snippet = (
@@ -136,7 +135,7 @@ def render_code_snippet(citation_data: dict) -> Union[str, None]:
             "",
             f'cli = Client.open("{settings.STAC_API}")',
             "cli.search(",
-            '   collections=["cmip7"],',
+            f'   collections=["{project_id}"],',
             "   query=[",
         ]
         + query
@@ -282,17 +281,20 @@ def unwrap_request(data: dict) -> dict:
     return {k: v for k, v in data.items()}
 
 
-def check_publish_ok(request, data: dict):
+def check_publish_ok(request, data: dict) -> tuple:
     """
-    Send a message to the user (UI) if a DOI minting event is unsuccessful
+    Send a message to the user (UI) if a DOI minting event is unsuccessful.
+
+    Repeat the checks done at publication such that a message can be generated to present to the user.
     """
 
     status = True
     if not data.get("doi_url"):
-        if not resolve_drs(data.get("drs_url")):
+
+        if not resolve_drs(data.get("drs_url")) and not resolve_stac_query(data):
             messages.error(
                 request,
-                "Failed to resolve DRS URL. DOI cannot be minted until data is available.",
+                "Failed to resolve DRS URL - either the Metagrid or STAC query must resolve. DOI cannot be minted until data is available.",
             )
         else:
             messages.error(
@@ -911,9 +913,9 @@ class CitationAPIView(GenericAPIView):
                     serializer.validated_data, status=status.HTTP_405_METHOD_NOT_ALLOWED
                 )
 
-        data = serializer.save(publish=publish, user_id=request.user.username)
         if publish:
             data, _ = check_publish_ok(request, data)
+        data = serializer.save(publish=publish, user_id=request.user.username)
         return Response(data, status=status.HTTP_201_CREATED)
 
 
