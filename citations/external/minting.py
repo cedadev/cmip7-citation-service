@@ -1,11 +1,14 @@
+import os
 import base64
 import logging
+import json
 from datetime import datetime
 
 import requests
 from django.conf import settings
 
 from citations.utils import logstream, get_drs_url
+from citations.facet_mappings import ESGVOC_FACET_LABELS, STAC_LABELS, STAC_COLLECTIONS
 
 # from esgf_core_utils.models.kafka.consumer import KafkaConsumer
 
@@ -180,6 +183,42 @@ def resolve_drs(drs_url: str | None) -> bool:
     # Data Access Check for DRS URL here.
     return False
 
+def resolve_stac_query(data: dict) -> bool:
+
+    if not getattr(settings, "STAC_API", None):
+        return False
+
+    if not bool(data.get("mip_era")):
+        return False
+    
+    project_id = data["mip_era"].lower()
+
+    query = {}
+    for label, facet in ESGVOC_FACET_LABELS[project_id].items():
+        if data.get(facet, None) is None:
+            return False
+
+        query[
+            f'{project_id}:{STAC_LABELS.get(label,facet)}'
+        ] = {'eq':data[facet]}
+
+    query_url = f'{os.path.join(settings.STAC_API,'search')}?collections={STAC_COLLECTIONS[project_id]}'
+
+    query_url += f'&query={json.dumps(query)}'
+
+    # Remove whitespaces
+    query_url = query_url.replace(' ','')
+
+    r = requests.get(query_url)
+
+    if r.status_code != 200:
+        return False
+    
+    if r.json()['numberMatched'] < 1:
+        return False
+    
+    # Only return True if STAC query contains 1 or more items.
+    return True
 
 def publish_record(data: dict, id: str) -> str:
     """
@@ -193,7 +232,7 @@ def publish_record(data: dict, id: str) -> str:
     if not bool(drs_url):
         drs_url = get_drs_url(data)
 
-    if not resolve_drs(drs_url):
+    if not resolve_drs(drs_url) and not resolve_stac_query(data):
         return False, {"published": False}
 
     pub_ts = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
