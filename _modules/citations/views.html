@@ -74,8 +74,7 @@
            <div itemprop="articleBody">
              
   <h1>Source code for citations.views</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">ast</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Union</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
@@ -100,7 +99,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">slack_sdk</span><span class="w"> </span><span class="kn">import</span> <span class="n">WebClient</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">citations.consumer.write</span><span class="w"> </span><span class="kn">import</span> <span class="n">delete_instance</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">citations.external</span><span class="w"> </span><span class="kn">import</span> <span class="n">resolve_drs</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">citations.external</span><span class="w"> </span><span class="kn">import</span> <span class="n">resolve_drs</span><span class="p">,</span> <span class="n">resolve_stac_query</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">citations.facet_mappings</span><span class="w"> </span><span class="kn">import</span> <span class="n">ESGVOC_FACET_LABELS</span><span class="p">,</span> <span class="n">STAC_LABELS</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">citations.forms</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">ContactFormSet</span><span class="p">,</span>
@@ -211,7 +210,7 @@
             <span class="k">return</span> <span class="kc">None</span>
 
         <span class="n">query</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s1">&#39;      &quot;cmip7:</span><span class="si">{</span><span class="n">STAC_LABELS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">label</span><span class="p">,</span><span class="n">facet</span><span class="p">)</span><span class="si">}</span><span class="s1">=</span><span class="si">{</span><span class="n">citation_data</span><span class="p">[</span><span class="n">facet</span><span class="p">]</span><span class="si">}</span><span class="s1">&quot;,&#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;      &quot;</span><span class="si">{</span><span class="n">project_id</span><span class="si">}</span><span class="s1">:</span><span class="si">{</span><span class="n">STAC_LABELS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">label</span><span class="p">,</span><span class="n">facet</span><span class="p">)</span><span class="si">}</span><span class="s1">=</span><span class="si">{</span><span class="n">citation_data</span><span class="p">[</span><span class="n">facet</span><span class="p">]</span><span class="si">}</span><span class="s1">&quot;,&#39;</span>
         <span class="p">)</span>
 
     <span class="n">code_snippet</span> <span class="o">=</span> <span class="p">(</span>
@@ -220,7 +219,7 @@
             <span class="s2">&quot;&quot;</span><span class="p">,</span>
             <span class="sa">f</span><span class="s1">&#39;cli = Client.open(&quot;</span><span class="si">{</span><span class="n">settings</span><span class="o">.</span><span class="n">STAC_API</span><span class="si">}</span><span class="s1">&quot;)&#39;</span><span class="p">,</span>
             <span class="s2">&quot;cli.search(&quot;</span><span class="p">,</span>
-            <span class="s1">&#39;   collections=[&quot;cmip7&quot;],&#39;</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s1">&#39;   collections=[&quot;</span><span class="si">{</span><span class="n">project_id</span><span class="si">}</span><span class="s1">&quot;],&#39;</span><span class="p">,</span>
             <span class="s2">&quot;   query=[&quot;</span><span class="p">,</span>
         <span class="p">]</span>
         <span class="o">+</span> <span class="n">query</span>
@@ -390,17 +389,20 @@
 
 <div class="viewcode-block" id="check_publish_ok">
 <a class="viewcode-back" href="../../views.html#citations.views.check_publish_ok">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">check_publish_ok</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">check_publish_ok</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Send a message to the user (UI) if a DOI minting event is unsuccessful</span>
+<span class="sd">    Send a message to the user (UI) if a DOI minting event is unsuccessful.</span>
+
+<span class="sd">    Repeat the checks done at publication such that a message can be generated to present to the user.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">status</span> <span class="o">=</span> <span class="kc">True</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;doi_url&quot;</span><span class="p">):</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">resolve_drs</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;drs_url&quot;</span><span class="p">)):</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">resolve_drs</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;drs_url&quot;</span><span class="p">))</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">resolve_stac_query</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
             <span class="n">messages</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
                 <span class="n">request</span><span class="p">,</span>
-                <span class="s2">&quot;Failed to resolve DRS URL. DOI cannot be minted until data is available.&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Failed to resolve DRS URL - either the Metagrid or STAC query must resolve. DOI cannot be minted until data is available.&quot;</span><span class="p">,</span>
             <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">messages</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
@@ -1124,9 +1126,9 @@
                     <span class="n">serializer</span><span class="o">.</span><span class="n">validated_data</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="n">status</span><span class="o">.</span><span class="n">HTTP_405_METHOD_NOT_ALLOWED</span>
                 <span class="p">)</span>
 
-        <span class="n">data</span> <span class="o">=</span> <span class="n">serializer</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">publish</span><span class="o">=</span><span class="n">publish</span><span class="p">,</span> <span class="n">user_id</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">username</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">publish</span><span class="p">:</span>
             <span class="n">data</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">check_publish_ok</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">serializer</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">publish</span><span class="o">=</span><span class="n">publish</span><span class="p">,</span> <span class="n">user_id</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">username</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="n">status</span><span class="o">.</span><span class="n">HTTP_201_CREATED</span><span class="p">)</span></div>
 
 
