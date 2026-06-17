@@ -44,6 +44,12 @@ CMIP_TITLE_ORDER = [
 
 STAC_LABELS = {"driving_experiment": "driving_experiment_id"}
 
+STAC_COLLECTIONS = {
+    'cmip7':'CMIP7',
+    'cmip6':'CMIP6',
+    'cordex-cmip6':'CORDEX-CMIP6'
+}
+
 # Mapping internal database facets to the User-facing view pages.
 UI_FACET_LABELS = {
     "cmip7": CMIP_FACETS,
