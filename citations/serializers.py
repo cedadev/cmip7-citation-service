@@ -31,7 +31,7 @@ from citations.models import (
     locate_institute,
 )
 from citations.utils import logstream
-from citations.validators import validate_component
+from citations.validators import validate_component, validate_project
 
 try:
     import esgvoc.api as ev
@@ -150,10 +150,17 @@ def title_from_facets(
     missing = []
 
     project_id = data["mip_era"].lower()
+    validate_project(project_id)
 
     for label, facet in ESGVOC_FACET_LABELS[project_id].items():
         if facet not in data:
             missing.append(facet)
+
+        if facet == 'mip_era':
+            # No longer validating mip_era - this is validated separately 
+            # as the project ID with every query, as well as above.
+            continue
+
         validate_component(
             data.get(facet).lower(),
             label,

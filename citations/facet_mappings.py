@@ -2,11 +2,11 @@ from django.conf import settings
 
 CORDEX_FACETS = {
     "mip_era": "mip_era",
-    "driving_experiment": "experiment_id",
-    "domain": "domain_id",
-    "activity": "activity_id",
-    "source": "source_id",
-    "institution": "institution_id",
+    "driving_experiment_id": "experiment_id", # Yes this one apparently needs the ID added (17/06/2026)
+    "domain_id": "domain_id",
+    "activity_id": "activity_id",
+    "source_id": "source_id",
+    "institution_id": "institution_id",
 }
 
 CMIP_FACETS = {
@@ -42,7 +42,7 @@ CMIP_TITLE_ORDER = [
     "experiment_id",
 ]
 
-STAC_LABELS = {"driving_experiment": "driving_experiment_id"}
+STAC_LABELS = {"driving_experiment_id": "driving_experiment_id"}
 
 STAC_COLLECTIONS = {
     'cmip7':'CMIP7',

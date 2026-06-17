@@ -197,6 +197,9 @@ def resolve_stac_query(data: dict) -> bool:
     for label, facet in ESGVOC_FACET_LABELS[project_id].items():
         if data.get(facet, None) is None:
             return False
+        
+        if facet == 'mip_era':
+            continue
 
         query[
             f'{project_id}:{STAC_LABELS.get(label,facet)}'
@@ -208,6 +211,7 @@ def resolve_stac_query(data: dict) -> bool:
 
     # Remove whitespaces
     query_url = query_url.replace(' ','')
+    logger.info(f'Querying STAC using: {query_url}')
 
     r = requests.get(query_url)
 
