@@ -141,23 +141,23 @@ def title_from_facets(
     """
     Validate by generating the expected title from the facets.
 
-    Facet title generation is `mip_era` specific. If the `mip_era` is not contained
+    Facet title generation is `project_id` specific. If the `project_id` is not contained
     in the data, this function should not be run, but will return a None value."""
 
-    if not bool(data.get("mip_era")):
+    if not bool(data.get("project_id")):
         return None
 
     missing = []
 
-    project_id = data["mip_era"].lower()
+    project_id = data["project_id"].lower()
     validate_project(project_id)
 
     for label, facet in ESGVOC_FACET_LABELS[project_id].items():
         if facet not in data:
             missing.append(facet)
 
-        if facet == 'mip_era':
-            # No longer validating mip_era - this is validated separately 
+        if facet == 'project_id':
+            # No longer validating project_id - this is validated separately 
             # as the project ID with every query, as well as above.
             continue
 
@@ -201,7 +201,7 @@ def obtain_all_references(data: dict) -> dict:
     if not ev:
         return {}
 
-    project_id = data.get("mip_era").lower()
+    project_id = data.get("project_id").lower()
 
     cites = []
     for label, facet in ESGVOC_FACET_LABELS[project_id].items():
@@ -255,7 +255,7 @@ def abstract_from_esgvoc(data: dict):
     if not ev:
         return ""
 
-    project_id = data.get("mip_era").lower()
+    project_id = data.get("project_id").lower()
 
     facet_labels = ESGVOC_FACET_LABELS[project_id]
 
@@ -272,10 +272,11 @@ def abstract_from_esgvoc(data: dict):
         component = ev.get_term_in_collection(
             project_id=project_id, collection_id=label, term_id=data[facet].lower()
         )
+        print(component)
 
         description = getattr(component, "description", data[facet])
         if not bool(description):
-            description = data[facet].lower()
+            description = f'{facet}: {data[facet]}'
 
         entry.append(description)
 
@@ -640,7 +641,7 @@ class CitationsSerializer(GenericSerializerMixin):
             "id",
             "version",
             "publication_timestamp",
-            "mip_era",
+            "project_id",
             "activity_id",
             "domain_id",
             "institution_id",
@@ -672,7 +673,7 @@ class CitationsSerializer(GenericSerializerMixin):
         """
 
         # Enforces valid facets for all records - but don't have to match title structure.
-        if "mip_era" in validated_data:
+        if "project_id" in validated_data:
 
             # Validate by assembling expected title - if the search facets are provided.
             title = title_from_facets(validated_data, raise_exceptions=True)
@@ -680,7 +681,7 @@ class CitationsSerializer(GenericSerializerMixin):
             if not bool(validated_data.get("title", False)):
                 if not title:
                     raise ValidationError(
-                        "Missing the `mip_era` facet and no other title provided."
+                        "Missing the `project_id` facet and no other title provided."
                     )
                 elif isinstance(title, list):
                     raise ValidationError(
@@ -718,7 +719,7 @@ class CitationsSerializer(GenericSerializerMixin):
         if data.get("institution_id"):
             # Create new institution as below, and add to the main affiliated institutions
 
-            inst_data = institution_mappings(data["institution_id"], data['mip_era'].lower())
+            inst_data = institution_mappings(data["institution_id"], data['project_id'].lower())
 
             institution = chain_new_objects(
                 inst_data,

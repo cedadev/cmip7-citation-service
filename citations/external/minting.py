@@ -188,17 +188,17 @@ def resolve_stac_query(data: dict) -> bool:
     if not getattr(settings, "STAC_API", None):
         return False
 
-    if not bool(data.get("mip_era")):
+    if not bool(data.get("project_id")):
         return False
     
-    project_id = data["mip_era"].lower()
+    project_id = data["project_id"].lower()
 
     query = {}
     for label, facet in ESGVOC_FACET_LABELS[project_id].items():
         if data.get(facet, None) is None:
             return False
         
-        if facet == 'mip_era':
+        if facet == 'project_id':
             continue
 
         query[

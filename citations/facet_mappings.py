@@ -1,7 +1,7 @@
 from django.conf import settings
 
 CORDEX_FACETS = {
-    "mip_era": "mip_era",
+    "project_id": "project_id",
     "driving_experiment_id": "experiment_id", # Yes this one apparently needs the ID added (17/06/2026)
     "domain_id": "domain_id",
     "activity_id": "activity_id",
@@ -10,7 +10,7 @@ CORDEX_FACETS = {
 }
 
 CMIP_FACETS = {
-    "mip_era": "mip_era",
+    "project_id": "project_id",
     "experiment": "experiment_id",
     "activity": "activity_id",
     "source": "source_id",
@@ -18,7 +18,7 @@ CMIP_FACETS = {
 }
 
 CMIP_FACETS_OLD = {
-    "mip_era": "mip_era",
+    "project_id": "project_id",
     "experiment_id": "experiment_id",
     "activity_id": "activity_id",
     "source_id": "source_id",
@@ -26,7 +26,7 @@ CMIP_FACETS_OLD = {
 }
 
 CORDEX_TITLE_ORDER = [
-    "mip_era",
+    "project_id",
     "activity_id",
     "domain_id",
     "institution_id",
@@ -35,7 +35,7 @@ CORDEX_TITLE_ORDER = [
 ]
 
 CMIP_TITLE_ORDER = [
-    "mip_era",
+    "project_id",
     "activity_id",
     "institution_id",
     "source_id",
@@ -77,7 +77,7 @@ BACKUP_REPOS = {
 
 # All labels to use based on labels applied to the facets in different project IDs
 FACET_ABSTRACT_DESCRIPTIONS = {
-    "mip_era": "MIP Era: ",
+    "project_id": "Project: ",
     "activity": "",
     "activity_id": "",
     "domain": "CORDEX Domain: ",

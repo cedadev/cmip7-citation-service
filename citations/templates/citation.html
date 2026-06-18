@@ -111,8 +111,8 @@
                     <td>{{ citation.institution_id }}</td>
                 </tr>
                 <tr>
-                    <th>MIP Era</th>
-                    <td>{{ citation.mip_era }}</td>
+                    <th>Project</th>
+                    <td>{{ citation.project_id }}</td>
                 </tr>
                 <tr>
                     <th>Source</th>
@@ -223,11 +223,11 @@
         {% if is_reviewer %}
             <!-- ONLY SHOW If User Is Authenticated-->
             {% if editable %}
-            <a href="{% url 'citations:edit_citation' title=citation.title %}">
+            <a href="{% url 'citations:edit_citation' pk=citation.id %}">
                 <input id="edit" class="btn btn-primary m-0" value="Edit Record" type="button" readonly>
             </a>
             {% else %}
-            <a href="{% url 'citations:edit_citation' title=citation.title %}">
+            <a href="{% url 'citations:edit_citation' pk=citation.id %}">
                 <input id="edit" class="btn btn-primary m-0" value="Edit Record" readonly type="button" disabled title="Not editable">
             </a>
             {% endif %}

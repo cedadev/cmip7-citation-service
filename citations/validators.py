@@ -69,7 +69,7 @@ def validate_component(
     repo: str = settings.CV_REPO,
 ) -> str:
     """
-    Check mip_era against CVs
+    Check project_id against CVs
     """
 
     if ev:
