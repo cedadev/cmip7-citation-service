@@ -340,11 +340,11 @@
         <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span>
 
-    <span class="n">mip_era</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
-        <span class="n">label</span><span class="o">=</span><span class="s2">&quot;MIP Era&quot;</span><span class="p">,</span>
+    <span class="n">project_id</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+        <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Project ID&quot;</span><span class="p">,</span>
         <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">TextInput</span><span class="p">(</span>
             <span class="n">attrs</span><span class="o">=</span><span class="p">{</span>
-                <span class="s2">&quot;placeholder&quot;</span><span class="p">:</span> <span class="s2">&quot;MIP Era Facet&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;placeholder&quot;</span><span class="p">:</span> <span class="s2">&quot;Project ID Facet&quot;</span><span class="p">,</span>
                 <span class="s2">&quot;data-bs-content&quot;</span><span class="p">:</span> <span class="s2">&quot;Validated against CMIP CVs.&quot;</span><span class="p">,</span>
             <span class="p">}</span>
             <span class="o">|</span> <span class="n">POPOVER_ATTRS</span>
@@ -410,7 +410,7 @@
     <span class="n">field_groups</span> <span class="o">=</span> <span class="p">{</span>
         <span class="s2">&quot;General Information&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Title&quot;</span><span class="p">,</span> <span class="s2">&quot;Abstract&quot;</span><span class="p">,</span> <span class="s2">&quot;Data Access URL&quot;</span><span class="p">,</span> <span class="s2">&quot;DOI URL&quot;</span><span class="p">,</span> <span class="s2">&quot;DOI Publication Date&quot;</span><span class="p">],</span>
         <span class="s2">&quot;Search Facets&quot;</span><span class="p">:</span> <span class="p">[</span>
-            <span class="s2">&quot;MIP Era&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Project ID&quot;</span><span class="p">,</span>
             <span class="s2">&quot;Activity&quot;</span><span class="p">,</span>
             <span class="s2">&quot;Institution&quot;</span><span class="p">,</span>
             <span class="s2">&quot;Source&quot;</span><span class="p">,</span>
@@ -429,7 +429,7 @@
         <span class="s2">&quot;drs_url&quot;</span><span class="p">,</span>
         <span class="s2">&quot;doi_url&quot;</span><span class="p">,</span>
         <span class="s2">&quot;doi_pub_date&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;mip_era&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;project_id&quot;</span><span class="p">,</span>
         <span class="s2">&quot;activity_id&quot;</span><span class="p">,</span>
         <span class="s2">&quot;institution_id&quot;</span><span class="p">,</span>
         <span class="s2">&quot;source_id&quot;</span><span class="p">,</span>

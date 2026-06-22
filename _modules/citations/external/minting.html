@@ -273,15 +273,18 @@
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="s2">&quot;STAC_API&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
         <span class="k">return</span> <span class="kc">False</span>
 
-    <span class="k">if</span> <span class="ow">not</span> <span class="nb">bool</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;mip_era&quot;</span><span class="p">)):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">bool</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;project_id&quot;</span><span class="p">)):</span>
         <span class="k">return</span> <span class="kc">False</span>
     
-    <span class="n">project_id</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;mip_era&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="n">project_id</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;project_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
 
     <span class="n">query</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">facet</span> <span class="ow">in</span> <span class="n">ESGVOC_FACET_LABELS</span><span class="p">[</span><span class="n">project_id</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
         <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">facet</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">False</span>
+        
+        <span class="k">if</span> <span class="n">facet</span> <span class="o">==</span> <span class="s1">&#39;project_id&#39;</span><span class="p">:</span>
+            <span class="k">continue</span>
 
         <span class="n">query</span><span class="p">[</span>
             <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">project_id</span><span class="si">}</span><span class="s1">:</span><span class="si">{</span><span class="n">STAC_LABELS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">label</span><span class="p">,</span><span class="n">facet</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span>
@@ -293,6 +296,7 @@
 
     <span class="c1"># Remove whitespaces</span>
     <span class="n">query_url</span> <span class="o">=</span> <span class="n">query_url</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Querying STAC using: </span><span class="si">{</span><span class="n">query_url</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
 
     <span class="n">r</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">query_url</span><span class="p">)</span>
 

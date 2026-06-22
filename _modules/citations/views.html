@@ -199,15 +199,18 @@
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="s2">&quot;STAC_API&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
         <span class="k">return</span> <span class="kc">None</span>
 
-    <span class="k">if</span> <span class="ow">not</span> <span class="nb">bool</span><span class="p">(</span><span class="n">citation_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;mip_era&quot;</span><span class="p">)):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">bool</span><span class="p">(</span><span class="n">citation_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;project_id&quot;</span><span class="p">)):</span>
         <span class="k">return</span> <span class="kc">None</span>
 
-    <span class="n">project_id</span> <span class="o">=</span> <span class="n">citation_data</span><span class="p">[</span><span class="s2">&quot;mip_era&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="n">project_id</span> <span class="o">=</span> <span class="n">citation_data</span><span class="p">[</span><span class="s2">&quot;project_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
 
     <span class="n">query</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">facet</span> <span class="ow">in</span> <span class="n">ESGVOC_FACET_LABELS</span><span class="p">[</span><span class="n">project_id</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
         <span class="k">if</span> <span class="n">citation_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">facet</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">None</span>
+        
+        <span class="k">if</span> <span class="n">facet</span> <span class="o">==</span> <span class="s1">&#39;project_id&#39;</span><span class="p">:</span>
+            <span class="k">continue</span>
 
         <span class="n">query</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
             <span class="sa">f</span><span class="s1">&#39;      &quot;</span><span class="si">{</span><span class="n">project_id</span><span class="si">}</span><span class="s1">:</span><span class="si">{</span><span class="n">STAC_LABELS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">label</span><span class="p">,</span><span class="n">facet</span><span class="p">)</span><span class="si">}</span><span class="s1">=</span><span class="si">{</span><span class="n">citation_data</span><span class="p">[</span><span class="n">facet</span><span class="p">]</span><span class="si">}</span><span class="s1">&quot;,&#39;</span>
@@ -219,7 +222,7 @@
             <span class="s2">&quot;&quot;</span><span class="p">,</span>
             <span class="sa">f</span><span class="s1">&#39;cli = Client.open(&quot;</span><span class="si">{</span><span class="n">settings</span><span class="o">.</span><span class="n">STAC_API</span><span class="si">}</span><span class="s1">&quot;)&#39;</span><span class="p">,</span>
             <span class="s2">&quot;cli.search(&quot;</span><span class="p">,</span>
-            <span class="sa">f</span><span class="s1">&#39;   collections=[&quot;</span><span class="si">{</span><span class="n">project_id</span><span class="si">}</span><span class="s1">&quot;],&#39;</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s1">&#39;   collections=[&quot;</span><span class="si">{</span><span class="n">project_id</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}</span><span class="s1">&quot;],&#39;</span><span class="p">,</span>
             <span class="s2">&quot;   query=[&quot;</span><span class="p">,</span>
         <span class="p">]</span>
         <span class="o">+</span> <span class="n">query</span>
@@ -1254,10 +1257,10 @@
                 <span class="o">.</span><span class="n">version</span>
                 <span class="o">+</span> <span class="mi">1</span>
             <span class="p">)</span>
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">):</span>
+        <span class="k">elif</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">):</span>
             <span class="c1"># Edit Current</span>
             <span class="n">new_version</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">))</span>
+                <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">))</span>
                 <span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">)</span>
                 <span class="o">.</span><span class="n">last</span><span class="p">()</span>
                 <span class="o">.</span><span class="n">version</span>
@@ -1295,7 +1298,7 @@
 
 <div class="viewcode-block" id="CitationFormMixin.get_context_data">
 <a class="viewcode-back" href="../../views.html#citations.views.CitationFormMixin.get_context_data">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="n">context</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">:</span>
@@ -1309,7 +1312,7 @@
 
         <span class="n">context</span><span class="p">[</span><span class="s2">&quot;on_submit&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_submit</span>
 
-        <span class="n">context</span><span class="p">[</span><span class="s2">&quot;new_version&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">new_version</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;new_version&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;version&#39;</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">new_version</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
 
         <span class="n">required_fields</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">serializer</span> <span class="ow">in</span> <span class="p">[</span>
@@ -1624,7 +1627,7 @@
             <span class="p">)</span><span class="o">.</span><span class="n">data</span>
 
         <span class="c1"># # Map Internal to External Labels</span>
-        <span class="c1"># for label, facet in ESGVOC_FACET_LABELS.get(citation_data.get(&#39;mip_era&#39;,&#39;&#39;),{}).items():</span>
+        <span class="c1"># for label, facet in ESGVOC_FACET_LABELS.get(citation_data.get(&#39;project_id&#39;,&#39;&#39;),{}).items():</span>
         <span class="c1">#     citation_data[label] = citation_data.pop(facet,None)</span>
 
         <span class="n">initial</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_initial</span><span class="p">()</span> <span class="o">|</span> <span class="n">citation_data</span>
@@ -1658,20 +1661,15 @@
 
         <span class="n">data</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span>
 
-        <span class="n">title</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">):</span>  <span class="c1"># Get the version onto the edit page data somehow.</span>
-            <span class="n">vn</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;version&quot;</span><span class="p">]</span>
-            <span class="n">instance</span> <span class="o">=</span> <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="n">vn</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">instance</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">])</span>
-                <span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">)</span>
-                <span class="o">.</span><span class="n">last</span><span class="p">()</span>
-            <span class="p">)</span>
+        <span class="n">instance</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;pk&quot;</span><span class="p">])</span>
+            <span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">last</span><span class="p">()</span>
+        <span class="p">)</span>
 
         <span class="c1"># Handle edits to the joined attributes</span>
 
-        <span class="n">formset_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_from_formsets</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">)</span>
+        <span class="n">formset_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_from_formsets</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="n">instance</span><span class="o">.</span><span class="n">title</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">formset_data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
             <span class="k">return</span> <span class="n">formset_data</span>
         <span class="n">data</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">formset_data</span><span class="p">)</span>
@@ -1683,7 +1681,7 @@
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">replicate_data</span><span class="p">(</span><span class="n">instance</span><span class="o">=</span><span class="n">instance</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
         <span class="k">except</span> <span class="n">ValidationError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">render_to_response</span><span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="n">form</span><span class="o">=</span><span class="n">form</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="n">form</span><span class="o">=</span><span class="n">form</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="n">instance</span><span class="o">.</span><span class="n">title</span><span class="p">)</span>
                 <span class="o">|</span> <span class="p">{</span>
                     <span class="s2">&quot;errors&quot;</span><span class="p">:</span> <span class="s2">&quot;1 or more&quot;</span><span class="p">,</span>
                     <span class="s2">&quot;extra_errors&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;general&quot;</span><span class="p">:</span> <span class="p">[</span><span class="nb">getattr</span><span class="p">(</span><span class="n">err</span><span class="p">,</span> <span class="s2">&quot;message&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">err</span><span class="p">))]},</span>
@@ -1697,19 +1695,11 @@
 <a class="viewcode-back" href="../../views.html#citations.views.EditCitationFormView.get_initial">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_initial</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">):</span>
-            <span class="n">vn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">)</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="n">citation</span> <span class="o">=</span> <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">],</span> <span class="n">version</span><span class="o">=</span><span class="n">vn</span><span class="p">)</span>
-            <span class="k">except</span> <span class="n">Citations</span><span class="o">.</span><span class="n">DoesNotExist</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="n">Http404</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s1">&#39;Citation does not exist with title </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1"> (v</span><span class="si">{</span><span class="n">vn</span><span class="si">}</span><span class="s1">)&#39;</span>
-                <span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">citation</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">])</span>
-                <span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">)</span>
-                <span class="o">.</span><span class="n">last</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">citation</span> <span class="o">=</span> <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;pk&#39;</span><span class="p">])</span>
+        <span class="k">except</span> <span class="n">Citations</span><span class="o">.</span><span class="n">DoesNotExist</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">Http404</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s1">&#39;Citation &quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;pk&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&quot; does not exist&#39;</span>
             <span class="p">)</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">citation</span><span class="o">.</span><span class="n">editable</span><span class="p">:</span>
@@ -1744,8 +1734,8 @@
         <span class="n">context</span><span class="p">[</span><span class="s2">&quot;replica_formset&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ReplicaFormSet</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">context</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">new_version</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">title</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="n">version_requested</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">new_version</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">title</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">version</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">version_requested</span> <span class="o">=</span> <span class="n">version</span>
         <span class="n">latest</span> <span class="o">=</span> <span class="p">(</span>
             <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">last</span><span class="p">()</span><span class="o">.</span><span class="n">version</span>
         <span class="p">)</span>
@@ -1761,15 +1751,18 @@
 
 <div class="viewcode-block" id="EditCitationFormView.get_context_data">
 <a class="viewcode-back" href="../../views.html#citations.views.EditCitationFormView.get_context_data">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="n">context</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pk</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="n">citation</span> <span class="o">=</span> <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">pk</span><span class="p">)</span>
+
+        <span class="n">context</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">citation</span><span class="o">.</span><span class="n">title</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="n">citation</span><span class="o">.</span><span class="n">version</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
         <span class="c1"># In order to be publishable, a record must have an empty DOI URL slot</span>
         <span class="c1"># - Already determined as editable if we&#39;re at this stage.</span>
         <span class="c1"># - Already determined as un-published as it&#39;s editable.</span>
         <span class="n">publishable</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;publishable&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
         <span class="k">if</span> <span class="p">(</span>
-            <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="n">context</span><span class="p">[</span><span class="s2">&quot;new_version&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">doi_url</span>
+            <span class="n">citation</span><span class="o">.</span><span class="n">doi_url</span>
             <span class="o">!=</span> <span class="s2">&quot;&quot;</span>
         <span class="p">):</span>
             <span class="n">publishable</span> <span class="o">=</span> <span class="kc">False</span>
