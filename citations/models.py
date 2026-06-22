@@ -112,7 +112,7 @@ class Citations(models.Model):
     editable = models.BooleanField(default=True)
     published = models.BooleanField(default=False)
 
-    mip_era = models.CharField(max_length=30, null=True, blank=True)
+    project_id = models.CharField(max_length=30, null=True, blank=True)
     activity_id = models.CharField(max_length=30, null=True, blank=True)
     institution_id = models.CharField(max_length=30, null=True, blank=True)
     source_id = models.CharField(max_length=30, null=True, blank=True)

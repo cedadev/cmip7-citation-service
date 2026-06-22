@@ -51,6 +51,15 @@ def validate_country(country: Union[str, None]):
         raise ValidationError(f'"{country}" returned no matches')
 
 
+def validate_project(
+        project_id: str
+    ) -> bool:
+
+    if not ev:
+        raise ValueError('API not defined - unable to perform validation')
+    if project_id not in ev.get_all_projects():
+        raise ValidationError(f"{project_id} not a valid project/collection in esgvoc")
+
 def validate_component(
     component: str,
     label: str,
@@ -58,9 +67,9 @@ def validate_component(
     requested: Union[str, None] = None,
     raise_exception: bool = False,
     repo: str = settings.CV_REPO,
-):
+) -> str:
     """
-    Check mip_era against CVs
+    Check project_id against CVs
     """
 
     if ev:

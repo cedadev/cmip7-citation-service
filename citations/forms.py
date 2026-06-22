@@ -264,11 +264,11 @@ class CitationForm(forms.ModelForm):
         required=False,
     )
 
-    mip_era = forms.CharField(
-        label="MIP Era",
+    project_id = forms.CharField(
+        label="Project ID",
         widget=forms.TextInput(
             attrs={
-                "placeholder": "MIP Era Facet",
+                "placeholder": "Project ID Facet",
                 "data-bs-content": "Validated against CMIP CVs.",
             }
             | POPOVER_ATTRS
@@ -334,7 +334,7 @@ class CitationForm(forms.ModelForm):
     field_groups = {
         "General Information": ["Title", "Abstract", "Data Access URL", "DOI URL", "DOI Publication Date"],
         "Search Facets": [
-            "MIP Era",
+            "Project ID",
             "Activity",
             "Institution",
             "Source",
@@ -353,7 +353,7 @@ class CitationForm(forms.ModelForm):
         "drs_url",
         "doi_url",
         "doi_pub_date",
-        "mip_era",
+        "project_id",
         "activity_id",
         "institution_id",
         "source_id",

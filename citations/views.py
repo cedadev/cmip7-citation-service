@@ -115,15 +115,18 @@ def render_code_snippet(citation_data: dict) -> Union[str, None]:
     if not getattr(settings, "STAC_API", None):
         return None
 
-    if not bool(citation_data.get("mip_era")):
+    if not bool(citation_data.get("project_id")):
         return None
 
-    project_id = citation_data["mip_era"].lower()
+    project_id = citation_data["project_id"].lower()
 
     query = []
     for label, facet in ESGVOC_FACET_LABELS[project_id].items():
         if citation_data.get(facet, None) is None:
             return None
+        
+        if facet == 'project_id':
+            continue
 
         query.append(
             f'      "{project_id}:{STAC_LABELS.get(label,facet)}={citation_data[facet]}",'
@@ -135,7 +138,7 @@ def render_code_snippet(citation_data: dict) -> Union[str, None]:
             "",
             f'cli = Client.open("{settings.STAC_API}")',
             "cli.search(",
-            f'   collections=["{project_id}"],',
+            f'   collections=["{project_id.upper()}"],',
             "   query=[",
         ]
         + query
@@ -1035,10 +1038,10 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
                 .version
                 + 1
             )
-        elif self.kwargs.get("title"):
+        elif kwargs.get("title"):
             # Edit Current
             new_version = (
-                Citations.objects.filter(title=self.kwargs.get("title"))
+                Citations.objects.filter(title=kwargs.get("title"))
                 .order_by("version")
                 .last()
                 .version
@@ -1071,7 +1074,7 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
 
         return super().dispatch(request, *args, **kwargs)
 
-    def get_context_data(self, title: str = None, **kwargs):
+    def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
         if self.request.POST:
@@ -1085,7 +1088,7 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
 
         context["on_submit"] = self.on_submit
 
-        context["new_version"] = self.new_version(title=title)
+        context['new_version'] = kwargs.get('version',self.new_version(**kwargs))
 
         required_fields = []
         for serializer in [
@@ -1388,7 +1391,7 @@ class NewCitationFormView(CitationFormMixin):
             ).data
 
         # # Map Internal to External Labels
-        # for label, facet in ESGVOC_FACET_LABELS.get(citation_data.get('mip_era',''),{}).items():
+        # for label, facet in ESGVOC_FACET_LABELS.get(citation_data.get('project_id',''),{}).items():
         #     citation_data[label] = citation_data.pop(facet,None)
 
         initial = super().get_initial() | citation_data
@@ -1413,20 +1416,15 @@ class EditCitationFormView(CitationFormMixin):
 
         data = form.cleaned_data
 
-        title = data.get("title")
-        if data.get("version"):  # Get the version onto the edit page data somehow.
-            vn = data["version"]
-            instance = Citations.objects.get(title=title, version=vn)
-        else:
-            instance = (
-                Citations.objects.filter(title=self.kwargs["title"])
-                .order_by("version")
-                .last()
-            )
+        instance = (
+            Citations.objects.filter(pk=self.kwargs["pk"])
+            .order_by("version")
+            .last()
+        )
 
         # Handle edits to the joined attributes
 
-        formset_data = self.create_from_formsets(form, title=title)
+        formset_data = self.create_from_formsets(form, title=instance.title)
         if not isinstance(formset_data, dict):
             return formset_data
         data.update(formset_data)
@@ -1438,7 +1436,7 @@ class EditCitationFormView(CitationFormMixin):
             return self.replicate_data(instance=instance, data=data)
         except ValidationError as err:
             return self.render_to_response(
-                self.get_context_data(form=form, title=title)
+                self.get_context_data(form=form, title=instance.title)
                 | {
                     "errors": "1 or more",
                     "extra_errors": {"general": [getattr(err, "message", str(err))]},
@@ -1449,19 +1447,11 @@ class EditCitationFormView(CitationFormMixin):
 
     def get_initial(self):
 
-        if self.request.GET.get("version"):
-            vn = self.request.GET.get("version")
-            try:
-                citation = Citations.objects.get(title=self.kwargs["title"], version=vn)
-            except Citations.DoesNotExist:
-                raise Http404(
-                    f'Citation does not exist with title {self.kwargs["title"]} (v{vn})'
-                )
-        else:
-            citation = (
-                Citations.objects.filter(title=self.kwargs["title"])
-                .order_by("version")
-                .last()
+        try:
+            citation = Citations.objects.get(pk=self.kwargs['pk'])
+        except Citations.DoesNotExist:
+            raise Http404(
+                f'Citation "{self.kwargs["pk"]}" does not exist'
             )
 
         if not citation.editable:
@@ -1495,8 +1485,8 @@ class EditCitationFormView(CitationFormMixin):
         context["replica_formset"] = ReplicaFormSet()
         return context
 
-    def new_version(self, title: str, **kwargs):
-        version_requested = self.request.GET.get("version")
+    def new_version(self, title: str, version: str):
+        version_requested = version
         latest = (
             Citations.objects.filter(title=title).order_by("version").last().version
         )
@@ -1510,15 +1500,18 @@ class EditCitationFormView(CitationFormMixin):
             )
         return version_requested
 
-    def get_context_data(self, title, **kwargs):
-        context = super().get_context_data(title=title, **kwargs)
+    def get_context_data(self, pk: str, **kwargs):
+
+        citation = Citations.objects.get(pk=pk)
+
+        context = super().get_context_data(title=citation.title, version=citation.version, **kwargs)
 
         # In order to be publishable, a record must have an empty DOI URL slot
         # - Already determined as editable if we're at this stage.
         # - Already determined as un-published as it's editable.
         publishable = context.get("publishable", True)
         if (
-            Citations.objects.get(title=title, version=context["new_version"]).doi_url
+            citation.doi_url
             != ""
         ):
             publishable = False

@@ -25,12 +25,12 @@ def get_drs_url(data: dict) -> Union[str, None]:
         return ""
 
     # No auto-DRS if the mip era is not given
-    if not bool(data.get("mip_era")):
+    if not bool(data.get("project_id")):
         return ""
 
-    project_id = data["mip_era"].lower()
+    project_id = data["project_id"].lower()
 
-    metagrid_base = f'{settings.METAGRID_URL}/search?project={project_id}+STAC&activeFacets=%7B"mip_era"%3A"{project_id}"'
+    metagrid_base = f'{settings.METAGRID_URL}/search?project={project_id}+STAC&activeFacets=%7B"project_id"%3A"{project_id}"'
 
     queries = [metagrid_base]
     for facet in ESGVOC_FACET_LABELS[project_id].values():

@@ -33,7 +33,7 @@ urlpatterns = [
     path("citation/<str:title>", CitationView.as_view(), name="citation"),
     path("citations/add", NewCitationFormView.as_view(), name="add_citation"),
     path(
-        "citation/edit/<str:title>",
+        "citation/edit/<str:pk>",
         EditCitationFormView.as_view(),
         name="edit_citation",
     ),
