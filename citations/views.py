@@ -651,15 +651,23 @@ class CitationView(GenericRenderedView):
     def get(self, request, *args, **kwargs):
 
         # Allow JSON header response from landing page directly.
-        if 'application/json' in request.headers.get('Accept',''):
+        if 'application/json' in request.headers.get('Accept','') or 'application/json' in request.GET.get('httpAccept',''):
             if request.GET.get('version'):
-                title = kwargs['title'] + '_v' + request.GET.get('version')
+                pk = kwargs['title'] + '_v' + request.GET.get('version')
             else:
-                title = kwargs['title']
+                pk = kwargs['title']
 
-            data = CitationsSerializer(
-                Citations.objects.get(pk=title)
-            ).data
+            if Citations.objects.filter(pk=pk):
+                data = CitationsSerializer(
+                    Citations.objects.get(pk=pk)
+                ).data
+            elif Citations.objects.filter(title=pk):
+                data = CitationsSerializer(
+                    Citations.objects.filter(title=pk).order_by("version").last()
+                ).data
+            else:
+                raise Http404("The requested citation title does not yet exist.")
+
 
             return JsonResponse(data)
         return super().get(request, *args, **kwargs)
@@ -1074,15 +1082,70 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
 
         return super().dispatch(request, *args, **kwargs)
 
-    def get_context_data(self, **kwargs):
+    def reload_formset_values(self, context: dict, post):
+        """
+        Reload new posted values into the formsets for the context
+        """
+        #context.pop('form',None)
+        #context.pop('view')
+        context['title'] = context['title']
+        context['version'] = context['version']
+
+        
+        context["contact_formset"] = ContactFormSet(
+            initial=[
+                {
+                    field: form[field].value()
+                    for field in form.fields
+                } for form in ContactFormSet(post).forms if not form.empty_permitted
+            ]
+        )
+        context["institution_formset"] = InstitutionFormSet(
+            initial=[
+                {
+                    field: form[field].value()
+                    for field in form.fields
+                } for form in InstitutionFormSet(post).forms if not form.empty_permitted
+            ]
+        )
+        context["funder_formset"] = FunderFormSet(
+            initial=[
+                {
+                    field: form[field].value()
+                    for field in form.fields
+                } for form in FunderFormSet(post).forms if not form.empty_permitted
+            ]
+        )
+        context["reference_formset"] = ReferenceFormSet(
+            initial=[
+                {
+                    field: form[field].value()
+                    for field in form.fields
+                } for form in ReferenceFormSet(post).forms if not form.empty_permitted
+            ]
+        )
+        context["replica_formset"] = ReplicaFormSet(
+            initial=[
+                {
+                    field: form[field].value()
+                    for field in form.fields
+                } for form in ReplicaFormSet(post).forms if not form.empty_permitted
+            ]
+        )
+        return context
+
+    def get_context_data(self, reload: bool = False, **kwargs):
         context = super().get_context_data(**kwargs)
 
         if self.request.POST:
-            context["contact_formset"] = ContactFormSet(self.request.POST)
-            context["institution_formset"] = InstitutionFormSet(self.request.POST)
-            context["funder_formset"] = FunderFormSet(self.request.POST)
-            context["replica_formset"] = ReplicaFormSet(self.request.POST)
-            context["reference_formset"] = ReferenceFormSet(self.request.POST)
+            if reload:
+                context = self.reload_formset_values(context, self.request.POST)
+            else:
+                context["contact_formset"] = ContactFormSet(self.request.POST)
+                context["institution_formset"] = InstitutionFormSet(self.request.POST)
+                context["funder_formset"] = FunderFormSet(self.request.POST)
+                context["replica_formset"] = ReplicaFormSet(self.request.POST)
+                context["reference_formset"] = ReferenceFormSet(self.request.POST)
         else:
             context = self.initial_formset_values(context)
 
@@ -1236,7 +1299,7 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
 
         if errors > 0:
             return self.render_to_response(
-                self.get_context_data(form=form, **kwargs)
+                self.get_context_data(form=form, reload=True, **kwargs)
                 | {"extra_errors": error_map, "errors": errors}
             )
 
@@ -1258,7 +1321,7 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
 
         if main_data.get("primary_id", None) is None:
             return self.render_to_response(
-                self.get_context_data(form=form, **kwargs)
+                self.get_context_data(form=form, reload=True, **kwargs)
                 | {
                     "errors": "1",
                     "extra_errors": {
@@ -1359,7 +1422,7 @@ class NewCitationFormView(CitationFormMixin):
     def form_valid(self, form):
 
         if not form.is_valid():
-            return self.render_to_response(self.get_context_data(form=form))
+            return self.render_to_response(self.get_context_data(form=form, reload=True))
 
         main_data = form.cleaned_data
         formset_data = self.create_from_formsets(form)
@@ -1372,7 +1435,7 @@ class NewCitationFormView(CitationFormMixin):
             return self.replicate_data(data=main_data)
         except ValidationError as err:
             return self.render_to_response(
-                self.get_context_data(form=form)
+                self.get_context_data(form=form, reload=True)
                 | {
                     "errors": "1 or more",
                     "extra_errors": {"general": [getattr(err, "message", str(err))]},
@@ -1436,7 +1499,7 @@ class EditCitationFormView(CitationFormMixin):
             return self.replicate_data(instance=instance, data=data)
         except ValidationError as err:
             return self.render_to_response(
-                self.get_context_data(form=form, title=instance.title)
+                self.get_context_data(form=form, pk=instance.pk, reload=True)
                 | {
                     "errors": "1 or more",
                     "extra_errors": {"general": [getattr(err, "message", str(err))]},
@@ -1485,7 +1548,7 @@ class EditCitationFormView(CitationFormMixin):
         context["replica_formset"] = ReplicaFormSet()
         return context
 
-    def new_version(self, title: str, version: str):
+    def new_version(self, title: str, version: str, **kwargs):
         version_requested = version
         latest = (
             Citations.objects.filter(title=title).order_by("version").last().version

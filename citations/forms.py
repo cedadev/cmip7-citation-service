@@ -6,6 +6,7 @@ from django.forms import BaseFormSet, formset_factory
 from django.utils.safestring import mark_safe
 
 from citations.models import Citations
+from citations.utils import is_support_user
 
 alphanumeric = RegexValidator(
     r"^[0-9a-zA-Z-_.]*$",
@@ -141,11 +142,14 @@ class PrefixFormSet(BaseFormSet):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, prefix=self.prefix, **kwargs)
 
-        if self.prefix == "contact" or self.prefix == "reference":
+        if self.prefix == "reference":
             return
 
         for form in self.forms:
             if not form.initial:
+                continue
+
+            if self.prefix == 'contact' and not is_support_user(form.initial):
                 continue
 
             for field in form.fields.values():

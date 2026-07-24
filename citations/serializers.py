@@ -57,6 +57,10 @@ def mint_doi_for_data(data: dict, id: str) -> dict | None:
     """
     data = copy.deepcopy(data)
 
+    if data['primary_id'] == settings.SUPPORT_ID:
+        # Not allowed
+        raise ValidationError('Unable to mint DOI for record with "Citation Support" as primary author.')
+
     creators = [
         PartiesSerializer(instance=Parties.objects.get(pk=data["primary_id"])).data
     ] + [
@@ -179,7 +183,7 @@ def title_from_facets(
             )
             or []
         )
-        if data.get("experiment_id") not in experiments:
+        if data.get("experiment_id").lower() not in experiments:
             if raise_exceptions:
                 raise ValidationError(
                     f"{data.get('experiment_id')} not valid for {data.get('activity_id')}: Valid experiments are {experiments}"
@@ -702,9 +706,11 @@ class CitationsSerializer(GenericSerializerMixin):
         for gr in obtain_all_references(data):
             new_ref = True
             for reftype in self.Meta.citation_types:
-                if gr["id"] in data[reftype]:
+                if gr["id"] in data.get(reftype,[]):
                     new_ref = False
             if new_ref:
+                if 'cites' not in data:
+                    data['cites'] = []
                 data["cites"].append(gr)
 
         # Auto-fill from ESGVOC

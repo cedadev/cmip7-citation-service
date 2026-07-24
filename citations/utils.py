@@ -13,6 +13,13 @@ logstream = logging.StreamHandler()
 formatter = logging.Formatter("%(levelname)s [%(name)s]: %(message)s")
 logstream.setFormatter(formatter)
 
+def is_support_user(data: dict):
+    if data.get('id','') == settings.SUPPORT_ID:
+        return True
+    if data['first_name'] == settings.SUPPORT_FIRSTNAME and data['last_name'] == settings.SUPPORT_LASTNAME:
+        return True
+    return False
+
 def get_drs_url(data: dict) -> Union[str, None]:
     """
     Obtain the DRS URL expected for this record, given the set of search facets.
