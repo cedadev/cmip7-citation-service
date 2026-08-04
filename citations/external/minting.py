@@ -8,7 +8,7 @@ import requests
 from django.conf import settings
 
 from citations.utils import logstream, get_drs_url
-from citations.facet_mappings import ESGVOC_FACET_LABELS, STAC_LABELS, STAC_COLLECTIONS
+from citations.external.stac import resolve_stac_query
 
 # from esgf_core_utils.models.kafka.consumer import KafkaConsumer
 
@@ -183,46 +183,6 @@ def resolve_drs(drs_url: str | None) -> bool:
     # Data Access Check for DRS URL here.
     return False
 
-def resolve_stac_query(data: dict) -> bool:
-
-    if not getattr(settings, "STAC_API", None):
-        return False
-
-    if not bool(data.get("project_id")):
-        return False
-    
-    project_id = data["project_id"].lower()
-
-    query = {}
-    for label, facet in ESGVOC_FACET_LABELS[project_id].items():
-        if data.get(facet, None) is None:
-            return False
-        
-        if facet == 'project_id':
-            continue
-
-        query[
-            f'{project_id}:{STAC_LABELS.get(label,facet)}'
-        ] = {'eq':data[facet]}
-
-    query_url = f'{os.path.join(settings.STAC_API,'search')}?collections={STAC_COLLECTIONS[project_id]}'
-
-    query_url += f'&query={json.dumps(query)}'
-
-    # Remove whitespaces
-    query_url = query_url.replace(' ','')
-    logger.info(f'Querying STAC using: {query_url}')
-
-    r = requests.get(query_url)
-
-    if r.status_code != 200:
-        return False
-    
-    if r.json()['numberMatched'] < 1:
-        return False
-    
-    # Only return True if STAC query contains 1 or more items.
-    return True
 
 def publish_record(data: dict, id: str) -> str:
     """
@@ -243,6 +203,9 @@ def publish_record(data: dict, id: str) -> str:
     publication["doi_url"] = mint_doi_for_record(data, pub_ts, id=id)
     if not publication["doi_url"]:
         return False, {"published": False}
+
+    # Cannot update STAC from citation service because of the number of PATCHes that may be required.
+    # check_update_stac(data, publication)
 
     publication["publication_timestamp"] = pub_ts
 
