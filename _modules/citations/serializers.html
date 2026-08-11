@@ -241,8 +241,9 @@
     <span class="n">validate_project</span><span class="p">(</span><span class="n">project_id</span><span class="p">)</span>
 
     <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">facet</span> <span class="ow">in</span> <span class="n">ESGVOC_FACET_LABELS</span><span class="p">[</span><span class="n">project_id</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-        <span class="k">if</span> <span class="n">facet</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">facet</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
             <span class="n">missing</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">facet</span><span class="p">)</span>
+            <span class="k">continue</span>
 
         <span class="k">if</span> <span class="n">facet</span> <span class="o">==</span> <span class="s1">&#39;project_id&#39;</span><span class="p">:</span>
             <span class="c1"># No longer validating project_id - this is validated separately </span>
@@ -256,6 +257,9 @@
             <span class="n">raise_exception</span><span class="o">=</span><span class="n">raise_exceptions</span><span class="p">,</span>
             <span class="n">repo</span><span class="o">=</span><span class="n">BACKUP_REPOS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">project_id</span><span class="p">),</span>
         <span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Missing components: </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">project_id</span> <span class="o">==</span> <span class="s2">&quot;cmip7&quot;</span><span class="p">:</span>
         <span class="n">experiments</span> <span class="o">=</span> <span class="p">(</span>
@@ -272,9 +276,6 @@
                 <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span>
                     <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;experiment_id&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2"> not valid for </span><span class="si">{</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;activity_id&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">: Valid experiments are </span><span class="si">{</span><span class="n">experiments</span><span class="si">}</span><span class="s2">&quot;</span>
                 <span class="p">)</span>
-
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">missing</span>
 
     <span class="k">return</span> <span class="s2">&quot;.&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">data</span><span class="p">[</span><span class="n">facet</span><span class="p">]</span> <span class="k">for</span> <span class="n">facet</span> <span class="ow">in</span> <span class="n">ESGVOC_TITLE_LABELS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">project_id</span><span class="p">)])</span></div>
 
