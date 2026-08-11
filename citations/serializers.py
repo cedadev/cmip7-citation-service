@@ -27,6 +27,7 @@ from citations.models import (
     Institutions,
     Parties,
     References,
+    FailedRequests,
     extract_from_orcid,
     locate_institute,
 )
@@ -141,7 +142,7 @@ def institution_mappings(institution_id: str, project_id: str = "cmip7") -> str:
 
 def title_from_facets(
     data: dict, raise_exceptions: bool = True
-) -> Union[str, list, None]:
+) -> tuple: # valid, title, response
     """
     Validate by generating the expected title from the facets.
 
@@ -149,14 +150,26 @@ def title_from_facets(
     in the data, this function should not be run, but will return a None value."""
 
     if not bool(data.get("project_id")):
-        return None
+        v = ValidationError('Missing "project_id"')
+        if raise_exceptions:
+            raise v
+        return False, '', v
 
     missing = []
 
     project_id = data["project_id"].lower()
-    validate_project(project_id)
+
+    try:
+        validate_project(project_id)
+    except Exception as e:
+        if raise_exceptions:
+            raise e
+        return False, '', e
+
+    invalids = []
 
     for label, facet in ESGVOC_FACET_LABELS[project_id].items():
+
         if not data.get(facet, False):
             missing.append(facet)
             continue
@@ -166,34 +179,56 @@ def title_from_facets(
             # as the project ID with every query, as well as above.
             continue
 
-        validate_component(
+        status, component, _ = validate_component(
             data.get(facet).lower(),
             label,
             project_id=project_id,
             raise_exception=raise_exceptions,
             repo=BACKUP_REPOS.get(project_id),
         )
+        if not status:
+            invalids.append(f'{label}={component}')
+
+    pseudo_title = ".".join([data.get(facet,'<MISSING>') for facet in ESGVOC_TITLE_LABELS.get(project_id)])
+
+    if invalids:
+        v = ValidationError(f'The following combinations are not valid: {", ".join(invalids)}')
+        if raise_exceptions:
+            raise v
+        return False, pseudo_title, v
 
     if len(missing) > 0:
-        raise ValidationError(f'Missing components: {missing}')
+        v = ValidationError(f'Missing components: {missing}')
+        if raise_exceptions:
+            raise v
+        return False, pseudo_title, v
 
     if project_id == "cmip7":
+
+        status, component, response = validate_component(
+            data.get("activity_id"),
+            "activity",
+            project_id=project_id,
+            requested="experiments",
+        )
+        if not status:
+            if raise_exceptions:
+                raise response
+            return False, pseudo_title, response
+
         experiments = (
-            validate_component(
-                data.get("activity_id"),
-                "activity",
-                project_id=project_id,
-                requested="experiments",
-            )
+            component
             or []
         )
         if data.get("experiment_id").lower() not in experiments:
+            v = ValidationError(
+                f"{data.get('experiment_id')} not valid for {data.get('activity_id')}: Valid experiments are {experiments}"
+            )
             if raise_exceptions:
-                raise ValidationError(
-                    f"{data.get('experiment_id')} not valid for {data.get('activity_id')}: Valid experiments are {experiments}"
-                )
+                raise v
+            return False, pseudo_title, v
 
-    return ".".join([data[facet] for facet in ESGVOC_TITLE_LABELS.get(project_id)])
+    return True, pseudo_title, None
 
 
 def obtain_all_references(data: dict) -> dict:
@@ -515,6 +550,15 @@ class InstitutionsSerializer(GenericSerializerMixin):
         return data
 
 
+class FailedRequestsSerializer(GenericSerializerMixin):
+    class Meta:
+        model = FailedRequests
+        required_fields = ['id', 'reason']
+        fields = required_fields
+
+    def fill_data_parameters(self, data):
+        return data
+
 class PartiesSerializer(GenericSerializerMixin):
     affiliations = InstitutionsSerializer(required=False, many=True)
 
@@ -681,7 +725,7 @@ class CitationsSerializer(GenericSerializerMixin):
         if "project_id" in validated_data:
 
             # Validate by assembling expected title - if the search facets are provided.
-            title = title_from_facets(validated_data, raise_exceptions=True)
+            _, title, _ = title_from_facets(validated_data, raise_exceptions=True)
 
             if not bool(validated_data.get("title", False)):
                 if not title:

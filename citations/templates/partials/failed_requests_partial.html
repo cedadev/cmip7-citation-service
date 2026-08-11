@@ -1,0 +1,20 @@
+{% for fail in failedrequests.object_list %}
+<tr>
+    <td>{{ fail.id }}</a></td>
+    <td>{{ fail.reason }}</td>
+</tr>
+{% endfor %}
+{% if failedrequests.has_next %}
+<tr id="load-more-row">
+    <td></td>
+    <td colspan="2">
+        <button
+            hx-get="{% url 'citations:failed' %}?page={{ failedrequests.next_page_number }}"
+            hx-target="#load-more-row"
+            hx-swap="outerHTML"
+        >
+            Load More (Showing {{ pagination }} out of {{ total_results }} results)
+        </button>
+    </td>
+</tr>
+{% endif %}

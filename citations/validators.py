@@ -67,7 +67,7 @@ def validate_component(
     requested: Union[str, None] = None,
     raise_exception: bool = False,
     repo: str = settings.CV_REPO,
-) -> str:
+) -> tuple:
     """
     Check project_id against CVs
     """
@@ -86,18 +86,26 @@ def validate_component(
             logger.error(
                 f"{component} not found in ESGF Vocabs for {label} in {project_id}"
             )
-            raise ValidationError(f"{component} not a valid {label}")
+            v = ValidationError(f"{component} not a valid {label}")
 
-        if requested:
-            return getattr(term_result, requested, [])
+            if raise_exception:
+                raise v
+            return False, component, v
+
+        value = component
+        if requested is not None:
+            value = getattr(term_result, requested, [])
+        return True, value, None
 
     else:
         r = requests.get(f"{repo}/{label.lower()}/{component.lower()}.json")
         if str(r.status_code) != "200":
+            v = ValidationError(f"{component} not a valid {label}")
             if raise_exception:
-                raise ValidationError(f"{component} not a valid {label}")
-            else:
-                return None
+                raise v
+            return False, component, v
 
-        if requested:
-            return r.json()[requested]
+        value = component
+        if requested is not None:
+            value = r.json()[requested]
+        return True, value, None

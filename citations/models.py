@@ -77,6 +77,13 @@ class References(models.Model):
     def __str__(self):
         return f"{self.title}"
 
+class FailedRequests(models.Model):
+    """
+    Stores failed requests made due to validation errors.
+    """
+
+    id = models.CharField(max_length=300, primary_key=True)
+    reason = models.TextField()
 
 class Citations(models.Model):
     """

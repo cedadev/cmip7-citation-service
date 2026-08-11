@@ -43,6 +43,7 @@ from citations.models import (
     Institutions,
     Parties,
     References,
+    FailedRequests
 )
 from citations.serializers import (
     CitationsSerializer,
@@ -50,6 +51,7 @@ from citations.serializers import (
     InstitutionsSerializer,
     PartiesSerializer,
     ReferencesSerializer,
+    FailedRequestsSerializer,
     chain_new_objects,
     handle_update,
     title_from_facets,
@@ -291,7 +293,7 @@ def check_publish_ok(request, data: dict) -> tuple:
     Repeat the checks done at publication such that a message can be generated to present to the user.
     """
 
-    status = True
+    valid = True
     if not data.get("doi_url"):
 
         if not resolve_drs(data.get("drs_url")) and not resolve_stac_query(data):
@@ -304,14 +306,14 @@ def check_publish_ok(request, data: dict) -> tuple:
                 request,
                 f"Failed to mint DOI for the record {data['title']} (v{data['version']})",
             )
-        status = False
+        valid = False
         data = {"warnings": "publication unsuccessful"} | data
     else:
         messages.success(
             request, f"DOI '{data['doi_url']}' minted at {data['publication_timestamp']}"
         )
 
-    return data, status
+    return data, valid
 
 
 class GenericRenderedView(TemplateView):
@@ -564,6 +566,24 @@ class PartiesView(PaginatedListView):
     serializer_class = PartiesSerializer
     paginate_by = 10
     order_by = "last_name"
+
+
+class FailedRequestsView(PaginatedListView):
+    template_name = "failed_requests.html"
+    partial_template = "partials/failed_requests_partial.html"
+    model = FailedRequests
+    serializer_class = FailedRequestsSerializer
+    paginate_by = 10
+    order_by = "id"
+
+    def get_context_data(self, *args, **kwargs):
+
+        # Remove items that are now present
+        for item in self.model.objects.all():
+            if Citations.objects.filter(title=item.id):
+                item.delete()
+
+        return super().get_context_data(*args, **kwargs)
 
 
 class InstitutionsView(PaginatedListView):
@@ -897,12 +917,23 @@ class CitationAPIView(GenericAPIView):
 
     def create(self, request, *args, **kwargs):
 
-        try:
-            return self._create(request, *args, **kwargs)
-        except Exception as e:
-            return Response({"error":e}, status=status.HTTP_400_BAD_REQUEST)
+        is_ok, id, response = self._create(request, *args, **kwargs)
+        if is_ok:
+            return response
 
-    def _create(self, request, *args, **kwargs):
+        if id:
+            # Create failure object on not OK creations for partially validated records.
+            reason = response.message
+            if FailedRequests.objects.filter(id=id):
+                fail = FailedRequests.objects.get(id=id)
+                fail.reason = reason
+            else:
+                fail = FailedRequests.objects.create(id=id, reason=reason)
+            fail.save()
+
+        return Response({"error":response}, status=status.HTTP_400_BAD_REQUEST)
+
+    def _create(self, request, *args, **kwargs) -> tuple:
         data = unwrap_request(request.data)
 
         if "institution_id" in data:
@@ -914,27 +945,32 @@ class CitationAPIView(GenericAPIView):
         serializer.is_valid(raise_exception=True)
         title = serializer.validated_data.get("title")
         if not title:
-            title = title_from_facets(serializer.validated_data)
+            valid, title, response = title_from_facets(serializer.validated_data, raise_exceptions=False)
+            if not valid:
+                return False, title, response
 
-        if "version" in request.data:
-            version = request.data["version"]
-        else:
-            version = None
-            inst = self.model.objects.filter(title=title).order_by("-version")
-            if inst:
-                version = inst.last().version
+        try:
+            if "version" in request.data:
+                version = request.data["version"]
+            else:
+                version = None
+                inst = self.model.objects.filter(title=title).order_by("-version")
+                if inst:
+                    version = inst.last().version
 
-        latest = self.model.objects.filter(title=title, version=version)
-        if latest:
-            if not latest[0].editable:
-                return Response(
-                    serializer.validated_data, status=status.HTTP_405_METHOD_NOT_ALLOWED
-                )
+            latest = self.model.objects.filter(title=title, version=version)
+            if latest:
+                if not latest[0].editable:
+                    return Response(
+                        serializer.validated_data, status=status.HTTP_405_METHOD_NOT_ALLOWED
+                    )
 
-        if publish:
-            data, _ = check_publish_ok(request, data)
-        data = serializer.save(publish=publish, user_id=request.user.username)
-        return Response(data, status=status.HTTP_201_CREATED)
+            if publish:
+                data, _ = check_publish_ok(request, data)
+            data = serializer.save(publish=publish, user_id=request.user.username)
+            return True, title, Response(data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return False, title, e
 
 
 class SpecificCitationAPIView(SpecificAPIView):
@@ -1016,7 +1052,7 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
     model = Citations
     serializer_class = CitationsSerializer
 
-    def redirect_on_success(self, title: str = None, status: bool = True):
+    def redirect_on_success(self, title: str = None, valid: bool = True):
 
         args = [title]
         msg = "Your citation updates have been submitted and will appear here when they have been processed."
@@ -1025,7 +1061,7 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
             args = None
             msg = "Your citations have been submitted and will appear here when they have been processed."
 
-        if not status:
+        if not valid:
             messages.error(
                 self.request,
                 "DOI Minting has not been completed. The record will remain unpublished until the above issue is resolved.",

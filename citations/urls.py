@@ -20,6 +20,7 @@ from citations.views import (
     ReviewerRequestView,
     SpecificCitationAPIView,
     SpecificPartyAPIView,
+    FailedRequestsView,
 )
 
 app_name = "citations"
@@ -29,6 +30,7 @@ urlpatterns = [
     path("citations/", CitationsView.as_view(), name="citations"),
     path("institutions/", InstitutionsView.as_view(), name="institutions"),
     path("fundingstreams/", FundingStreamsView.as_view(), name="funders"),
+    path("failed/", FailedRequestsView.as_view(), name="funders"),
     path("party/<str:pk>", PartyView.as_view(), name="party"),
     path("citation/<str:title>", CitationView.as_view(), name="citation"),
     path("citations/add", NewCitationFormView.as_view(), name="add_citation"),
