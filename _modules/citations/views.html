@@ -119,6 +119,7 @@
     <span class="n">Institutions</span><span class="p">,</span>
     <span class="n">Parties</span><span class="p">,</span>
     <span class="n">References</span><span class="p">,</span>
+    <span class="n">FailedRequests</span>
 <span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">citations.serializers</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">CitationsSerializer</span><span class="p">,</span>
@@ -126,6 +127,7 @@
     <span class="n">InstitutionsSerializer</span><span class="p">,</span>
     <span class="n">PartiesSerializer</span><span class="p">,</span>
     <span class="n">ReferencesSerializer</span><span class="p">,</span>
+    <span class="n">FailedRequestsSerializer</span><span class="p">,</span>
     <span class="n">chain_new_objects</span><span class="p">,</span>
     <span class="n">handle_update</span><span class="p">,</span>
     <span class="n">title_from_facets</span><span class="p">,</span>
@@ -399,7 +401,7 @@
 <span class="sd">    Repeat the checks done at publication such that a message can be generated to present to the user.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="n">status</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">valid</span> <span class="o">=</span> <span class="kc">True</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;doi_url&quot;</span><span class="p">):</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">resolve_drs</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;drs_url&quot;</span><span class="p">))</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">resolve_stac_query</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
@@ -412,14 +414,14 @@
                 <span class="n">request</span><span class="p">,</span>
                 <span class="sa">f</span><span class="s2">&quot;Failed to mint DOI for the record </span><span class="si">{</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> (v</span><span class="si">{</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;version&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">,</span>
             <span class="p">)</span>
-        <span class="n">status</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">valid</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="n">data</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;warnings&quot;</span><span class="p">:</span> <span class="s2">&quot;publication unsuccessful&quot;</span><span class="p">}</span> <span class="o">|</span> <span class="n">data</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">messages</span><span class="o">.</span><span class="n">success</span><span class="p">(</span>
             <span class="n">request</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;DOI &#39;</span><span class="si">{</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;doi_url&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&#39; minted at </span><span class="si">{</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;publication_timestamp&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
         <span class="p">)</span>
 
-    <span class="k">return</span> <span class="n">data</span><span class="p">,</span> <span class="n">status</span></div>
+    <span class="k">return</span> <span class="n">data</span><span class="p">,</span> <span class="n">valid</span></div>
 
 
 
@@ -717,6 +719,30 @@
     <span class="n">serializer_class</span> <span class="o">=</span> <span class="n">PartiesSerializer</span>
     <span class="n">paginate_by</span> <span class="o">=</span> <span class="mi">10</span>
     <span class="n">order_by</span> <span class="o">=</span> <span class="s2">&quot;last_name&quot;</span></div>
+
+
+
+<div class="viewcode-block" id="FailedRequestsView">
+<a class="viewcode-back" href="../../views.html#citations.views.FailedRequestsView">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">FailedRequestsView</span><span class="p">(</span><span class="n">PaginatedListView</span><span class="p">):</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s2">&quot;failed_requests.html&quot;</span>
+    <span class="n">partial_template</span> <span class="o">=</span> <span class="s2">&quot;partials/failed_requests_partial.html&quot;</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">FailedRequests</span>
+    <span class="n">serializer_class</span> <span class="o">=</span> <span class="n">FailedRequestsSerializer</span>
+    <span class="n">paginate_by</span> <span class="o">=</span> <span class="mi">10</span>
+    <span class="n">order_by</span> <span class="o">=</span> <span class="s2">&quot;id&quot;</span>
+
+<div class="viewcode-block" id="FailedRequestsView.get_context_data">
+<a class="viewcode-back" href="../../views.html#citations.views.FailedRequestsView.get_context_data">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="c1"># Remove items that are now present</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">item</span><span class="o">.</span><span class="n">id</span><span class="p">):</span>
+                <span class="n">item</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+</div>
 
 
 
@@ -1110,12 +1136,23 @@
 
     <span class="k">def</span><span class="w"> </span><span class="nf">create</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 
-        <span class="k">try</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">Response</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span><span class="n">e</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="n">status</span><span class="o">.</span><span class="n">HTTP_400_BAD_REQUEST</span><span class="p">)</span>
+        <span class="n">is_ok</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">is_ok</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">response</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_create</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">id</span><span class="p">:</span>
+            <span class="c1"># Create failure object on not OK creations for partially validated records.</span>
+            <span class="n">reason</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">message</span>
+            <span class="k">if</span> <span class="n">FailedRequests</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">):</span>
+                <span class="n">fail</span> <span class="o">=</span> <span class="n">FailedRequests</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+                <span class="n">fail</span><span class="o">.</span><span class="n">reason</span> <span class="o">=</span> <span class="n">reason</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">fail</span> <span class="o">=</span> <span class="n">FailedRequests</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="n">reason</span><span class="p">)</span>
+            <span class="n">fail</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">Response</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span><span class="n">response</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="n">status</span><span class="o">.</span><span class="n">HTTP_400_BAD_REQUEST</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_create</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
         <span class="n">data</span> <span class="o">=</span> <span class="n">unwrap_request</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="s2">&quot;institution_id&quot;</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
@@ -1127,27 +1164,32 @@
         <span class="n">serializer</span><span class="o">.</span><span class="n">is_valid</span><span class="p">(</span><span class="n">raise_exception</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="n">title</span> <span class="o">=</span> <span class="n">serializer</span><span class="o">.</span><span class="n">validated_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">title</span><span class="p">:</span>
-            <span class="n">title</span> <span class="o">=</span> <span class="n">title_from_facets</span><span class="p">(</span><span class="n">serializer</span><span class="o">.</span><span class="n">validated_data</span><span class="p">)</span>
+            <span class="n">valid</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">response</span> <span class="o">=</span> <span class="n">title_from_facets</span><span class="p">(</span><span class="n">serializer</span><span class="o">.</span><span class="n">validated_data</span><span class="p">,</span> <span class="n">raise_exceptions</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">valid</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">response</span>
 
-        <span class="k">if</span> <span class="s2">&quot;version&quot;</span> <span class="ow">in</span> <span class="n">request</span><span class="o">.</span><span class="n">data</span><span class="p">:</span>
-            <span class="n">version</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;version&quot;</span><span class="p">]</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">version</span> <span class="o">=</span> <span class="kc">None</span>
-            <span class="n">inst</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s2">&quot;-version&quot;</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">inst</span><span class="p">:</span>
-                <span class="n">version</span> <span class="o">=</span> <span class="n">inst</span><span class="o">.</span><span class="n">last</span><span class="p">()</span><span class="o">.</span><span class="n">version</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">&quot;version&quot;</span> <span class="ow">in</span> <span class="n">request</span><span class="o">.</span><span class="n">data</span><span class="p">:</span>
+                <span class="n">version</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;version&quot;</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">version</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="n">inst</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s2">&quot;-version&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">inst</span><span class="p">:</span>
+                    <span class="n">version</span> <span class="o">=</span> <span class="n">inst</span><span class="o">.</span><span class="n">last</span><span class="p">()</span><span class="o">.</span><span class="n">version</span>
 
-        <span class="n">latest</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="n">version</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">latest</span><span class="p">:</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">latest</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">editable</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">Response</span><span class="p">(</span>
-                    <span class="n">serializer</span><span class="o">.</span><span class="n">validated_data</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="n">status</span><span class="o">.</span><span class="n">HTTP_405_METHOD_NOT_ALLOWED</span>
-                <span class="p">)</span>
+            <span class="n">latest</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="n">version</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">latest</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">latest</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">editable</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">Response</span><span class="p">(</span>
+                        <span class="n">serializer</span><span class="o">.</span><span class="n">validated_data</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="n">status</span><span class="o">.</span><span class="n">HTTP_405_METHOD_NOT_ALLOWED</span>
+                    <span class="p">)</span>
 
-        <span class="k">if</span> <span class="n">publish</span><span class="p">:</span>
-            <span class="n">data</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">check_publish_ok</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
-        <span class="n">data</span> <span class="o">=</span> <span class="n">serializer</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">publish</span><span class="o">=</span><span class="n">publish</span><span class="p">,</span> <span class="n">user_id</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">username</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="n">status</span><span class="o">.</span><span class="n">HTTP_201_CREATED</span><span class="p">)</span></div>
+            <span class="k">if</span> <span class="n">publish</span><span class="p">:</span>
+                <span class="n">data</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">check_publish_ok</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">serializer</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">publish</span><span class="o">=</span><span class="n">publish</span><span class="p">,</span> <span class="n">user_id</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">username</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">True</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">Response</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="n">status</span><span class="o">.</span><span class="n">HTTP_201_CREATED</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">e</span></div>
 
 
 
@@ -1235,7 +1277,7 @@
     <span class="n">model</span> <span class="o">=</span> <span class="n">Citations</span>
     <span class="n">serializer_class</span> <span class="o">=</span> <span class="n">CitationsSerializer</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">redirect_on_success</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">status</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">redirect_on_success</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">valid</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
 
         <span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="n">title</span><span class="p">]</span>
         <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Your citation updates have been submitted and will appear here when they have been processed.&quot;</span>
@@ -1244,7 +1286,7 @@
             <span class="n">args</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Your citations have been submitted and will appear here when they have been processed.&quot;</span>
 
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">status</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">valid</span><span class="p">:</span>
             <span class="n">messages</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="p">,</span>
                 <span class="s2">&quot;DOI Minting has not been completed. The record will remain unpublished until the above issue is resolved.&quot;</span><span class="p">,</span>

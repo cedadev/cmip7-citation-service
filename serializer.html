@@ -65,6 +65,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#citations.serializers.InstitutionsSerializer.fill_data_parameters"><code class="docutils literal notranslate"><span class="pre">InstitutionsSerializer.fill_data_parameters()</span></code></a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.serializers.FailedRequestsSerializer"><code class="docutils literal notranslate"><span class="pre">FailedRequestsSerializer</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#citations.serializers.PartiesSerializer"><code class="docutils literal notranslate"><span class="pre">PartiesSerializer</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#citations.serializers.PartiesSerializer.fill_data_parameters"><code class="docutils literal notranslate"><span class="pre">PartiesSerializer.fill_data_parameters()</span></code></a></li>
 </ul>
@@ -158,7 +159,7 @@ to the models of this application.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="citations.serializers.title_from_facets">
-<span class="sig-prename descclassname"><span class="pre">citations.serializers.</span></span><span class="sig-name descname"><span class="pre">title_from_facets</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">raise_exceptions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="_modules/citations/serializers.html#title_from_facets"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.title_from_facets" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">citations.serializers.</span></span><span class="sig-name descname"><span class="pre">title_from_facets</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">raise_exceptions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span></span></span><a class="reference internal" href="_modules/citations/serializers.html#title_from_facets"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.title_from_facets" title="Link to this definition"></a></dt>
 <dd><p>Validate by generating the expected title from the facets.</p>
 <p>Facet title generation is <cite>project_id</cite> specific. If the <cite>project_id</cite> is not contained
 in the data, this function should not be run, but will return a None value.</p>
@@ -237,6 +238,11 @@ to identify the existing instance.</p>
 </dd></dl>
 
 </dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="citations.serializers.FailedRequestsSerializer">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">citations.serializers.</span></span><span class="sig-name descname"><span class="pre">FailedRequestsSerializer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/serializers.html#FailedRequestsSerializer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.FailedRequestsSerializer" title="Link to this definition"></a></dt>
+<dd></dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="citations.serializers.PartiesSerializer">
