@@ -15,3 +15,8 @@ It is possible to use the citation service to mint DOIs for records as needed. T
 Use of the Citation Service, including reviewing citation records and approving for publication can be found in the Citation Reviewer Guide: https://github.com/cedadev/cmip7-citation-service/blob/main/docs/CitationReviewerGuide.pdf
 
 NOTE: The DataCite publication workflow is not in production as of 14/05/2026, pending the formal agreement of DOI responsibilities with the Consortium leaders at STFC.
+
+## Information for CEDA Staff/Admins
+There is now a `failed/` View on the citation service which captures attempts to create citations via the API that have passed initial checks (permissions, title construction etc.) but have otherwise failed validation for a given reason - typically due to missing elements in the esgvoc API. 
+
+Items which end up in `failed/` can be used to retrigger the automated process after the issue has been resolved, where all STAC items corresponding to the ID listed can be added to a static file and used with a local version of the `cmip7_listeners` package to create the citation record and update all necessary STAC items. Where the citation record has been successfully created, the corresponding item will be removed from the `failed/` view (on next loading of the page). If a citation record fails for a second time, the `reason` value will be updated in the `failed/` view but no duplication of items will take place.
