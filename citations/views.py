@@ -585,6 +585,14 @@ class FailedRequestsView(PaginatedListView):
 
         return super().get_context_data(*args, **kwargs)
 
+    def dispatch(self, request, *args, **kwargs):
+        """
+        Setup for form view
+        """
+        if not request.user.is_superuser:
+            raise PermissionDenied()
+        return super().dispatch(request, *args, **kwargs)
+
 
 class InstitutionsView(PaginatedListView):
     template_name = "institutions.html"
