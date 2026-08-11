@@ -47,7 +47,8 @@ STAC_LABELS = {"driving_experiment_id": "driving_experiment_id"}
 STAC_COLLECTIONS = {
     'cmip7':'CMIP7',
     'cmip6':'CMIP6',
-    'cordex-cmip6':'CORDEX-CMIP6'
+    'cordex-cmip6':'CORDEX-CMIP6',
+    'cmip6plus': 'CMIP6Plus'
 }
 
 # Mapping internal database facets to the User-facing view pages.

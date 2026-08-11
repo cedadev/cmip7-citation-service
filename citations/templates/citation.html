@@ -121,14 +121,29 @@
                 
             </table>
             <br>
-            {% if code_snippet %}
-            <h3><b>Data Access (python)</b></h3>
-            <p><i>Interfacing with the STAC API in python typically requires the pystac client or similar. Below is an example code snippet to fetch items to which this Citation record applies.</i></p>
-            <br>
-            <div class="box">
-                <pre>
+            {% if code_snippet  or stac_query_url%}
+            <h3><b>Data Access</b></h3>
+            <div>
+                {% if stac_query_url %}
+                <h4><b>STAC API Query</b></h4>
+                <p><i>Use this STAC API query to retrieve items corresponding to this citation record.</i></p>
+                <div>
+                <a href="{{ stac_query_url }}">{{ stac_query_url }}</a>
+                </div>
+                <br>
+                {% endif %}
+
+                {% if code_snippet %}
+                <h4>Python Client</h4>
+                <p><i>Interfacing with the STAC API in python typically requires the pystac client or similar. Below is an example code snippet to fetch items to which this Citation record applies.</i></p>
+                <br>
+                <div class="box">
+                    <pre>
 {{ code_snippet }}
-                </pre>
+                    </pre>
+                </div>
+                {% endif %}
+
             </div>
             {% endif %}
 

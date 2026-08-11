@@ -23,8 +23,8 @@ from rest_framework.response import Response
 from slack_sdk import WebClient
 
 from citations.consumer.write import delete_instance
-from citations.external import resolve_drs, resolve_stac_query
-from citations.facet_mappings import ESGVOC_FACET_LABELS, STAC_LABELS
+from citations.external import resolve_drs, resolve_stac_query, get_stac_query
+from citations.facet_mappings import ESGVOC_FACET_LABELS, STAC_LABELS, STAC_COLLECTIONS
 from citations.forms import (
     ContactFormSet,
     EditCitationForm,
@@ -140,7 +140,7 @@ def render_code_snippet(citation_data: dict) -> Union[str, None]:
             "",
             f'cli = Client.open("{settings.STAC_API}")',
             "cli.search(",
-            f'   collections=["{project_id.upper()}"],',
+            f'   collections=["{STAC_COLLECTIONS[project_id]}"],',
             "   query=[",
         ]
         + query
@@ -765,8 +765,10 @@ class CitationView(GenericRenderedView):
                 for ref in citation_data[reference_type]:
                     ref = render_reference_html(ref)
 
-        # 3. Render Code Snippet
+        # 3. Render Code Snippet and Query URL
         context["code_snippet"] = render_code_snippet(citation_data)
+
+        context["stac_query_url"] = get_stac_query(citation_data)
 
         # 4. Render Rights
         context["rights"] = render_rights(citation_data)
