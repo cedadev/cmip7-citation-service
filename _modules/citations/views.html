@@ -99,8 +99,8 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">slack_sdk</span><span class="w"> </span><span class="kn">import</span> <span class="n">WebClient</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">citations.consumer.write</span><span class="w"> </span><span class="kn">import</span> <span class="n">delete_instance</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">citations.external</span><span class="w"> </span><span class="kn">import</span> <span class="n">resolve_drs</span><span class="p">,</span> <span class="n">resolve_stac_query</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">citations.facet_mappings</span><span class="w"> </span><span class="kn">import</span> <span class="n">ESGVOC_FACET_LABELS</span><span class="p">,</span> <span class="n">STAC_LABELS</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">citations.external</span><span class="w"> </span><span class="kn">import</span> <span class="n">resolve_drs</span><span class="p">,</span> <span class="n">resolve_stac_query</span><span class="p">,</span> <span class="n">get_stac_query</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">citations.facet_mappings</span><span class="w"> </span><span class="kn">import</span> <span class="n">ESGVOC_FACET_LABELS</span><span class="p">,</span> <span class="n">STAC_LABELS</span><span class="p">,</span> <span class="n">STAC_COLLECTIONS</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">citations.forms</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">ContactFormSet</span><span class="p">,</span>
     <span class="n">EditCitationForm</span><span class="p">,</span>
@@ -224,7 +224,7 @@
             <span class="s2">&quot;&quot;</span><span class="p">,</span>
             <span class="sa">f</span><span class="s1">&#39;cli = Client.open(&quot;</span><span class="si">{</span><span class="n">settings</span><span class="o">.</span><span class="n">STAC_API</span><span class="si">}</span><span class="s1">&quot;)&#39;</span><span class="p">,</span>
             <span class="s2">&quot;cli.search(&quot;</span><span class="p">,</span>
-            <span class="sa">f</span><span class="s1">&#39;   collections=[&quot;</span><span class="si">{</span><span class="n">project_id</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}</span><span class="s1">&quot;],&#39;</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s1">&#39;   collections=[&quot;</span><span class="si">{</span><span class="n">STAC_COLLECTIONS</span><span class="p">[</span><span class="n">project_id</span><span class="p">]</span><span class="si">}</span><span class="s1">&quot;],&#39;</span><span class="p">,</span>
             <span class="s2">&quot;   query=[&quot;</span><span class="p">,</span>
         <span class="p">]</span>
         <span class="o">+</span> <span class="n">query</span>
@@ -953,8 +953,10 @@
                 <span class="k">for</span> <span class="n">ref</span> <span class="ow">in</span> <span class="n">citation_data</span><span class="p">[</span><span class="n">reference_type</span><span class="p">]:</span>
                     <span class="n">ref</span> <span class="o">=</span> <span class="n">render_reference_html</span><span class="p">(</span><span class="n">ref</span><span class="p">)</span>
 
-        <span class="c1"># 3. Render Code Snippet</span>
+        <span class="c1"># 3. Render Code Snippet and Query URL</span>
         <span class="n">context</span><span class="p">[</span><span class="s2">&quot;code_snippet&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">render_code_snippet</span><span class="p">(</span><span class="n">citation_data</span><span class="p">)</span>
+
+        <span class="n">context</span><span class="p">[</span><span class="s2">&quot;stac_query_url&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">get_stac_query</span><span class="p">(</span><span class="n">citation_data</span><span class="p">)</span>
 
         <span class="c1"># 4. Render Rights</span>
         <span class="n">context</span><span class="p">[</span><span class="s2">&quot;rights&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">render_rights</span><span class="p">(</span><span class="n">citation_data</span><span class="p">)</span>
