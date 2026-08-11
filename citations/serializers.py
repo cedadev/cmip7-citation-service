@@ -157,8 +157,9 @@ def title_from_facets(
     validate_project(project_id)
 
     for label, facet in ESGVOC_FACET_LABELS[project_id].items():
-        if facet not in data:
+        if not data.get(facet, False):
             missing.append(facet)
+            continue
 
         if facet == 'project_id':
             # No longer validating project_id - this is validated separately 
@@ -172,6 +173,9 @@ def title_from_facets(
             raise_exception=raise_exceptions,
             repo=BACKUP_REPOS.get(project_id),
         )
+
+    if len(missing) > 0:
+        raise ValidationError(f'Missing components: {missing}')
 
     if project_id == "cmip7":
         experiments = (
@@ -188,9 +192,6 @@ def title_from_facets(
                 raise ValidationError(
                     f"{data.get('experiment_id')} not valid for {data.get('activity_id')}: Valid experiments are {experiments}"
                 )
-
-    if len(missing) > 0:
-        return missing
 
     return ".".join([data[facet] for facet in ESGVOC_TITLE_LABELS.get(project_id)])
 
