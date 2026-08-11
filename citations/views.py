@@ -898,7 +898,7 @@ class CitationAPIView(GenericAPIView):
     def create(self, request, *args, **kwargs):
 
         try:
-            self._create(request, *args, **kwargs)
+            return self._create(request, *args, **kwargs)
         except Exception as e:
             return Response({"error":e}, status=status.HTTP_400_BAD_REQUEST)
 
