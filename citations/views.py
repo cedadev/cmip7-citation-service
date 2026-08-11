@@ -896,6 +896,13 @@ class CitationAPIView(GenericAPIView):
     ]
 
     def create(self, request, *args, **kwargs):
+
+        try:
+            self._create(request, *args, **kwargs)
+        except Exception as e:
+            return Response({"error":e}, status=status.HTTP_400_BAD_REQUEST)
+
+    def _create(self, request, *args, **kwargs):
         data = unwrap_request(request.data)
 
         if "institution_id" in data:
