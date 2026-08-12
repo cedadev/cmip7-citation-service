@@ -146,7 +146,15 @@ class Citations(models.Model):
     )
 
     # An endpoint for obtaining a list of ESGF urls that can be rendered
-    # data_access =
+
+class CitationParty(models.Model):
+
+    citation = models.ForeignKey(Citations, on_delete=models.CASCADE)
+    party    = models.ForeignKey(Parties, on_delete=models.CASCADE)
+    position = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["position"]
 
 
 def locate_institute(inst: str):

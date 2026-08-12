@@ -23,6 +23,7 @@ from citations.facet_mappings import (
 )
 from citations.models import (
     Citations,
+    CitationParty,
     FundingStreams,
     Institutions,
     Parties,
@@ -63,16 +64,16 @@ def mint_doi_for_data(data: dict, id: str) -> dict | None:
         raise ValidationError('Unable to mint DOI for record with "Citation Support" as primary author.')
 
     creators = [
-        PartiesSerializer(instance=Parties.objects.get(pk=data["primary_id"])).data
+        PartiesSerializer(instance=Parties.objects.get(pk=data["primary_id"])).get_data()
     ] + [
-        PartiesSerializer(instance=Parties.objects.get(pk=pk)).data
+        PartiesSerializer(instance=Parties.objects.get(pk=pk)).get_data()
         for pk in data["contacts"]
     ]
 
     data["creators"] = creators
 
     funders = [
-        FundingStreamsSerializer(instance=FundingStreams.objects.get(pk=pk)).data
+        FundingStreamsSerializer(instance=FundingStreams.objects.get(pk=pk)).get_data()
         for pk in data["funders"]
     ]
 
@@ -80,7 +81,7 @@ def mint_doi_for_data(data: dict, id: str) -> dict | None:
 
     for reltype in ["cites", "is_cited_by", "is_referenced_by"]:
         data[reltype] = [
-            ReferencesSerializer(instance=References.objects.get(pk=pk)).data
+            ReferencesSerializer(instance=References.objects.get(pk=pk)).get_data()
             for pk in data.get(reltype, [])
         ]
 
@@ -402,6 +403,9 @@ def chain_new_objects(
 
 class GenericSerializerMixin(serializers.ModelSerializer):
 
+    def get_data(self):
+        return self.data
+
     def to_internal_value(self, data):
 
         data = data.copy()
@@ -703,6 +707,7 @@ class CitationsSerializer(GenericSerializerMixin):
         required_fields = ["title", "version", "primary"]
         non_replicating_fields = ["experiment_id", "doi_url", "publication_timestamp"]
         id_relations = ["primary"]
+        insert_order_relations = ["contacts"]
 
         relations = [
             "contacts",
@@ -713,6 +718,36 @@ class CitationsSerializer(GenericSerializerMixin):
             "cites",
         ]
         internal_fields = ["editable", "published"]
+
+    def get_data(self):
+        data = dict(self.data)
+        data['contacts'] = self.get_contacts()
+        return data
+
+    def get_contacts(self):
+        contact_relations = CitationParty.objects.filter(citation=self.instance)
+        return [PartiesSerializer(c.party).get_data() for c in contact_relations]
+
+    def _set_order(self, instance, contacts):
+
+        try:
+            for pos, field in enumerate(contacts):
+                c = CitationParty.objects.filter(
+                    citation=instance,
+                    party=Parties.objects.get(id=field),
+                )
+                if c:
+                    c = c[0]
+                    c.position = pos
+                else:
+                    c = CitationParty.objects.create(
+                        citation=instance,
+                        party=Parties.objects.get(id=field),
+                        position=pos
+                    )
+                c.save()
+        except Exception as e:
+            print(e)
 
     def create(self, validated_data):
         """
@@ -738,7 +773,20 @@ class CitationsSerializer(GenericSerializerMixin):
                     )
                 validated_data["title"] = title
 
-        return super().create(validated_data)
+        filtered_data = super().create(validated_data)
+
+        # Ensure correct ordering - parties only
+        instance = Citations.objects.get(id=filtered_data['id'])
+        self._set_order(instance, filtered_data.get('contacts',[]))
+
+        return filtered_data
+
+    def update(self, instance, validated_data: dict):
+
+        filtered_data = super().update(instance, validated_data)
+        self._set_order(instance, filtered_data.get('contacts',[]))
+
+        return filtered_data
 
     def fill_data_parameters(self, data: dict):
         """
@@ -932,8 +980,11 @@ def handle_update(table: str, method: str, content: dict):
                 }
             )
             for r in serializer.Meta.relations:
-                if r in content:
-                    getattr(instance, r).set(content[r])
+                try:
+                    if r in content:
+                        getattr(instance, r).set(content[r])
+                except Exception as e:
+                    print(e)
             instance.save()
 
         case "update":

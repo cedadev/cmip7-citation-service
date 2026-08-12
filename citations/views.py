@@ -43,7 +43,8 @@ from citations.models import (
     Institutions,
     Parties,
     References,
-    FailedRequests
+    FailedRequests,
+    CitationParty
 )
 from citations.serializers import (
     CitationsSerializer,
@@ -158,7 +159,8 @@ def render_cite_as(citation: Citations):
     """
     all_authors = [get_citable_party(citation.primary)]
 
-    for contact in citation.contacts.all():
+    for relation in CitationParty.objects.filter(citation=citation):
+        contact = relation.party
         all_authors.append(get_citable_party(contact))
 
     yyyymmdd = citation.publication_timestamp.split('T')[0].replace('-','')
@@ -166,7 +168,7 @@ def render_cite_as(citation: Citations):
 
     # Add version to cite as?
     return {
-        "title": f'{";".join(all_authors)}. ({yyyy}).',
+        "title": f'{"; ".join(all_authors)}. ({yyyy}).',
         "rotc": f"{citation.title}. v{yyyymmdd}. {settings.PUBLISHER}.",
     }
 
@@ -338,7 +340,7 @@ class GenericRenderedView(TemplateView):
         Handle 404 on getting an instance of a model
         """
         try:
-            return self.serializer_class(self.model.objects.get(pk=pk)).data
+            return self.serializer_class(self.model.objects.get(pk=pk)).get_data()
         except self.model.DoesNotExist:
             raise Http404(f"Requested object ID {pk} not found")
 
@@ -425,7 +427,7 @@ class PaginatedListView(GenericRenderedView):
         """
         Convert queryset to JSON representations
         """
-        return [self.serializer_class(q).data for q in queryset]
+        return [self.serializer_class(q).get_data() for q in queryset]
 
 
 class GenericAPIView(
@@ -614,7 +616,7 @@ class FundingStreamsView(PaginatedListView):
     def adjust_for_UI_render(self, queryset) -> list:
         adj_queryset = []
         for q in queryset:
-            serial = self.serializer_class(q).data
+            serial = self.serializer_class(q).get_data()
             serial["affiliation_id"] = q.affiliation_id
             adj_queryset.append(serial)
         return adj_queryset
@@ -663,7 +665,7 @@ class CitationsView(PaginatedListView):
         # Adjustments for UI rendering
         citations = []
         for citation in queryset:
-            cite = self.serializer_class(citation).data
+            cite = self.serializer_class(citation).get_data()
             cite["primary"] = {
                 "fullname": fullname(cite["primary"]),
                 "id": cite["primary"]["id"],
@@ -688,11 +690,11 @@ class CitationView(GenericRenderedView):
             if Citations.objects.filter(pk=pk):
                 data = CitationsSerializer(
                     Citations.objects.get(pk=pk)
-                ).data
+                ).get_data()
             elif Citations.objects.filter(title=pk):
                 data = CitationsSerializer(
                     Citations.objects.filter(title=pk).order_by("version").last()
-                ).data
+                ).get_data()
             else:
                 raise Http404("The requested citation title does not yet exist.")
 
@@ -722,7 +724,7 @@ class CitationView(GenericRenderedView):
                 citation = Citations.objects.get(title=title, version=vn)
             except Citations.DoesNotExist:
                 raise Http404("The requested citation does not yet exist.")
-            citation_data = CitationsSerializer(citation).data
+            citation_data = CitationsSerializer(citation).get_data()
         else:
             if not version:
                 citation = (
@@ -730,7 +732,7 @@ class CitationView(GenericRenderedView):
                 )
             else:
                 citation = Citations.objects.get(title=title, version=version)
-            citation_data = CitationsSerializer(citation).data
+            citation_data = CitationsSerializer(citation).get_data()
 
         latest_version = (
             Citations.objects.filter(title=title).order_by("version").last().version
@@ -843,7 +845,7 @@ class PartyView(GenericRenderedView):
             raise Http404("Requested party does not exist")
 
         instance = Parties.objects.get(id=pk)
-        context["party"] = PartiesSerializer(instance).data
+        context["party"] = PartiesSerializer(instance).get_data()
 
         primary_citations = [
             {"title": citation.title, "version": citation.version, "id": citation.id}
@@ -933,7 +935,7 @@ class CitationAPIView(GenericAPIView):
 
         if id:
             # Create failure object on not OK creations for partially validated records.
-            reason = response.message
+            reason = getattr(response,'message',str(response))
             if FailedRequests.objects.filter(id=id):
                 fail = FailedRequests.objects.get(id=id)
                 fail.reason = reason
@@ -1504,7 +1506,7 @@ class NewCitationFormView(CitationFormMixin):
                 Citations.objects.filter(title=self.request.GET.get("title"))
                 .order_by("version")
                 .last()
-            ).data
+            ).get_data()
 
         # # Map Internal to External Labels
         # for label, facet in ESGVOC_FACET_LABELS.get(citation_data.get('project_id',''),{}).items():
@@ -1575,7 +1577,7 @@ class EditCitationFormView(CitationFormMixin):
                 f'Citation "{citation.title} (v{citation.version})" is not editable'
             )
 
-        citation_data = CitationsSerializer(citation).data
+        citation_data = CitationsSerializer(citation).get_data()
 
         initial = super().get_initial() | citation_data
         return initial
