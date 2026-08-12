@@ -119,7 +119,8 @@
     <span class="n">Institutions</span><span class="p">,</span>
     <span class="n">Parties</span><span class="p">,</span>
     <span class="n">References</span><span class="p">,</span>
-    <span class="n">FailedRequests</span>
+    <span class="n">FailedRequests</span><span class="p">,</span>
+    <span class="n">CitationParty</span>
 <span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">citations.serializers</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">CitationsSerializer</span><span class="p">,</span>
@@ -245,7 +246,8 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">all_authors</span> <span class="o">=</span> <span class="p">[</span><span class="n">get_citable_party</span><span class="p">(</span><span class="n">citation</span><span class="o">.</span><span class="n">primary</span><span class="p">)]</span>
 
-    <span class="k">for</span> <span class="n">contact</span> <span class="ow">in</span> <span class="n">citation</span><span class="o">.</span><span class="n">contacts</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+    <span class="k">for</span> <span class="n">relation</span> <span class="ow">in</span> <span class="n">CitationParty</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">citation</span><span class="o">=</span><span class="n">citation</span><span class="p">):</span>
+        <span class="n">contact</span> <span class="o">=</span> <span class="n">relation</span><span class="o">.</span><span class="n">party</span>
         <span class="n">all_authors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">get_citable_party</span><span class="p">(</span><span class="n">contact</span><span class="p">))</span>
 
     <span class="n">yyyymmdd</span> <span class="o">=</span> <span class="n">citation</span><span class="o">.</span><span class="n">publication_timestamp</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;T&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">,</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
@@ -253,7 +255,7 @@
 
     <span class="c1"># Add version to cite as?</span>
     <span class="k">return</span> <span class="p">{</span>
-        <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="s2">&quot;;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">all_authors</span><span class="p">)</span><span class="si">}</span><span class="s1">. (</span><span class="si">{</span><span class="n">yyyy</span><span class="si">}</span><span class="s1">).&#39;</span><span class="p">,</span>
+        <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="s2">&quot;; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">all_authors</span><span class="p">)</span><span class="si">}</span><span class="s1">. (</span><span class="si">{</span><span class="n">yyyy</span><span class="si">}</span><span class="s1">).&#39;</span><span class="p">,</span>
         <span class="s2">&quot;rotc&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">citation</span><span class="o">.</span><span class="n">title</span><span class="si">}</span><span class="s2">. v</span><span class="si">{</span><span class="n">yyyymmdd</span><span class="si">}</span><span class="s2">. </span><span class="si">{</span><span class="n">settings</span><span class="o">.</span><span class="n">PUBLISHER</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">,</span>
     <span class="p">}</span></div>
 
@@ -454,7 +456,7 @@
 <span class="sd">        Handle 404 on getting an instance of a model</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">serializer_class</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">pk</span><span class="p">))</span><span class="o">.</span><span class="n">data</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">serializer_class</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">pk</span><span class="p">))</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
         <span class="k">except</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">DoesNotExist</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">Http404</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Requested object ID </span><span class="si">{</span><span class="n">pk</span><span class="si">}</span><span class="s2"> not found&quot;</span><span class="p">)</span></div>
 </div>
@@ -556,7 +558,7 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Convert queryset to JSON representations</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">serializer_class</span><span class="p">(</span><span class="n">q</span><span class="p">)</span><span class="o">.</span><span class="n">data</span> <span class="k">for</span> <span class="n">q</span> <span class="ow">in</span> <span class="n">queryset</span><span class="p">]</span></div>
+        <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">serializer_class</span><span class="p">(</span><span class="n">q</span><span class="p">)</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span> <span class="k">for</span> <span class="n">q</span> <span class="ow">in</span> <span class="n">queryset</span><span class="p">]</span></div>
 </div>
 
 
@@ -784,7 +786,7 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">adjust_for_UI_render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queryset</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
         <span class="n">adj_queryset</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">q</span> <span class="ow">in</span> <span class="n">queryset</span><span class="p">:</span>
-            <span class="n">serial</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">serializer_class</span><span class="p">(</span><span class="n">q</span><span class="p">)</span><span class="o">.</span><span class="n">data</span>
+            <span class="n">serial</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">serializer_class</span><span class="p">(</span><span class="n">q</span><span class="p">)</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
             <span class="n">serial</span><span class="p">[</span><span class="s2">&quot;affiliation_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">q</span><span class="o">.</span><span class="n">affiliation_id</span>
             <span class="n">adj_queryset</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">serial</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">adj_queryset</span></div>
@@ -845,7 +847,7 @@
         <span class="c1"># Adjustments for UI rendering</span>
         <span class="n">citations</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">citation</span> <span class="ow">in</span> <span class="n">queryset</span><span class="p">:</span>
-            <span class="n">cite</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">serializer_class</span><span class="p">(</span><span class="n">citation</span><span class="p">)</span><span class="o">.</span><span class="n">data</span>
+            <span class="n">cite</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">serializer_class</span><span class="p">(</span><span class="n">citation</span><span class="p">)</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
             <span class="n">cite</span><span class="p">[</span><span class="s2">&quot;primary&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
                 <span class="s2">&quot;fullname&quot;</span><span class="p">:</span> <span class="n">fullname</span><span class="p">(</span><span class="n">cite</span><span class="p">[</span><span class="s2">&quot;primary&quot;</span><span class="p">]),</span>
                 <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">cite</span><span class="p">[</span><span class="s2">&quot;primary&quot;</span><span class="p">][</span><span class="s2">&quot;id&quot;</span><span class="p">],</span>
@@ -874,11 +876,11 @@
             <span class="k">if</span> <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">pk</span><span class="p">):</span>
                 <span class="n">data</span> <span class="o">=</span> <span class="n">CitationsSerializer</span><span class="p">(</span>
                     <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">pk</span><span class="p">)</span>
-                <span class="p">)</span><span class="o">.</span><span class="n">data</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
             <span class="k">elif</span> <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">pk</span><span class="p">):</span>
                 <span class="n">data</span> <span class="o">=</span> <span class="n">CitationsSerializer</span><span class="p">(</span>
                     <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">pk</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">last</span><span class="p">()</span>
-                <span class="p">)</span><span class="o">.</span><span class="n">data</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="n">Http404</span><span class="p">(</span><span class="s2">&quot;The requested citation title does not yet exist.&quot;</span><span class="p">)</span>
 
@@ -910,7 +912,7 @@
                 <span class="n">citation</span> <span class="o">=</span> <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="n">vn</span><span class="p">)</span>
             <span class="k">except</span> <span class="n">Citations</span><span class="o">.</span><span class="n">DoesNotExist</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="n">Http404</span><span class="p">(</span><span class="s2">&quot;The requested citation does not yet exist.&quot;</span><span class="p">)</span>
-            <span class="n">citation_data</span> <span class="o">=</span> <span class="n">CitationsSerializer</span><span class="p">(</span><span class="n">citation</span><span class="p">)</span><span class="o">.</span><span class="n">data</span>
+            <span class="n">citation_data</span> <span class="o">=</span> <span class="n">CitationsSerializer</span><span class="p">(</span><span class="n">citation</span><span class="p">)</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">version</span><span class="p">:</span>
                 <span class="n">citation</span> <span class="o">=</span> <span class="p">(</span>
@@ -918,7 +920,7 @@
                 <span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">citation</span> <span class="o">=</span> <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="n">version</span><span class="p">)</span>
-            <span class="n">citation_data</span> <span class="o">=</span> <span class="n">CitationsSerializer</span><span class="p">(</span><span class="n">citation</span><span class="p">)</span><span class="o">.</span><span class="n">data</span>
+            <span class="n">citation_data</span> <span class="o">=</span> <span class="n">CitationsSerializer</span><span class="p">(</span><span class="n">citation</span><span class="p">)</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
 
         <span class="n">latest_version</span> <span class="o">=</span> <span class="p">(</span>
             <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">last</span><span class="p">()</span><span class="o">.</span><span class="n">version</span>
@@ -1049,7 +1051,7 @@
             <span class="k">raise</span> <span class="n">Http404</span><span class="p">(</span><span class="s2">&quot;Requested party does not exist&quot;</span><span class="p">)</span>
 
         <span class="n">instance</span> <span class="o">=</span> <span class="n">Parties</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">pk</span><span class="p">)</span>
-        <span class="n">context</span><span class="p">[</span><span class="s2">&quot;party&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">PartiesSerializer</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span><span class="o">.</span><span class="n">data</span>
+        <span class="n">context</span><span class="p">[</span><span class="s2">&quot;party&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">PartiesSerializer</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
 
         <span class="n">primary_citations</span> <span class="o">=</span> <span class="p">[</span>
             <span class="p">{</span><span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="n">citation</span><span class="o">.</span><span class="n">title</span><span class="p">,</span> <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="n">citation</span><span class="o">.</span><span class="n">version</span><span class="p">,</span> <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">citation</span><span class="o">.</span><span class="n">id</span><span class="p">}</span>
@@ -1155,7 +1157,7 @@
 
         <span class="k">if</span> <span class="nb">id</span><span class="p">:</span>
             <span class="c1"># Create failure object on not OK creations for partially validated records.</span>
-            <span class="n">reason</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">message</span>
+            <span class="n">reason</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">response</span><span class="p">,</span><span class="s1">&#39;message&#39;</span><span class="p">,</span><span class="nb">str</span><span class="p">(</span><span class="n">response</span><span class="p">))</span>
             <span class="k">if</span> <span class="n">FailedRequests</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">):</span>
                 <span class="n">fail</span> <span class="o">=</span> <span class="n">FailedRequests</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
                 <span class="n">fail</span><span class="o">.</span><span class="n">reason</span> <span class="o">=</span> <span class="n">reason</span>
@@ -1752,7 +1754,7 @@
                 <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">))</span>
                 <span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">)</span>
                 <span class="o">.</span><span class="n">last</span><span class="p">()</span>
-            <span class="p">)</span><span class="o">.</span><span class="n">data</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
 
         <span class="c1"># # Map Internal to External Labels</span>
         <span class="c1"># for label, facet in ESGVOC_FACET_LABELS.get(citation_data.get(&#39;project_id&#39;,&#39;&#39;),{}).items():</span>
@@ -1835,7 +1837,7 @@
                 <span class="sa">f</span><span class="s1">&#39;Citation &quot;</span><span class="si">{</span><span class="n">citation</span><span class="o">.</span><span class="n">title</span><span class="si">}</span><span class="s1"> (v</span><span class="si">{</span><span class="n">citation</span><span class="o">.</span><span class="n">version</span><span class="si">}</span><span class="s1">)&quot; is not editable&#39;</span>
             <span class="p">)</span>
 
-        <span class="n">citation_data</span> <span class="o">=</span> <span class="n">CitationsSerializer</span><span class="p">(</span><span class="n">citation</span><span class="p">)</span><span class="o">.</span><span class="n">data</span>
+        <span class="n">citation_data</span> <span class="o">=</span> <span class="n">CitationsSerializer</span><span class="p">(</span><span class="n">citation</span><span class="p">)</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
 
         <span class="n">initial</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_initial</span><span class="p">()</span> <span class="o">|</span> <span class="n">citation_data</span>
         <span class="k">return</span> <span class="n">initial</span></div>

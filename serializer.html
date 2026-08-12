@@ -80,6 +80,7 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#citations.serializers.CitationsSerializer"><code class="docutils literal notranslate"><span class="pre">CitationsSerializer</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#citations.serializers.CitationsSerializer.create"><code class="docutils literal notranslate"><span class="pre">CitationsSerializer.create()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.serializers.CitationsSerializer.update"><code class="docutils literal notranslate"><span class="pre">CitationsSerializer.update()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#citations.serializers.CitationsSerializer.fill_data_parameters"><code class="docutils literal notranslate"><span class="pre">CitationsSerializer.fill_data_parameters()</span></code></a></li>
 </ul>
 </li>
@@ -136,6 +137,9 @@
 </ul>
 </dd>
 </dl>
+<p>Special notes on the citation auto-generation:
+- The citation listener (see <code class="docutils literal notranslate"><span class="pre">cmip7_listeners</span></code>) will add the user <code class="docutils literal notranslate"><span class="pre">Citation</span> <span class="pre">Support</span></code> to all auto-generated Citation records where a primary author has not been provided. For specific records (i.e some CORDEX records archived with WDC) a mapping exists to provide author lists instead.
+- Authors (parties) added to a citation record will always present in the order they were given, including for the <code class="docutils literal notranslate"><span class="pre">Cite</span> <span class="pre">As</span></code> property on publication. This includes where the author list has been extracted from the WDC or another API by the listener and the order preserved on exporting to the citation service.</p>
 <p>See below for a list of the functions used to fill content in the records.</p>
 <dl class="py function" id="module-citations.serializers">
 <dt class="sig sig-object py" id="citations.serializers.mint_doi_for_data">
@@ -285,6 +289,12 @@ to identify the existing instance.</p>
 <span class="sig-name descname"><span class="pre">create</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">validated_data</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/serializers.html#CitationsSerializer.create"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.CitationsSerializer.create" title="Link to this definition"></a></dt>
 <dd><p>Apply extra validation to the citation record.</p>
 <p>This validates the <code class="docutils literal notranslate"><span class="pre">search_facets</span></code> if they have been provided to this record.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.serializers.CitationsSerializer.update">
+<span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">instance</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validated_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/serializers.html#CitationsSerializer.update"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.serializers.CitationsSerializer.update" title="Link to this definition"></a></dt>
+<dd><p>Update and return an existing instance, given the validated data.</p>
 </dd></dl>
 
 <dl class="py method">

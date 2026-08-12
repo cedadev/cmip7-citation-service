@@ -222,7 +222,15 @@
     <span class="p">)</span>
 
     <span class="c1"># An endpoint for obtaining a list of ESGF urls that can be rendered</span>
-    <span class="c1"># data_access =</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">CitationParty</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+
+    <span class="n">citation</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="n">Citations</span><span class="p">,</span> <span class="n">on_delete</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CASCADE</span><span class="p">)</span>
+    <span class="n">party</span>    <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="n">Parties</span><span class="p">,</span> <span class="n">on_delete</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CASCADE</span><span class="p">)</span>
+    <span class="n">position</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">PositiveIntegerField</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="k">class</span><span class="w"> </span><span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">ordering</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;position&quot;</span><span class="p">]</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">locate_institute</span><span class="p">(</span><span class="n">inst</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
