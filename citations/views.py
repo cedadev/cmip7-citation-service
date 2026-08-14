@@ -943,23 +943,26 @@ class CitationAPIView(GenericAPIView):
                 fail = FailedRequests.objects.create(id=id, reason=reason)
             fail.save()
 
-        return Response({"error":response}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            _ = json.dumps({"error":response})
+            error = {"error":response}
+        except Exception as e:
+            error = {"error": str(response)}
+
+        return Response(error, status=status.HTTP_400_BAD_REQUEST)
 
     def _create(self, request, *args, **kwargs) -> tuple:
         data = unwrap_request(request.data)
-
-        if "institution_id" in data:
-            create_new_permission(request.user, data["institution_id"])
 
         publish = data.pop("publish_on_save", None)
 
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
+
+        if "institution_id" in data:
+            create_new_permission(request.user, data["institution_id"])
+            
         title = serializer.validated_data.get("title")
-        if not title:
-            valid, title, response = title_from_facets(serializer.validated_data, raise_exceptions=False)
-            if not valid:
-                return False, title, response
 
         try:
             if "version" in request.data:

@@ -355,6 +355,7 @@ def chain_new_objects(
     filter_kwargs: list,
     optionals: list = None,
     allow_update: bool = False,
+    user_id: str | None = None
 ) -> str:
     """
     Create new model instances if required, or return the ID of the existing instance.
@@ -372,14 +373,14 @@ def chain_new_objects(
 
     # Create instance if not specified.
     if not instance:
-        serial = serializer(data=data)
+        serial = serializer(data=data | {'user_id':user_id})
         serial.is_valid(raise_exception=True)
         serial.save()
         inst_pk = serial.instance["id"]
     else:
         # Update the existing record with new data - if allowed
         instance = instance[0]
-        serial = serializer(data=data, instance=instance)
+        serial = serializer(data=data | {'user_id':user_id}, instance=instance)
 
         serial.is_valid(raise_exception=True)
         update = False
@@ -415,14 +416,14 @@ class GenericSerializerMixin(serializers.ModelSerializer):
 
         return data
 
-    def filter_data(self, validated_data: dict) -> dict:
+    def filter_data(self, validated_data: dict, user_id: str) -> dict:
         """
         Filter out unrecognised parameters.
 
         Also runs the `fill_data_parameters` method to auto-generate content.
         """
         filtered_data = {}
-        validated_data = self.fill_data_parameters(validated_data)
+        validated_data = self.fill_data_parameters(validated_data, user_id=user_id)
         for k in list(validated_data.keys()):
             if (
                 k in self.Meta.fields
@@ -451,7 +452,7 @@ class GenericSerializerMixin(serializers.ModelSerializer):
         publish: bool = validated_data.pop("publish", False)
         user_id: str = validated_data.pop("user_id", "anon")
 
-        filtered_data = self.filter_data(validated_data)
+        filtered_data = self.filter_data(validated_data, user_id=user_id)
 
         # Check for required fields
         for k in self.Meta.required_fields:
@@ -502,7 +503,7 @@ class GenericSerializerMixin(serializers.ModelSerializer):
         publish: bool = validated_data.pop("publish", False)
         user_id: str = validated_data.pop("user_id", "anon")
 
-        filtered_data = self.filter_data(validated_data)
+        filtered_data = self.filter_data(validated_data, user_id=user_id)
         filtered_data = self.replace_id_relations(filtered_data)
         id = filtered_data.pop("id", None)
 
@@ -541,7 +542,7 @@ class InstitutionsSerializer(GenericSerializerMixin):
         relations = []
         internal_fields = []
 
-    def fill_data_parameters(self, data):
+    def fill_data_parameters(self, data, *args, **kwargs):
         """
         Auto-fill content into the data dict.
         """
@@ -560,7 +561,7 @@ class FailedRequestsSerializer(GenericSerializerMixin):
         required_fields = ['id', 'reason']
         fields = required_fields
 
-    def fill_data_parameters(self, data):
+    def fill_data_parameters(self, data: dict, *args, **kwargs):
         return data
 
 class PartiesSerializer(GenericSerializerMixin):
@@ -574,7 +575,7 @@ class PartiesSerializer(GenericSerializerMixin):
         relations = ["affiliations"]
         internal_fields = []
 
-    def fill_data_parameters(self, data):
+    def fill_data_parameters(self, data: dict, user_id: str):
         """
         Auto-fill content into the data dict.
         """
@@ -599,6 +600,7 @@ class PartiesSerializer(GenericSerializerMixin):
                     InstitutionsSerializer,
                     Institutions,
                     filter_kwargs={"name": a},
+                    user_id=user_id
                 )
                 for a in affiliation_data
             ]
@@ -627,7 +629,7 @@ class FundingStreamsSerializer(GenericSerializerMixin):
         id_relations = ["affiliation"]
         internal_fields = []
 
-    def fill_data_parameters(self, data):
+    def fill_data_parameters(self, data: dict, user_id: str):
         """
         Auto-fill content into the data dict.
         """
@@ -640,6 +642,7 @@ class FundingStreamsSerializer(GenericSerializerMixin):
                 InstitutionsSerializer,
                 Institutions,
                 filter_kwargs={"name": affiliation},
+                user_id=user_id
             )
 
         if "id" not in data:
@@ -659,7 +662,7 @@ class ReferencesSerializer(GenericSerializerMixin):
         field_mappings = {"DOI": "id"}
         internal_fields = []
 
-    def fill_data_parameters(self, data):
+    def fill_data_parameters(self, data: dict, *args, **kwargs):
         """
         No data filling for references
         """
@@ -719,6 +722,27 @@ class CitationsSerializer(GenericSerializerMixin):
         ]
         internal_fields = ["editable", "published"]
 
+    def is_valid(self, *args, raise_exception: bool = False, **kwargs):
+        super().is_valid(*args, raise_exception=raise_exception, **kwargs)
+
+        if "project_id" not in self._validated_data:
+            if raise_exception:
+                raise ValidationError('Missing "project_id" for citation.')
+
+        # Custom validation here.
+        _, title, _ = title_from_facets(self._validated_data, raise_exceptions=raise_exception)
+
+        if not bool(self._validated_data.get("title", False)):
+            if not title:
+                raise ValidationError(
+                    "Missing the `project_id` facet and no other title provided."
+                )
+            elif isinstance(title, list):
+                raise ValidationError(
+                    f"Missing facets: {title} - unable to generate title and no title provided."
+                )
+            self._validated_data["title"] = title
+
     def get_data(self):
         data = dict(self.data)
         data['contacts'] = self.get_contacts()
@@ -757,21 +781,6 @@ class CitationsSerializer(GenericSerializerMixin):
         """
 
         # Enforces valid facets for all records - but don't have to match title structure.
-        if "project_id" in validated_data:
-
-            # Validate by assembling expected title - if the search facets are provided.
-            _, title, _ = title_from_facets(validated_data, raise_exceptions=True)
-
-            if not bool(validated_data.get("title", False)):
-                if not title:
-                    raise ValidationError(
-                        "Missing the `project_id` facet and no other title provided."
-                    )
-                elif isinstance(title, list):
-                    raise ValidationError(
-                        f"Missing facets: {title} - unable to generate title and no title provided."
-                    )
-                validated_data["title"] = title
 
         filtered_data = super().create(validated_data)
 
@@ -788,7 +797,7 @@ class CitationsSerializer(GenericSerializerMixin):
 
         return filtered_data
 
-    def fill_data_parameters(self, data: dict):
+    def fill_data_parameters(self, data: dict, user_id: str):
         """
         Update the data in a POST request.
 
@@ -826,6 +835,7 @@ class CitationsSerializer(GenericSerializerMixin):
                 Institutions,
                 filter_kwargs={"name": inst_data["name"]},
                 allow_update=True,
+                user_id=user_id
             )
             if "institutions" not in data:
                 data["institutions"] = []
@@ -857,6 +867,7 @@ class CitationsSerializer(GenericSerializerMixin):
                     Parties,
                     filter_kwargs=PartiesSerializer.Meta.required_fields,
                     optionals=optional_party,
+                    user_id=user_id
                 )
                 primary = search_primary
             data["primary_id"] = primary
@@ -871,6 +882,7 @@ class CitationsSerializer(GenericSerializerMixin):
                         Parties,
                         filter_kwargs=PartiesSerializer.Meta.required_fields,
                         optionals=optional_party,
+                        user_id=user_id
                     )
                     contacts.append(search_contact)
                 else:
@@ -887,6 +899,7 @@ class CitationsSerializer(GenericSerializerMixin):
                         FundingStreamsSerializer,
                         FundingStreams,
                         filter_kwargs=FundingStreamsSerializer.Meta.required_fields,
+                        user_id=user_id
                     )
                     funders.append(search_funder)
                 else:
@@ -903,6 +916,7 @@ class CitationsSerializer(GenericSerializerMixin):
                         InstitutionsSerializer,
                         Institutions,
                         filter_kwargs=InstitutionsSerializer.Meta.required_fields,
+                        user_id=user_id
                     )
                     institutions.append(search_institution)
                 else:
@@ -922,6 +936,7 @@ class CitationsSerializer(GenericSerializerMixin):
                         References,
                         filter_kwargs=ReferencesSerializer.Meta.required_fields,
                         allow_update=True,
+                        user_id=user_id
                     )
                     references.append(reference)
                 else:
