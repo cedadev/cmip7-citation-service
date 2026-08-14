@@ -1067,7 +1067,7 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
     model = Citations
     serializer_class = CitationsSerializer
 
-    def redirect_on_success(self, title: str = None, valid: bool = True):
+    def redirect_on_success(self, title: str = None, failed_publish: bool = False):
 
         args = [title]
         msg = "Your citation updates have been submitted and will appear here when they have been processed."
@@ -1076,7 +1076,7 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
             args = None
             msg = "Your citations have been submitted and will appear here when they have been processed."
 
-        if not valid:
+        if failed_publish:
             messages.error(
                 self.request,
                 "DOI Minting has not been completed. The record will remain unpublished until the above issue is resolved.",
@@ -1238,12 +1238,22 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
         Clean data from a formset and determine if updates are required
         """
         pks = []
-        for fd in formset:
+        form_set_iter = formset
+        if hasattr(formset, "ordered_forms"):
+            form_set_iter = formset.ordered_forms
+
+        for fd in form_set_iter:
 
             if not fd:
                 continue
+
             formdata = dict(getattr(fd, "cleaned_data", {}))
+            formdata.pop('ORDER',None)
+
             if not formdata:
+                continue
+
+            if all(not v for v in formdata.values()):
                 continue
 
             filter_kwargs = {
@@ -1343,7 +1353,11 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
             funder_formset,
             reference_formset,
         ]:
-            for form_pt in formset:
+            form_set_iter = formset
+            if hasattr(formset, "ordered_forms"):
+                form_set_iter = formset.ordered_forms
+            
+            for form_pt in form_set_iter:
                 if not form_pt.is_valid() and not form_pt.empty_permitted:
 
                     if formset == reference_formset:
@@ -1461,15 +1475,18 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
                 if publish:
                     obj, pubstatus = check_publish_ok(self.request, obj)
 
+            # pubstatus = True if publication either successful or not run
+            # pubstatus = False only if publication is unsuccessful
+
             if len(replicas) > 0:
-                return self.redirect_on_success(status=pubstatus)
+                return self.redirect_on_success(failed_publish = not pubstatus)
 
         if "institution_id" in serializer.validated_data:
             create_new_permission(
                 self.request.user, serializer.validated_data["institution_id"]
             )
 
-        return self.redirect_on_success(title=obj["title"], status=pubstatus)
+        return self.redirect_on_success(title=obj["title"], failed_publish = not pubstatus)
 
 
 class NewCitationFormView(CitationFormMixin):
@@ -1545,7 +1562,7 @@ class EditCitationFormView(CitationFormMixin):
 
         # Handle edits to the joined attributes
 
-        formset_data = self.create_from_formsets(form, title=instance.title)
+        formset_data = self.create_from_formsets(form, title=instance.title, pk=instance.id)
         if not isinstance(formset_data, dict):
             return formset_data
         data.update(formset_data)
@@ -1624,8 +1641,10 @@ class EditCitationFormView(CitationFormMixin):
     def get_context_data(self, pk: str, **kwargs):
 
         citation = Citations.objects.get(pk=pk)
+        kwargs['title'] = citation.title
+        kwargs['version'] = citation.version
 
-        context = super().get_context_data(title=citation.title, version=citation.version, **kwargs)
+        context = super().get_context_data(**kwargs)
 
         # In order to be publishable, a record must have an empty DOI URL slot
         # - Already determined as editable if we're at this stage.
