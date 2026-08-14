@@ -1346,18 +1346,13 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
 
         errors = 0
 
+        # Check all forms for errors - this does not involve creating new entries yet
         error_map = {}
-        for formset in [
-            contact_formset,
-            institution_formset,
-            funder_formset,
-            reference_formset,
-        ]:
-            form_set_iter = formset
-            if hasattr(formset, "ordered_forms"):
-                form_set_iter = formset.ordered_forms
-            
-            for form_pt in form_set_iter:
+        for formset in [contact_formset,institution_formset,
+                funder_formset, reference_formset]:
+        
+            # Don't need correct form order when validating
+            for form_pt in formset:
                 if not form_pt.is_valid() and not form_pt.empty_permitted:
 
                     if formset == reference_formset:
