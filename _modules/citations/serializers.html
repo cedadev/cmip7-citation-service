@@ -451,6 +451,7 @@
     <span class="n">filter_kwargs</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
     <span class="n">optionals</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">allow_update</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Create new model instances if required, or return the ID of the existing instance.</span>
@@ -468,14 +469,14 @@
 
     <span class="c1"># Create instance if not specified.</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">instance</span><span class="p">:</span>
-        <span class="n">serial</span> <span class="o">=</span> <span class="n">serializer</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">serial</span> <span class="o">=</span> <span class="n">serializer</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span> <span class="o">|</span> <span class="p">{</span><span class="s1">&#39;user_id&#39;</span><span class="p">:</span><span class="n">user_id</span><span class="p">})</span>
         <span class="n">serial</span><span class="o">.</span><span class="n">is_valid</span><span class="p">(</span><span class="n">raise_exception</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="n">serial</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
         <span class="n">inst_pk</span> <span class="o">=</span> <span class="n">serial</span><span class="o">.</span><span class="n">instance</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="c1"># Update the existing record with new data - if allowed</span>
         <span class="n">instance</span> <span class="o">=</span> <span class="n">instance</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="n">serial</span> <span class="o">=</span> <span class="n">serializer</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">instance</span><span class="o">=</span><span class="n">instance</span><span class="p">)</span>
+        <span class="n">serial</span> <span class="o">=</span> <span class="n">serializer</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span> <span class="o">|</span> <span class="p">{</span><span class="s1">&#39;user_id&#39;</span><span class="p">:</span><span class="n">user_id</span><span class="p">},</span> <span class="n">instance</span><span class="o">=</span><span class="n">instance</span><span class="p">)</span>
 
         <span class="n">serial</span><span class="o">.</span><span class="n">is_valid</span><span class="p">(</span><span class="n">raise_exception</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="n">update</span> <span class="o">=</span> <span class="kc">False</span>
@@ -519,14 +520,14 @@
 
 <div class="viewcode-block" id="GenericSerializerMixin.filter_data">
 <a class="viewcode-back" href="../../serializer.html#citations.serializers.GenericSerializerMixin.filter_data">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">filter_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">validated_data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">filter_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">validated_data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Filter out unrecognised parameters.</span>
 
 <span class="sd">        Also runs the `fill_data_parameters` method to auto-generate content.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">filtered_data</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="n">validated_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fill_data_parameters</span><span class="p">(</span><span class="n">validated_data</span><span class="p">)</span>
+        <span class="n">validated_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fill_data_parameters</span><span class="p">(</span><span class="n">validated_data</span><span class="p">,</span> <span class="n">user_id</span><span class="o">=</span><span class="n">user_id</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">validated_data</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
             <span class="k">if</span> <span class="p">(</span>
                 <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">fields</span>
@@ -561,7 +562,7 @@
         <span class="n">publish</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">validated_data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;publish&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
         <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">validated_data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;user_id&quot;</span><span class="p">,</span> <span class="s2">&quot;anon&quot;</span><span class="p">)</span>
 
-        <span class="n">filtered_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter_data</span><span class="p">(</span><span class="n">validated_data</span><span class="p">)</span>
+        <span class="n">filtered_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter_data</span><span class="p">(</span><span class="n">validated_data</span><span class="p">,</span> <span class="n">user_id</span><span class="o">=</span><span class="n">user_id</span><span class="p">)</span>
 
         <span class="c1"># Check for required fields</span>
         <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">required_fields</span><span class="p">:</span>
@@ -615,7 +616,7 @@
         <span class="n">publish</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">validated_data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;publish&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
         <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">validated_data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;user_id&quot;</span><span class="p">,</span> <span class="s2">&quot;anon&quot;</span><span class="p">)</span>
 
-        <span class="n">filtered_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter_data</span><span class="p">(</span><span class="n">validated_data</span><span class="p">)</span>
+        <span class="n">filtered_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter_data</span><span class="p">(</span><span class="n">validated_data</span><span class="p">,</span> <span class="n">user_id</span><span class="o">=</span><span class="n">user_id</span><span class="p">)</span>
         <span class="n">filtered_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">replace_id_relations</span><span class="p">(</span><span class="n">filtered_data</span><span class="p">)</span>
         <span class="nb">id</span> <span class="o">=</span> <span class="n">filtered_data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 
@@ -660,7 +661,7 @@
 
 <div class="viewcode-block" id="InstitutionsSerializer.fill_data_parameters">
 <a class="viewcode-back" href="../../serializer.html#citations.serializers.InstitutionsSerializer.fill_data_parameters">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">fill_data_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fill_data_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Auto-fill content into the data dict.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -683,7 +684,7 @@
         <span class="n">required_fields</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">,</span> <span class="s1">&#39;reason&#39;</span><span class="p">]</span>
         <span class="n">fields</span> <span class="o">=</span> <span class="n">required_fields</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">fill_data_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fill_data_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">data</span></div>
 
 
@@ -702,7 +703,7 @@
 
 <div class="viewcode-block" id="PartiesSerializer.fill_data_parameters">
 <a class="viewcode-back" href="../../serializer.html#citations.serializers.PartiesSerializer.fill_data_parameters">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">fill_data_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fill_data_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Auto-fill content into the data dict.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -727,6 +728,7 @@
                     <span class="n">InstitutionsSerializer</span><span class="p">,</span>
                     <span class="n">Institutions</span><span class="p">,</span>
                     <span class="n">filter_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">a</span><span class="p">},</span>
+                    <span class="n">user_id</span><span class="o">=</span><span class="n">user_id</span>
                 <span class="p">)</span>
                 <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">affiliation_data</span>
             <span class="p">]</span>
@@ -761,7 +763,7 @@
 
 <div class="viewcode-block" id="FundingStreamsSerializer.fill_data_parameters">
 <a class="viewcode-back" href="../../serializer.html#citations.serializers.FundingStreamsSerializer.fill_data_parameters">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">fill_data_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fill_data_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Auto-fill content into the data dict.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -774,6 +776,7 @@
                 <span class="n">InstitutionsSerializer</span><span class="p">,</span>
                 <span class="n">Institutions</span><span class="p">,</span>
                 <span class="n">filter_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">affiliation</span><span class="p">},</span>
+                <span class="n">user_id</span><span class="o">=</span><span class="n">user_id</span>
             <span class="p">)</span>
 
         <span class="k">if</span> <span class="s2">&quot;id&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
@@ -799,7 +802,7 @@
 
 <div class="viewcode-block" id="ReferencesSerializer.fill_data_parameters">
 <a class="viewcode-back" href="../../serializer.html#citations.serializers.ReferencesSerializer.fill_data_parameters">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">fill_data_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fill_data_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        No data filling for references</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -863,6 +866,27 @@
         <span class="p">]</span>
         <span class="n">internal_fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;editable&quot;</span><span class="p">,</span> <span class="s2">&quot;published&quot;</span><span class="p">]</span>
 
+    <span class="k">def</span><span class="w"> </span><span class="nf">is_valid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">raise_exception</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">is_valid</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">raise_exception</span><span class="o">=</span><span class="n">raise_exception</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="s2">&quot;project_id&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validated_data</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">raise_exception</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span><span class="s1">&#39;Missing &quot;project_id&quot; for citation.&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Custom validation here.</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">title_from_facets</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_validated_data</span><span class="p">,</span> <span class="n">raise_exceptions</span><span class="o">=</span><span class="n">raise_exception</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">bool</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_validated_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">title</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span>
+                    <span class="s2">&quot;Missing the `project_id` facet and no other title provided.&quot;</span>
+                <span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">title</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Missing facets: </span><span class="si">{</span><span class="n">title</span><span class="si">}</span><span class="s2"> - unable to generate title and no title provided.&quot;</span>
+                <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_validated_data</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">title</span>
+
     <span class="k">def</span><span class="w"> </span><span class="nf">get_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">data</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
         <span class="n">data</span><span class="p">[</span><span class="s1">&#39;contacts&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_contacts</span><span class="p">()</span>
@@ -903,21 +927,6 @@
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="c1"># Enforces valid facets for all records - but don&#39;t have to match title structure.</span>
-        <span class="k">if</span> <span class="s2">&quot;project_id&quot;</span> <span class="ow">in</span> <span class="n">validated_data</span><span class="p">:</span>
-
-            <span class="c1"># Validate by assembling expected title - if the search facets are provided.</span>
-            <span class="n">_</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">title_from_facets</span><span class="p">(</span><span class="n">validated_data</span><span class="p">,</span> <span class="n">raise_exceptions</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-            <span class="k">if</span> <span class="ow">not</span> <span class="nb">bool</span><span class="p">(</span><span class="n">validated_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)):</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">title</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span>
-                        <span class="s2">&quot;Missing the `project_id` facet and no other title provided.&quot;</span>
-                    <span class="p">)</span>
-                <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">title</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
-                    <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">&quot;Missing facets: </span><span class="si">{</span><span class="n">title</span><span class="si">}</span><span class="s2"> - unable to generate title and no title provided.&quot;</span>
-                    <span class="p">)</span>
-                <span class="n">validated_data</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">title</span>
 
         <span class="n">filtered_data</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">validated_data</span><span class="p">)</span>
 
@@ -940,7 +949,7 @@
 
 <div class="viewcode-block" id="CitationsSerializer.fill_data_parameters">
 <a class="viewcode-back" href="../../serializer.html#citations.serializers.CitationsSerializer.fill_data_parameters">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">fill_data_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fill_data_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Update the data in a POST request.</span>
 
@@ -978,6 +987,7 @@
                 <span class="n">Institutions</span><span class="p">,</span>
                 <span class="n">filter_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">inst_data</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]},</span>
                 <span class="n">allow_update</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">user_id</span><span class="o">=</span><span class="n">user_id</span>
             <span class="p">)</span>
             <span class="k">if</span> <span class="s2">&quot;institutions&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
                 <span class="n">data</span><span class="p">[</span><span class="s2">&quot;institutions&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
@@ -1009,6 +1019,7 @@
                     <span class="n">Parties</span><span class="p">,</span>
                     <span class="n">filter_kwargs</span><span class="o">=</span><span class="n">PartiesSerializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">required_fields</span><span class="p">,</span>
                     <span class="n">optionals</span><span class="o">=</span><span class="n">optional_party</span><span class="p">,</span>
+                    <span class="n">user_id</span><span class="o">=</span><span class="n">user_id</span>
                 <span class="p">)</span>
                 <span class="n">primary</span> <span class="o">=</span> <span class="n">search_primary</span>
             <span class="n">data</span><span class="p">[</span><span class="s2">&quot;primary_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">primary</span>
@@ -1023,6 +1034,7 @@
                         <span class="n">Parties</span><span class="p">,</span>
                         <span class="n">filter_kwargs</span><span class="o">=</span><span class="n">PartiesSerializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">required_fields</span><span class="p">,</span>
                         <span class="n">optionals</span><span class="o">=</span><span class="n">optional_party</span><span class="p">,</span>
+                        <span class="n">user_id</span><span class="o">=</span><span class="n">user_id</span>
                     <span class="p">)</span>
                     <span class="n">contacts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">search_contact</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
@@ -1039,6 +1051,7 @@
                         <span class="n">FundingStreamsSerializer</span><span class="p">,</span>
                         <span class="n">FundingStreams</span><span class="p">,</span>
                         <span class="n">filter_kwargs</span><span class="o">=</span><span class="n">FundingStreamsSerializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">required_fields</span><span class="p">,</span>
+                        <span class="n">user_id</span><span class="o">=</span><span class="n">user_id</span>
                     <span class="p">)</span>
                     <span class="n">funders</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">search_funder</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
@@ -1055,6 +1068,7 @@
                         <span class="n">InstitutionsSerializer</span><span class="p">,</span>
                         <span class="n">Institutions</span><span class="p">,</span>
                         <span class="n">filter_kwargs</span><span class="o">=</span><span class="n">InstitutionsSerializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">required_fields</span><span class="p">,</span>
+                        <span class="n">user_id</span><span class="o">=</span><span class="n">user_id</span>
                     <span class="p">)</span>
                     <span class="n">institutions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">search_institution</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
@@ -1074,6 +1088,7 @@
                         <span class="n">References</span><span class="p">,</span>
                         <span class="n">filter_kwargs</span><span class="o">=</span><span class="n">ReferencesSerializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">required_fields</span><span class="p">,</span>
                         <span class="n">allow_update</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                        <span class="n">user_id</span><span class="o">=</span><span class="n">user_id</span>
                     <span class="p">)</span>
                     <span class="n">references</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">reference</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
