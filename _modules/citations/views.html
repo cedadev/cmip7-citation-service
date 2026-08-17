@@ -1377,11 +1377,6 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Reload new posted values into the formsets for the context</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1">#context.pop(&#39;form&#39;,None)</span>
-        <span class="c1">#context.pop(&#39;view&#39;)</span>
-        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span>
-        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;version&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="s1">&#39;version&#39;</span><span class="p">]</span>
-
         
         <span class="n">context</span><span class="p">[</span><span class="s2">&quot;contact_formset&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ContactFormSet</span><span class="p">(</span>
             <span class="n">initial</span><span class="o">=</span><span class="p">[</span>
