@@ -1295,7 +1295,7 @@
     <span class="n">model</span> <span class="o">=</span> <span class="n">Citations</span>
     <span class="n">serializer_class</span> <span class="o">=</span> <span class="n">CitationsSerializer</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">redirect_on_success</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">valid</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">redirect_on_success</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">failed_publish</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
 
         <span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="n">title</span><span class="p">]</span>
         <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Your citation updates have been submitted and will appear here when they have been processed.&quot;</span>
@@ -1304,7 +1304,7 @@
             <span class="n">args</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Your citations have been submitted and will appear here when they have been processed.&quot;</span>
 
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">valid</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">failed_publish</span><span class="p">:</span>
             <span class="n">messages</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="p">,</span>
                 <span class="s2">&quot;DOI Minting has not been completed. The record will remain unpublished until the above issue is resolved.&quot;</span><span class="p">,</span>
@@ -1477,12 +1477,22 @@
 <span class="sd">        Clean data from a formset and determine if updates are required</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">pks</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">fd</span> <span class="ow">in</span> <span class="n">formset</span><span class="p">:</span>
+        <span class="n">form_set_iter</span> <span class="o">=</span> <span class="n">formset</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">formset</span><span class="p">,</span> <span class="s2">&quot;ordered_forms&quot;</span><span class="p">):</span>
+            <span class="n">form_set_iter</span> <span class="o">=</span> <span class="n">formset</span><span class="o">.</span><span class="n">ordered_forms</span>
+
+        <span class="k">for</span> <span class="n">fd</span> <span class="ow">in</span> <span class="n">form_set_iter</span><span class="p">:</span>
 
             <span class="k">if</span> <span class="ow">not</span> <span class="n">fd</span><span class="p">:</span>
                 <span class="k">continue</span>
+
             <span class="n">formdata</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="s2">&quot;cleaned_data&quot;</span><span class="p">,</span> <span class="p">{}))</span>
+            <span class="n">formdata</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;ORDER&#39;</span><span class="p">,</span><span class="kc">None</span><span class="p">)</span>
+
             <span class="k">if</span> <span class="ow">not</span> <span class="n">formdata</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="ow">not</span> <span class="n">v</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">formdata</span><span class="o">.</span><span class="n">values</span><span class="p">()):</span>
                 <span class="k">continue</span>
 
             <span class="n">filter_kwargs</span> <span class="o">=</span> <span class="p">{</span>
@@ -1576,13 +1586,12 @@
 
         <span class="n">errors</span> <span class="o">=</span> <span class="mi">0</span>
 
+        <span class="c1"># Check all forms for errors - this does not involve creating new entries yet</span>
         <span class="n">error_map</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="k">for</span> <span class="n">formset</span> <span class="ow">in</span> <span class="p">[</span>
-            <span class="n">contact_formset</span><span class="p">,</span>
-            <span class="n">institution_formset</span><span class="p">,</span>
-            <span class="n">funder_formset</span><span class="p">,</span>
-            <span class="n">reference_formset</span><span class="p">,</span>
-        <span class="p">]:</span>
+        <span class="k">for</span> <span class="n">formset</span> <span class="ow">in</span> <span class="p">[</span><span class="n">contact_formset</span><span class="p">,</span><span class="n">institution_formset</span><span class="p">,</span>
+                <span class="n">funder_formset</span><span class="p">,</span> <span class="n">reference_formset</span><span class="p">]:</span>
+        
+            <span class="c1"># Don&#39;t need correct form order when validating</span>
             <span class="k">for</span> <span class="n">form_pt</span> <span class="ow">in</span> <span class="n">formset</span><span class="p">:</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="n">form_pt</span><span class="o">.</span><span class="n">is_valid</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">form_pt</span><span class="o">.</span><span class="n">empty_permitted</span><span class="p">:</span>
 
@@ -1701,15 +1710,18 @@
                 <span class="k">if</span> <span class="n">publish</span><span class="p">:</span>
                     <span class="n">obj</span><span class="p">,</span> <span class="n">pubstatus</span> <span class="o">=</span> <span class="n">check_publish_ok</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="p">,</span> <span class="n">obj</span><span class="p">)</span>
 
+            <span class="c1"># pubstatus = True if publication either successful or not run</span>
+            <span class="c1"># pubstatus = False only if publication is unsuccessful</span>
+
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">replicas</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">redirect_on_success</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">pubstatus</span><span class="p">)</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">redirect_on_success</span><span class="p">(</span><span class="n">failed_publish</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">pubstatus</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="s2">&quot;institution_id&quot;</span> <span class="ow">in</span> <span class="n">serializer</span><span class="o">.</span><span class="n">validated_data</span><span class="p">:</span>
             <span class="n">create_new_permission</span><span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">serializer</span><span class="o">.</span><span class="n">validated_data</span><span class="p">[</span><span class="s2">&quot;institution_id&quot;</span><span class="p">]</span>
             <span class="p">)</span>
 
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">redirect_on_success</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">obj</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">],</span> <span class="n">status</span><span class="o">=</span><span class="n">pubstatus</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">redirect_on_success</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">obj</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">],</span> <span class="n">failed_publish</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">pubstatus</span><span class="p">)</span></div>
 
 
 
@@ -1802,7 +1814,7 @@
 
         <span class="c1"># Handle edits to the joined attributes</span>
 
-        <span class="n">formset_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_from_formsets</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="n">instance</span><span class="o">.</span><span class="n">title</span><span class="p">)</span>
+        <span class="n">formset_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_from_formsets</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="n">instance</span><span class="o">.</span><span class="n">title</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="n">instance</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">formset_data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
             <span class="k">return</span> <span class="n">formset_data</span>
         <span class="n">data</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">formset_data</span><span class="p">)</span>
@@ -1887,8 +1899,10 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pk</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 
         <span class="n">citation</span> <span class="o">=</span> <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">pk</span><span class="p">)</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">citation</span><span class="o">.</span><span class="n">title</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;version&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">citation</span><span class="o">.</span><span class="n">version</span>
 
-        <span class="n">context</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">citation</span><span class="o">.</span><span class="n">title</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="n">citation</span><span class="o">.</span><span class="n">version</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
         <span class="c1"># In order to be publishable, a record must have an empty DOI URL slot</span>
         <span class="c1"># - Already determined as editable if we&#39;re at this stage.</span>

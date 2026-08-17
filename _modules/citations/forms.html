@@ -139,6 +139,12 @@
         <span class="s2">&quot;email&quot;</span><span class="p">,</span>
     <span class="p">]</span>
 
+    <span class="k">def</span><span class="w"> </span><span class="nf">has_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">has_changed</span><span class="p">()</span>
+
+        <span class="n">valid_changes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="n">cd</span> <span class="k">for</span> <span class="n">cd</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">changed_data</span> <span class="k">if</span> <span class="n">cd</span> <span class="o">!=</span> <span class="s2">&quot;ORDER&quot;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">valid_changes</span><span class="p">)</span>
+
 
 <span class="k">class</span><span class="w"> </span><span class="nc">OneRequiredFormSet</span><span class="p">(</span><span class="n">BaseFormSet</span><span class="p">):</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">clean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -268,7 +274,7 @@
 <span class="p">)</span>
 <span class="n">ReferenceFormSet</span> <span class="o">=</span> <span class="n">formset_factory</span><span class="p">(</span><span class="n">ReferenceForm</span><span class="p">,</span> <span class="n">formset</span><span class="o">=</span><span class="n">ReferenceBaseFormSet</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 <span class="n">FunderFormSet</span> <span class="o">=</span> <span class="n">formset_factory</span><span class="p">(</span><span class="n">FunderForm</span><span class="p">,</span> <span class="n">formset</span><span class="o">=</span><span class="n">FunderBaseFormSet</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-<span class="n">ContactFormSet</span> <span class="o">=</span> <span class="n">formset_factory</span><span class="p">(</span><span class="n">PartyForm</span><span class="p">,</span> <span class="n">formset</span><span class="o">=</span><span class="n">ContactBaseFormSet</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">ContactFormSet</span> <span class="o">=</span> <span class="n">formset_factory</span><span class="p">(</span><span class="n">PartyForm</span><span class="p">,</span> <span class="n">can_order</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">formset</span><span class="o">=</span><span class="n">ContactBaseFormSet</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 <span class="n">ReplicaFormSet</span> <span class="o">=</span> <span class="n">formset_factory</span><span class="p">(</span><span class="n">ReplicaForm</span><span class="p">,</span> <span class="n">formset</span><span class="o">=</span><span class="n">ReplicaBaseFormSet</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
 
