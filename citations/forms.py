@@ -63,6 +63,12 @@ class PartyForm(forms.Form):
         "email",
     ]
 
+    def has_changed(self):
+        _ = super().has_changed()
+
+        valid_changes = set([cd for cd in self.changed_data if cd != "ORDER"])
+        return bool(valid_changes)
+
 
 class OneRequiredFormSet(BaseFormSet):
     def clean(self):
@@ -192,7 +198,7 @@ InstitutionFormSet = formset_factory(
 )
 ReferenceFormSet = formset_factory(ReferenceForm, formset=ReferenceBaseFormSet, extra=1)
 FunderFormSet = formset_factory(FunderForm, formset=FunderBaseFormSet, extra=1)
-ContactFormSet = formset_factory(PartyForm, formset=ContactBaseFormSet, extra=1)
+ContactFormSet = formset_factory(PartyForm, can_order=True, formset=ContactBaseFormSet, extra=1)
 ReplicaFormSet = formset_factory(ReplicaForm, formset=ReplicaBaseFormSet, extra=1)
 
 

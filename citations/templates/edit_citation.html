@@ -70,8 +70,11 @@
                 <table class="table table-striped border border-light">
                     <thead>
                         <tr>
+                            <td></td>
                             {% for field in contact_formset.empty_form %}
-                            <td>{{ field.label }} {% if field.label in required_fields %}<span style="color: red;">*</span>{% endif %}</td>
+                                {% if field.label != "Order" %}
+                                    <td>{{ field.label }} {% if field.label in required_fields %}<span style="color: red;">*</span>{% endif %}</td>
+                                {% endif %}
                             {% endfor %}
                             <td>Primary</td>
                             <td><b>Remove</b></td>
@@ -83,8 +86,12 @@
 
                         {% for form in contact_formset %}
                         <tr class="contact-row">
+
+                            <td class="drag-handle" style="cursor: move;">☰</td>
                             {% for field in form %}
+                                {% if field.name != "ORDER" %}
                                 <td>{{ field }}</td>
+                                {% endif %}
                             {% endfor %}
                             <td>
 
@@ -348,6 +355,7 @@
         </table>
     </form>
 
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => {
@@ -371,6 +379,40 @@ document.addEventListener("DOMContentLoaded", function () {
     // Contacts Form Syntax
     const tbodyContacts = document.getElementById("contact-formset-body");
     const addContact = document.getElementById("add-contact");
+
+    Sortable.create(tbodyContacts, {
+        animation: 150,
+        handle: '.drag-handle',
+
+        onEnd: function() {
+            updateOrderFields();
+        }
+    });
+
+    function updateOrderFields() {
+        tbodyContacts.querySelectorAll('.contact-row').forEach((row, index) => {
+
+            const orderField = row.querySelector(
+                'input[name$="-ORDER"]'
+            );
+            if (orderField) {
+                orderField.value = index;
+            }
+            renumberRow(row, 'contact',index)
+        });
+    }
+
+    function renumberRow(row, prefix, index){
+        row.querySelectorAll('[name]').forEach(element => {
+            element.name = element.name.replace(
+                new RegExp(`^${prefix}-\\d+-`),
+                    `${prefix}-${index}-`)
+                    
+            element.id = element.id.replace(
+                new RegExp(`^id_${prefix}-\\d+-`),
+                    `id_${prefix}-${index}-`)
+            })
+        }
 
     addContact.addEventListener("click", function () {
         const totalForms = tbodyContacts.querySelector('#id_contact-TOTAL_FORMS');
@@ -408,6 +450,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 // Update TOTAL_FORMS count
                 const totalForms =  tbodyContacts.querySelector('#id_contact-TOTAL_FORMS');
                 totalForms.value = rows.length - 1;
+                updateOrderFields();
             }
         }
     });
@@ -450,7 +493,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 // Update TOTAL_FORMS count
                 const totalForms = tbodyInstitutions.querySelector('#id_institution-TOTAL_FORMS');
                 totalForms.value = rows.length - 1;
+                rows.forEach((row,index) => {
+                    renumberRow(row, 'institution',index)
+                });
             }
+            
         }
     });
 
@@ -492,6 +539,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 // Update TOTAL_FORMS count
                 const totalForms = tbodyFunders.querySelector('#id_funder-TOTAL_FORMS');
                 totalForms.value = rows.length - 1;
+                rows.forEach((row,index) => {
+                    renumberRow(row, 'institution',index)
+                });
             }
         }
     });
@@ -540,6 +590,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 // Update TOTAL_FORMS count
                 const totalForms = tbodyReplicas.querySelector('#id_replica-TOTAL_FORMS');
                 totalForms.value = rows.length - 1;
+                rows.forEach((row,index) => {
+                    renumberRow(row, 'institution',index)
+                });
             }
         }
     });
@@ -563,7 +616,6 @@ document.addEventListener("DOMContentLoaded", function () {
                     elements.forEach((el) => {
                         el.name = el.name.replace(/reference-\d+/, `reference-${k}`);
                     });
-                    //ref.innerHTML = ref.innerHTML.replace(/reference-\d+/g, `reference-${k}`);
                 }
 
                 // Find all preceding tables and change the reference label

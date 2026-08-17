@@ -754,24 +754,23 @@ class CitationsSerializer(GenericSerializerMixin):
 
     def _set_order(self, instance, contacts):
 
-        try:
-            for pos, field in enumerate(contacts):
-                c = CitationParty.objects.filter(
+        CitationParty.objects.filter(citation=instance).delete()
+
+        for pos, field in enumerate(contacts):
+            c = CitationParty.objects.filter(
+                citation=instance,
+                party=Parties.objects.get(id=field),
+            )
+            if c:
+                c = c[0]
+                c.position = pos
+            else:
+                c = CitationParty.objects.create(
                     citation=instance,
                     party=Parties.objects.get(id=field),
+                    position=pos
                 )
-                if c:
-                    c = c[0]
-                    c.position = pos
-                else:
-                    c = CitationParty.objects.create(
-                        citation=instance,
-                        party=Parties.objects.get(id=field),
-                        position=pos
-                    )
-                c.save()
-        except Exception as e:
-            print(e)
+            c.save()
 
     def create(self, validated_data):
         """
