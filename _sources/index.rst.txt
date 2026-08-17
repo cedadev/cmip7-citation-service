@@ -17,6 +17,7 @@ For Citation Service users and reviewers, please go to the main site at `https:/
    Citation Flow Diagram <flow_diagram>
    Citation Auto Generation <serializer>
    Citation Views and Rendering <views>
+   Citation Admins <admin>
    DOI Minting Service <dois>
    Kafka Queue Systems & Listener <kafka>
    STAC ESGF Integration <stac>

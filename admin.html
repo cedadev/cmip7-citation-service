@@ -3,9 +3,10 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" data-content_root="./">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Python Module Index &mdash; CEDA CMIP7 Citation Service 0.1.0 documentation</title>
+  <title>Admins of the Citation Service &mdash; CEDA CMIP7 Citation Service 0.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
@@ -18,9 +19,8 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
- 
-
-
+    <link rel="next" title="DOI Minting Service" href="dois.html" />
+    <link rel="prev" title="Citation Views and Rendering" href="views.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -43,11 +43,15 @@
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Developer Guides</span></p>
-<ul>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="flow_diagram.html">Citation Flow Diagram</a></li>
 <li class="toctree-l1"><a class="reference internal" href="serializer.html">Citation Auto Generation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="views.html">Citation Views and Rendering</a></li>
-<li class="toctree-l1"><a class="reference internal" href="admin.html">Citation Admins</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Citation Admins</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#approving-reviewer-permissions">Approving Reviewer Permissions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#check-failed-requests">Check failed requests</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="dois.html">DOI Minting Service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="kafka.html">Kafka Queue Systems &amp; Listener</a></li>
 <li class="toctree-l1"><a class="reference internal" href="stac.html">STAC ESGF Integration</a></li>
@@ -67,8 +71,9 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Python Module Index</li>
+      <li class="breadcrumb-item active">Admins of the Citation Service</li>
       <li class="wy-breadcrumbs-aside">
+            <a href="_sources/admin.rst.txt" rel="nofollow"> View page source</a>
       </li>
   </ul>
   <hr/>
@@ -76,54 +81,32 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-
-   <h1>Python Module Index</h1>
-
-   <div class="modindex-jumpbox">
-   <a href="#cap-c"><strong>c</strong></a>
-   </div>
-
-   <table class="indextable modindextable">
-     <tr class="pcap"><td></td><td>&#160;</td><td></td></tr>
-     <tr class="cap" id="cap-c"><td></td><td>
-       <strong>c</strong></td><td></td></tr>
-     <tr>
-       <td><img src="_static/minus.png" class="toggler"
-              id="toggle-1" style="display: none" alt="-" /></td>
-       <td>
-       <code class="xref">citations</code></td><td>
-       <em></em></td></tr>
-     <tr class="cg-1">
-       <td></td>
-       <td>&#160;&#160;&#160;
-       <a href="kafka.html#module-citations.consumer.internal"><code class="xref">citations.consumer.internal</code></a></td><td>
-       <em></em></td></tr>
-     <tr class="cg-1">
-       <td></td>
-       <td>&#160;&#160;&#160;
-       <a href="kafka.html#module-citations.consumer.write"><code class="xref">citations.consumer.write</code></a></td><td>
-       <em></em></td></tr>
-     <tr class="cg-1">
-       <td></td>
-       <td>&#160;&#160;&#160;
-       <a href="dois.html#module-citations.external.minting"><code class="xref">citations.external.minting</code></a></td><td>
-       <em></em></td></tr>
-     <tr class="cg-1">
-       <td></td>
-       <td>&#160;&#160;&#160;
-       <a href="serializer.html#module-citations.serializers"><code class="xref">citations.serializers</code></a></td><td>
-       <em></em></td></tr>
-     <tr class="cg-1">
-       <td></td>
-       <td>&#160;&#160;&#160;
-       <a href="views.html#module-citations.views"><code class="xref">citations.views</code></a></td><td>
-       <em></em></td></tr>
-   </table>
+  <section id="admins-of-the-citation-service">
+<h1>Admins of the Citation Service<a class="headerlink" href="#admins-of-the-citation-service" title="Link to this heading"></a></h1>
+<p>Special instructions for Citation service admins:</p>
+<section id="approving-reviewer-permissions">
+<h2>Approving Reviewer Permissions<a class="headerlink" href="#approving-reviewer-permissions" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Check the ESGF slack workspace channel <code class="docutils literal notranslate"><span class="pre">citation_reviewer_requests</span></code> to see all pending citation reviewer requests. Requests that have been granted will have a corresponding message to state that a user has received permissions.</p></li>
+<li><p>Log into the admin page <code class="docutils literal notranslate"><span class="pre">/admin</span></code></p></li>
+<li><p>Go to Users and find the desired user (github username)</p></li>
+<li><p>Scroll down to the permissions section, find <code class="docutils literal notranslate"><span class="pre">add</span> <span class="pre">citations</span></code> plus any institution-based permission and click to move it to the granted permissions section on the left.</p></li>
+<li><p>Click save - this will automatically send a message to the slack channel, but the user will not be contacted as there may not be an email attached to their github account that is queryable.</p></li>
+</ul>
+</section>
+<section id="check-failed-requests">
+<h2>Check failed requests<a class="headerlink" href="#check-failed-requests" title="Link to this heading"></a></h2>
+<p>If API-based POST requests are received, get past initial checks to form a title then are found to be invalid in validation checks, this will generate an entry in the <code class="docutils literal notranslate"><span class="pre">/failed</span></code> view that is visible only to admins. The entry recorded to then identify issues with the listener/service, fix issues and eventually retry the request with corrected details. Once the entry with corresponding title has been fixed, that entry will be removed from the <code class="docutils literal notranslate"><span class="pre">/failed</span></code> view on next loading.</p>
+</section>
+</section>
 
 
            </div>
           </div>
-          <footer>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="views.html" class="btn btn-neutral float-left" title="Citation Views and Rendering" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="dois.html" class="btn btn-neutral float-right" title="DOI Minting Service" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
 
   <hr/>
 
