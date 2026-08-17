@@ -1144,11 +1144,6 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
         """
         Reload new posted values into the formsets for the context
         """
-        #context.pop('form',None)
-        #context.pop('view')
-        context['title'] = context['title']
-        context['version'] = context['version']
-
         
         context["contact_formset"] = ContactFormSet(
             initial=[
