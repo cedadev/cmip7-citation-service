@@ -113,11 +113,13 @@ def institution_mappings(institution_id: str, project_id: str = "cmip7") -> str:
 
     # Get the institution from esgvoc
     component = ev.get_term_in_collection(
-        project_id=project_id, collection_id="institution", term_id=institution_id
+        project_id=project_id, 
+        collection_id=esgvoc_institution, 
+        term_id=institution_id.lower().replace('_','-') # Shift to dashes
     ) or ev.get_term_in_collection(
         project_id=project_id,
-        collection_id="institution",
-        term_id=institution_id.lower(),
+        collection_id=esgvoc_institution,
+        term_id=institution_id.lower().replace('-','_') # Shift to underscores
     )
 
     data = {"name": institution_id, "acronym": institution_id}
@@ -247,7 +249,13 @@ def obtain_all_references(data: dict) -> dict:
     cites = []
     for label, facet in ESGVOC_FACET_LABELS[project_id].items():
         component = ev.get_term_in_collection(
-            project_id=project_id, collection_id=label, term_id=data[facet].lower()
+            project_id=project_id, 
+            collection_id=label, 
+            term_id=data[facet].lower().replace('_','-') # Shift to dashes
+        ) or ev.get_term_in_collection(
+            project_id=project_id, 
+            collection_id=label, 
+            term_id=data[facet].lower().replace('-','_') # Shift to underscores
         )
 
         if not component:
@@ -311,9 +319,14 @@ def abstract_from_esgvoc(data: dict):
 
         entry = []
         component = ev.get_term_in_collection(
-            project_id=project_id, collection_id=label, term_id=data[facet].lower()
+            project_id=project_id, 
+            collection_id=label, 
+            term_id=data[facet].lower().replace('_','-') # Shift to dashes
+        ) or ev.get_term_in_collection(
+            project_id=project_id, 
+            collection_id=label, 
+            term_id=data[facet].lower().replace('-','_') # Shift to underscores
         )
-        print(component)
 
         description = getattr(component, "description", data[facet])
         if not bool(description):

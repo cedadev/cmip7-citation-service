@@ -78,10 +78,15 @@ def validate_component(
             f"Validating {component} as {label} in {project_id} using ESGF Vocabs"
         )
         term_result = ev.get_term_in_collection(
-            term_id=component.lower(),
+            term_id=component.lower().replace('_','-'), # Shift to dashes
+            project_id=project_id.lower(),
+            collection_id=label.lower(),
+        ) or ev.get_term_in_collection(
+            term_id=component.lower().replace('-','_'), # Shift to underscores if no dashes.
             project_id=project_id.lower(),
             collection_id=label.lower(),
         )
+        
         if not bool(term_result):
             logger.error(
                 f"{component} not found in ESGF Vocabs for {label} in {project_id}"

@@ -929,11 +929,16 @@ class CitationAPIView(GenericAPIView):
 
     def create(self, request, *args, **kwargs):
 
-        is_ok, id, response = self._create(request, *args, **kwargs)
-        if is_ok:
-            return response
+        id = None
+        try:
+            is_ok, id, response = self._create(request, *args, **kwargs)
+            if is_ok:
+                return response
+        except Exception as e:
+            # Exception raised before id can be generated.
+            response = e
 
-        if id:
+        if id is not None:
             # Create failure object on not OK creations for partially validated records.
             reason = getattr(response,'message',str(response))
             if FailedRequests.objects.filter(id=id):
@@ -946,7 +951,7 @@ class CitationAPIView(GenericAPIView):
         try:
             _ = json.dumps({"error":response})
             error = {"error":response}
-        except Exception as e:
+        except Exception as _:
             error = {"error": str(response)}
 
         return Response(error, status=status.HTTP_400_BAD_REQUEST)
@@ -976,7 +981,7 @@ class CitationAPIView(GenericAPIView):
             latest = self.model.objects.filter(title=title, version=version)
             if latest:
                 if not latest[0].editable:
-                    return Response(
+                    return True, title, Response(
                         serializer.validated_data, status=status.HTTP_405_METHOD_NOT_ALLOWED
                     )
 
