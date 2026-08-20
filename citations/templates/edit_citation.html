@@ -24,6 +24,15 @@
     {% endif %}
     <form method="post">
         {% csrf_token %}
+        <div>
+            <p>
+                For information relating to approving your citation information via the UI or API, see 
+                <a href="https://github.com/cedadev/cmip7-citation-service/blob/main/docs/CitationReviewerGuide.pdf">the Citation Approval Guide</a> 
+                or take a look at the <a href="https://wcrp-cmip.github.io/cmip7-guidance/docs/CMIP7/Citation_Guidance/">CMIP7 Citation Guidance</a> pages.
+                If you encounter technical issues with using the Citation Service edit pages, please contact the CEDA helpdesk at support@ceda.ac.uk.
+            </p>
+        </div>
+
         {% for title, fields in form.field_groups.items %}
             <h3>{{ title }}
             {% if title == 'General Information' %}
