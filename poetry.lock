@@ -855,14 +855,14 @@ stac-pydantic = ">=3.1.1"
 
 [[package]]
 name = "esgvoc"
-version = "4.0.0"
+version = "5.0.1"
 description = "python library and CLI to interact with WCRP CVs"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "esgvoc-4.0.0-py3-none-any.whl", hash = "sha256:8903b18517cf6adfca68d3010aeb692fa55f8af38d57a20a2d5e8a7b1e22464f"},
-    {file = "esgvoc-4.0.0.tar.gz", hash = "sha256:7531aae6818b8b7e69ccafeb3b9f9d3945746d13d4b1163fa29454859bd08ed8"},
+    {file = "esgvoc-5.0.1-py3-none-any.whl", hash = "sha256:96b897c069a2ca3fee6526acefec948dcda5c733dbb06a64722ba0aa456184a3"},
+    {file = "esgvoc-5.0.1.tar.gz", hash = "sha256:97d90ba8b38a35b13f16c08b166b0e2921b50c4d4cd20dd277cd505c3029fb94"},
 ]
 
 [package.dependencies]
@@ -2694,4 +2694,4 @@ test = ["pytest", "pytest-cov"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13,<4"
-content-hash = "7c4aa8800aa0b02dc6e4e9c4c0bc9f527ab3ed478e8fe364b4e5ab8e3f1ad416"
+content-hash = "54091991f412ac20f7665fd27b38a33d834d5bff40cb0cddcf8e50c4872f0b8a"

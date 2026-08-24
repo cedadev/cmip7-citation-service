@@ -1,6 +1,6 @@
 [project]
 name = "cmip7-citation-service"
-version = "1.0.0a"
+version = "1.0.1"
 description = "A citation service for the CMIP7 project"
 authors = [
     {name = "Daniel Westwood",email = "daniel.westwood@stfc.ac.uk"}
@@ -25,7 +25,7 @@ dependencies = [
     "django-allauth[socialaccount] (>=65.15.1,<66.0.0)",
     "slack-sdk (>=3.41.0,<4.0.0)",
     "esgf-core-utils (>=1.0.7,<2.0.0)",
-    "esgvoc (>=4.0.0,<5.0.0)",
+    "esgvoc (>=5,<6)",
 ]
 
 [build-system]
