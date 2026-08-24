@@ -131,7 +131,7 @@ def institution_mappings(institution_id: str, project_id: str = "cmip7") -> str:
 
         data.update(
             {
-                "name": getattr(component, "description", institution_id),
+                "name": name,
                 "acronym": getattr(component, "acronyms", [institution_id])[0],
             }
         )
