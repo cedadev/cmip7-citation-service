@@ -207,6 +207,10 @@
     <span class="n">data</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">institution_id</span><span class="p">,</span> <span class="s2">&quot;acronym&quot;</span><span class="p">:</span> <span class="n">institution_id</span><span class="p">}</span>
     <span class="k">if</span> <span class="n">component</span><span class="p">:</span>
 
+        <span class="n">name</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">component</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">,</span> <span class="n">institution_id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">120</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">institution_id</span>
+
         <span class="n">data</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
             <span class="p">{</span>
                 <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">component</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">,</span> <span class="n">institution_id</span><span class="p">),</span>
