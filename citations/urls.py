@@ -21,11 +21,13 @@ from citations.views import (
     SpecificCitationAPIView,
     SpecificPartyAPIView,
     FailedRequestsView,
+    SuperuserTokenView
 )
 
 app_name = "citations"
 urlpatterns = [
     path("", RedirectView.as_view(url="citations/")),
+    path("superuser_token/", SuperuserTokenView.as_view(), name='superusertoken'),
     path("parties/", PartiesView.as_view(), name="parties"),
     path("citations/", CitationsView.as_view(), name="citations"),
     path("institutions/", InstitutionsView.as_view(), name="institutions"),

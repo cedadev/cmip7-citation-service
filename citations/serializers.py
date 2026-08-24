@@ -125,6 +125,10 @@ def institution_mappings(institution_id: str, project_id: str = "cmip7") -> str:
     data = {"name": institution_id, "acronym": institution_id}
     if component:
 
+        name = getattr(component, "description", institution_id)
+        if len(name) > 120:
+            name = institution_id
+
         data.update(
             {
                 "name": getattr(component, "description", institution_id),

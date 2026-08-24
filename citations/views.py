@@ -7,6 +7,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.auth.models import Permission
+from django.contrib.auth import authenticate
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
@@ -18,8 +19,10 @@ from django.views.generic.base import TemplateView
 from django.views.generic.edit import FormView
 from django.shortcuts import redirect
 from rest_framework import generics, mixins, permissions, status
-from rest_framework.authentication import TokenAuthentication
+from rest_framework.authtoken.models import Token
+from rest_framework.authentication import TokenAuthentication, BasicAuthentication
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from slack_sdk import WebClient
 
 from citations.consumer.write import delete_instance
@@ -594,6 +597,41 @@ class FailedRequestsView(PaginatedListView):
         if not request.user.is_superuser:
             raise PermissionDenied()
         return super().dispatch(request, *args, **kwargs)
+
+
+class SuperuserTokenView(APIView):
+
+    authentication_classes = [BasicAuthentication]
+    permission_classes = []
+
+    def post(self, request):
+
+        if not request.is_secure():
+            return Response(
+                {"detail": "HTTPS Required"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        if not request.user.is_authenticated:
+            return Response(
+                {"detail": "Authentication required"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        if not request.user.is_superuser:
+            return Response(
+                {"detail": "User is not a superuser"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        token, created = Token.objects.get_or_create(user=request.user)
+
+        return Response(
+            {
+                "token": token.key,
+                "created": created,
+            }
+        )
 
 
 class InstitutionsView(PaginatedListView):
