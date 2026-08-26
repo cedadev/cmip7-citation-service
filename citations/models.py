@@ -5,6 +5,22 @@ from django.db import models
 from citations.validators import validate_orcid
 
 
+class ListenerPause(models.Model):
+    pause_listener = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = "Pause Listener"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1 # Ensures only one row
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_paused(cls) -> bool:
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj.pause_listener
+
+
 # Create your models here.
 class Institutions(models.Model):
     """
@@ -77,6 +93,7 @@ class References(models.Model):
     def __str__(self):
         return f"{self.title}"
 
+
 class FailedRequests(models.Model):
     """
     Stores failed requests made due to validation errors.
@@ -84,6 +101,7 @@ class FailedRequests(models.Model):
 
     id = models.CharField(max_length=300, primary_key=True)
     reason = models.TextField()
+
 
 class Citations(models.Model):
     """
