@@ -1548,21 +1548,18 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">user_permissions</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">codename</span><span class="o">=</span><span class="s2">&quot;add_citations&quot;</span><span class="p">):</span>
             <span class="k">return</span> <span class="n">HttpResponseRedirect</span><span class="p">(</span><span class="n">reverse</span><span class="p">(</span><span class="s2">&quot;citations:reviewer_request&quot;</span><span class="p">))</span>
 
-        <span class="n">title</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">title</span><span class="p">:</span>
-            <span class="n">institute</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">)</span>
-                <span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s2">&quot;-version&quot;</span><span class="p">)</span>
-                <span class="o">.</span><span class="n">last</span><span class="p">()</span>
-                <span class="o">.</span><span class="n">institution_id</span>
-            <span class="p">)</span>
-            <span class="k">if</span> <span class="n">institute</span><span class="p">:</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">user_permissions</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span>
-                    <span class="n">codename</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;edit_</span><span class="si">{</span><span class="n">institute</span><span class="si">}</span><span class="s2">&quot;</span>
-                <span class="p">):</span>
-                    <span class="k">return</span> <span class="n">HttpResponseRedirect</span><span class="p">(</span><span class="n">reverse</span><span class="p">(</span><span class="s2">&quot;citations:reviewer_request&quot;</span><span class="p">))</span>
+        <span class="n">pk</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pk&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pk&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">pk</span><span class="p">:</span>
+            <span class="c1"># Editing existing record or creating from template.</span>
+            <span class="n">citation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">pk</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">last</span><span class="p">()</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">citation</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">Http404</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Citation for </span><span class="si">{</span><span class="n">pk</span><span class="si">}</span><span class="s1"> does not exist&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">user_permissions</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span>
+                <span class="n">codename</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;edit_</span><span class="si">{</span><span class="n">citation</span><span class="o">.</span><span class="n">institution_id</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">):</span>
+                <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">dispatch</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">dispatch</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="n">HttpResponseRedirect</span><span class="p">(</span><span class="n">reverse</span><span class="p">(</span><span class="s2">&quot;citations:reviewer_request&quot;</span><span class="p">))</span></div>
 
 
 <div class="viewcode-block" id="CitationFormMixin.reload_formset_values">
