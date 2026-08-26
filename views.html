@@ -47,6 +47,9 @@
 <li class="toctree-l1"><a class="reference internal" href="flow_diagram.html">Citation Flow Diagram</a></li>
 <li class="toctree-l1"><a class="reference internal" href="serializer.html">Citation Auto Generation</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Citation Views and Rendering</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.listener_check"><code class="docutils literal notranslate"><span class="pre">listener_check()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.download_bibtex"><code class="docutils literal notranslate"><span class="pre">download_bibtex()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.download_ris"><code class="docutils literal notranslate"><span class="pre">download_ris()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#citations.views.create_new_permission"><code class="docutils literal notranslate"><span class="pre">create_new_permission()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#citations.views.get_citable_party"><code class="docutils literal notranslate"><span class="pre">get_citable_party()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#citations.views.render_code_snippet"><code class="docutils literal notranslate"><span class="pre">render_code_snippet()</span></code></a></li>
@@ -259,6 +262,26 @@
 </dl>
 <p>Permissions apply to all create/update/delete views including for the API (PUT/POST/DELETE methods), where a user/token provided must have both the <code class="docutils literal notranslate"><span class="pre">add_citations</span></code> and <code class="docutils literal notranslate"><span class="pre">edit_&lt;institution&gt;</span></code> permissions to edit an existing record, or just the <code class="docutils literal notranslate"><span class="pre">add_citations</span></code> permission to create new records.</p>
 <dl class="py function" id="module-citations.views">
+<dt class="sig sig-object py" id="citations.views.listener_check">
+<span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">listener_check</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#listener_check"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.listener_check" title="Link to this definition"></a></dt>
+<dd><p>Custom check endpoint for the listener.</p>
+<p>Check if a citation exists, also reports the Paused state</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="citations.views.download_bibtex">
+<span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">download_bibtex</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#download_bibtex"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.download_bibtex" title="Link to this definition"></a></dt>
+<dd><p>Download a BibTeX representation of a given DOI</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="citations.views.download_ris">
+<span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">download_ris</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#download_ris"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.download_ris" title="Link to this definition"></a></dt>
+<dd><p>Download a RIS representation of a given DOI</p>
+<p>Research Information Systems format.</p>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="citations.views.create_new_permission">
 <span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">create_new_permission</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">user</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">institution_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#create_new_permission"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.create_new_permission" title="Link to this definition"></a></dt>
 <dd><p>Create a new permission type based on the newly added institution.</p>
