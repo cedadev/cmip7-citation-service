@@ -1305,21 +1305,18 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
         if not request.user.user_permissions.filter(codename="add_citations"):
             return HttpResponseRedirect(reverse("citations:reviewer_request"))
 
-        title = kwargs.get("title") or request.GET.get("title")
-        if title:
-            institute = (
-                self.model.objects.filter(title=title)
-                .order_by("-version")
-                .last()
-                .institution_id
-            )
-            if institute:
-                if not request.user.user_permissions.filter(
-                    codename=f"edit_{institute}"
-                ):
-                    return HttpResponseRedirect(reverse("citations:reviewer_request"))
+        pk = kwargs.get("pk") or request.GET.get("pk")
+        if pk:
+            # Editing existing record or creating from template.
+            citation = self.model.objects.filter(pk=pk).order_by("version").last()
+            if not citation:
+                raise Http404(f'Citation for {pk} does not exist')
+            if request.user.user_permissions.filter(
+                codename=f"edit_{citation.institution_id}"
+            ):
+                return super().dispatch(request, *args, **kwargs)
 
-        return super().dispatch(request, *args, **kwargs)
+        return HttpResponseRedirect(reverse("citations:reviewer_request"))
 
     def reload_formset_values(self, context: dict, post):
         """
