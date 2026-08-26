@@ -21,12 +21,18 @@ from citations.views import (
     SpecificCitationAPIView,
     SpecificPartyAPIView,
     FailedRequestsView,
-    SuperuserTokenView
+    SuperuserTokenView,
+    download_bibtex,
+    download_ris,
+    listener_check
 )
 
 app_name = "citations"
 urlpatterns = [
     path("", RedirectView.as_view(url="citations/")),
+    path("bibtex/<str:title>/", download_bibtex, name='bibtex'),
+    path("ris/<str:title>/", download_ris, name='ris'),
+    path("listener_check/<str:title>/", listener_check, name='listencheck'),
     path("superuser_token/", SuperuserTokenView.as_view(), name='superusertoken'),
     path("parties/", PartiesView.as_view(), name="parties"),
     path("citations/", CitationsView.as_view(), name="citations"),

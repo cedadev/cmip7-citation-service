@@ -13,7 +13,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.db.models import CharField, ForeignKey, Q, TextField
 from django.db.models.functions import Lower
-from django.http import Http404, HttpResponseForbidden, HttpResponseRedirect, JsonResponse
+from django.http import Http404, HttpResponse, HttpResponseForbidden, HttpResponseRedirect, JsonResponse
 from django.urls import reverse
 from django.views.generic.base import TemplateView
 from django.views.generic.edit import FormView
@@ -47,7 +47,8 @@ from citations.models import (
     Parties,
     References,
     FailedRequests,
-    CitationParty
+    CitationParty,
+    ListenerPause
 )
 from citations.serializers import (
     CitationsSerializer,
@@ -58,7 +59,6 @@ from citations.serializers import (
     FailedRequestsSerializer,
     chain_new_objects,
     handle_update,
-    title_from_facets,
 )
 from citations.utils import logstream, get_drs_url
 import logging
@@ -66,6 +66,146 @@ import logging
 logger = logging.getLogger(__name__)
 logger.addHandler(logstream)
 logger.propagate = False
+
+
+def listener_check(request, title, *args, **kwargs):
+    """
+    Custom check endpoint for the listener.
+    
+    Check if a citation exists, also reports the Paused state
+    """
+
+    is_paused = ListenerPause.get_paused()
+
+    record = Citations.objects.filter(
+        Q(title=title) | Q(pk=title)
+    ).order_by('-version')
+
+    if not record:
+        return JsonResponse(
+            {
+                "detail": f"Requested object ID {title} not found",
+                "pause": is_paused
+            },
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    return JsonResponse(
+        {
+            "detail": record[0].pk,
+            "pause": is_paused
+        },
+        status=status.HTTP_200_OK,
+    )
+        
+
+def download_bibtex(request, title, *args, **kwargs):
+    """
+    Download a BibTeX representation of a given DOI
+    """
+
+    # If the ID is given (i.e from the landing page), will
+    # use the specific record. Otherwise will return the latest version
+    # of the citation record.
+
+    record = Citations.objects.filter(
+            Q(title=title) | Q(pk=title)
+        ).order_by('-version')
+
+    if not record:
+        raise Http404(f"Requested object ID {title} not found")
+
+    record = record[0]
+
+    if not record.published:
+        raise Http404(f"Citation ID {record.pk} does not have a DOI")
+
+    doi_full = record.doi_url
+    doi      = record.doi_url.replace('https://doi.org/','')
+    timestamp = record.publication_timestamp
+
+    primary = fullname(PartiesSerializer(record.primary).data)
+
+    yyyymmdd = timestamp.split('T')[0].replace('-','')
+    yyyy = yyyymmdd[:4]
+
+    bibtex = '\n'.join([
+        '@misc{' + doi_full + ',',
+        '   url = {' + doi_full + '},',
+        '   title = {' + record.title + '},',
+        '   publisher = {' + settings.PUBLISHER_LONGNAME + '},',
+        '   year = {' + yyyy + '},',
+        '   author = {' + primary + '},',
+        '   doi = {' + doi + '},',
+        '   citation_version = {v' + str(record.version) + '}', 
+        '}'
+    ])
+
+    response = HttpResponse(
+        bibtex, content_type='text/plain'
+    )
+
+    response["Content-Disposition"] = (
+        f'attachment; filename="{record.pk}.bib"'
+    )
+    return response
+
+
+
+def download_ris(request, title, *args, **kwargs):
+    """
+    Download a RIS representation of a given DOI
+
+    Research Information Systems format.
+    """
+
+    # If the ID is given (i.e from the landing page), will
+    # use the specific record. Otherwise will return the latest version
+    # of the citation record.
+
+    record = Citations.objects.filter(
+            Q(title=title) | Q(pk=title)
+        ).order_by('-version')
+
+    if not record:
+        raise Http404(f"Requested object ID {title} not found")
+
+    record = record[0]
+
+    if not record.published:
+        raise Http404(f"Citation ID {record.pk} does not have a DOI")
+
+    doi_full = record.doi_url
+    doi      = record.doi_url.replace('https://doi.org/','')
+    timestamp = record.publication_timestamp
+
+    primary = get_citable_party(record.primary)
+
+    yyyymmdd = timestamp.split('T')[0].replace('-','')
+    yyyy = yyyymmdd[:4]
+
+    ris = '\n'.join([
+        'TY  - DATA',
+        f'ID  - {doi_full}',
+        f'T1  - {record.title}',
+        f'PB  - {settings.PUBLISHER_LONGNAME}',
+        f'PY  - {yyyy}',
+        f'UR  - {doi_full}',
+        f'DO  - {doi}',
+        f'AU  - {primary}',
+        f'N1  - citation_version: {record.version}', 
+        'ER  -'
+    ])
+
+    response = HttpResponse(
+        ris, content_type='text/plain'
+    )
+
+    response["Content-Disposition"] = (
+        f'attachment; filename="{record.pk}.ris"'
+    )
+    return response
+
 
 def create_new_permission(user, institution_id: str):
     """
@@ -606,7 +746,7 @@ class SuperuserTokenView(APIView):
 
     def post(self, request):
 
-        if not request.is_secure():
+        if not settings.DEBUG and not request.is_secure():
             return Response(
                 {"detail": "HTTPS Required"},
                 status=status.HTTP_401_UNAUTHORIZED,
@@ -725,17 +865,15 @@ class CitationView(GenericRenderedView):
             else:
                 pk = kwargs['title']
 
-            if Citations.objects.filter(pk=pk):
+            citation = Citations.objects.filter(
+                Q(pk=pk) | Q(title=pk)).order_by("-version")
+
+            if citation:
                 data = CitationsSerializer(
-                    Citations.objects.get(pk=pk)
-                ).get_data()
-            elif Citations.objects.filter(title=pk):
-                data = CitationsSerializer(
-                    Citations.objects.filter(title=pk).order_by("version").last()
+                    citation[0]
                 ).get_data()
             else:
                 raise Http404("The requested citation title does not yet exist.")
-
 
             return JsonResponse(data)
         return super().get(request, *args, **kwargs)
