@@ -409,7 +409,7 @@
     <span class="c1"># Add version to cite as?</span>
     <span class="k">return</span> <span class="p">{</span>
         <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="s2">&quot;; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">all_authors</span><span class="p">)</span><span class="si">}</span><span class="s1">. (</span><span class="si">{</span><span class="n">yyyy</span><span class="si">}</span><span class="s1">).&#39;</span><span class="p">,</span>
-        <span class="s2">&quot;rotc&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">citation</span><span class="o">.</span><span class="n">title</span><span class="si">}</span><span class="s2">. v</span><span class="si">{</span><span class="n">yyyymmdd</span><span class="si">}</span><span class="s2">. </span><span class="si">{</span><span class="n">settings</span><span class="o">.</span><span class="n">PUBLISHER</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;rotc&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">citation</span><span class="o">.</span><span class="n">title</span><span class="si">}</span><span class="s2">. v</span><span class="si">{</span><span class="n">citation</span><span class="o">.</span><span class="n">version</span><span class="si">}</span><span class="s2">. </span><span class="si">{</span><span class="n">settings</span><span class="o">.</span><span class="n">PUBLISHER</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">,</span>
     <span class="p">}</span></div>
 
 
@@ -1558,8 +1558,9 @@
                 <span class="n">codename</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;edit_</span><span class="si">{</span><span class="n">citation</span><span class="o">.</span><span class="n">institution_id</span><span class="si">}</span><span class="s2">&quot;</span>
             <span class="p">):</span>
                 <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">dispatch</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">HttpResponseRedirect</span><span class="p">(</span><span class="n">reverse</span><span class="p">(</span><span class="s2">&quot;citations:reviewer_request&quot;</span><span class="p">))</span></div>
+            <span class="k">return</span> <span class="n">HttpResponseRedirect</span><span class="p">(</span><span class="n">reverse</span><span class="p">(</span><span class="s2">&quot;citations:reviewer_request&quot;</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">dispatch</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="CitationFormMixin.reload_formset_values">
@@ -1969,6 +1970,10 @@
 <a class="viewcode-back" href="../../views.html#citations.views.NewCitationFormView.get_context_data">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="n">context</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">):</span>
+            <span class="n">context</span><span class="p">[</span><span class="s1">&#39;citation_title&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">)</span>
+            <span class="n">context</span><span class="p">[</span><span class="s1">&#39;next_version&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span>
+                <span class="n">title</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s1">&#39;version&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">last</span><span class="p">()</span><span class="o">.</span><span class="n">version</span> <span class="o">+</span> <span class="mi">1</span>
         <span class="k">return</span> <span class="n">context</span></div>
 </div>
 
