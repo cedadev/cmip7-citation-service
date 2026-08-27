@@ -3,7 +3,9 @@
 {% block head_title %}CMIP7 Citation{% endblock %}
 
 {% block content_main_inner %}
-    {% if on_submit == 'create' %}
+    {% if next_version %}
+    <h2><b>Create Version {{ next_version }} for {{ citation_title }}</b></h2>
+    {% elif on_submit == 'create' %}
     <h2><b>Add New Citation</b></h2>
     {% else %}
     <h2><b>Edit Citation Record</b></h2>

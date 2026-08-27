@@ -312,7 +312,7 @@ def render_cite_as(citation: Citations):
     # Add version to cite as?
     return {
         "title": f'{"; ".join(all_authors)}. ({yyyy}).',
-        "rotc": f"{citation.title}. v{yyyymmdd}. {settings.PUBLISHER}.",
+        "rotc": f"{citation.title}. v{citation.version}. {settings.PUBLISHER}.",
     }
 
 
@@ -1315,8 +1315,9 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
                 codename=f"edit_{citation.institution_id}"
             ):
                 return super().dispatch(request, *args, **kwargs)
-
-        return HttpResponseRedirect(reverse("citations:reviewer_request"))
+            return HttpResponseRedirect(reverse("citations:reviewer_request"))
+        else:
+            return super().dispatch(request, *args, **kwargs)
 
     def reload_formset_values(self, context: dict, post):
         """
@@ -1705,6 +1706,10 @@ class NewCitationFormView(CitationFormMixin):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        if self.request.GET.get("title"):
+            context['citation_title'] = self.request.GET.get("title")
+            context['next_version'] = Citations.objects.filter(
+                title=self.request.GET.get("title")).order_by('version').last().version + 1
         return context
 
 
