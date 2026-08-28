@@ -390,12 +390,13 @@ def fullname(party: dict) -> str:
     return f"{party['first_name']} {party['last_name']}"
 
 
-def deep_search(queryset, term: str, order_by: str, all_versions=True):
+def deep_search(queryset, term: str, order_by: tuple, all_versions=True):
     """
     Fuzzy search for a term within the queryset.
 
     This also allows ordering of search results and filtering on versions.
     """
+
     q = Q()
     model = queryset.model
 
@@ -410,7 +411,7 @@ def deep_search(queryset, term: str, order_by: str, all_versions=True):
     if not all_versions:
         return filter_versions(queryset.filter(q))
     else:
-        return queryset.filter(q).order_by(order_by)
+        return queryset.filter(q).order_by(*order_by)
 
 
 def filter_versions(queryset):
@@ -505,6 +506,15 @@ class PaginatedListView(GenericRenderedView):
         """
         context = super().get_context_data(**kwargs)
 
+        # Define partial next query.
+        query_next = []
+        if search_term:
+            query_next.append(f'search={search_term}')
+        if context.get('all_versions'):
+            query_next.append('legacy_versions=yes')
+        query_next.append(f'page={page_number+1}')
+        context['query_next'] = '&'.join(query_next)
+
         context["total_results"] = count or self.model.objects.count()
         context["pagination"] = min(
             self.paginate_by * page_number, int(context["total_results"])
@@ -530,8 +540,8 @@ class PaginatedListView(GenericRenderedView):
                 self.model.objects.all(), term, order_by=self.order_by
             )
         else:
-            searches = self.model.objects.all().order_by(self.order_by)
-            count = len(searches)
+            searches = self.model.objects.all().order_by(*self.order_by)
+        count = len(searches)
         return searches, count, term
 
     def get(self, request, *args, **kwargs):
@@ -710,7 +720,7 @@ class PartiesView(PaginatedListView):
     model = Parties
     serializer_class = PartiesSerializer
     paginate_by = 10
-    order_by = "last_name"
+    order_by = ("last_name",)
 
 
 class FailedRequestsView(PaginatedListView):
@@ -719,7 +729,7 @@ class FailedRequestsView(PaginatedListView):
     model = FailedRequests
     serializer_class = FailedRequestsSerializer
     paginate_by = 10
-    order_by = "id"
+    order_by = ("id",)
 
     def get_context_data(self, *args, **kwargs):
 
@@ -780,7 +790,7 @@ class InstitutionsView(PaginatedListView):
     model = Institutions
     serializer_class = InstitutionsSerializer
     paginate_by = 10
-    order_by = Lower("name")
+    order_by = (Lower("name"),)
 
 
 class FundingStreamsView(PaginatedListView):
@@ -789,7 +799,7 @@ class FundingStreamsView(PaginatedListView):
     model = FundingStreams
     serializer_class = FundingStreamsSerializer
     paginate_by = 10
-    order_by = Lower("name")
+    order_by = (Lower("name"),)
 
     def adjust_for_UI_render(self, queryset) -> list:
         adj_queryset = []
@@ -806,7 +816,7 @@ class CitationsView(PaginatedListView):
     model = Citations
     serializer_class = CitationsSerializer
     paginate_by = 10
-    order_by = "-version,title"
+    order_by=('-version','title')
 
     def get_context_data(self, *args, **kwargs):
         context = super().get_context_data(*args, **kwargs)
@@ -816,7 +826,6 @@ class CitationsView(PaginatedListView):
         return context
 
     def perform_search(self, show_all_versions: bool = False) -> tuple:
-        count = self.model.objects.count()
         show_all_versions = bool(self.request.GET.get("legacy_versions", "") != "")
         term = None
         if (
@@ -832,11 +841,11 @@ class CitationsView(PaginatedListView):
             )
         else:
             if show_all_versions:
-                search_citations = self.model.objects.all().order_by(self.order_by)
-                count = len(search_citations)
+                search_citations = self.model.objects.all().order_by(*self.order_by)
             else:
                 search_citations = filter_versions(self.model.objects)
-                count = len(search_citations)
+
+        count = len(search_citations)
         return search_citations, count, term
 
     def adjust_for_UI_render(self, queryset) -> list:

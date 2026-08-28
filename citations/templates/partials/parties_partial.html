@@ -14,7 +14,7 @@
     <td></td>
     <td colspan="2">
         <button
-            hx-get="{% url 'citations:parties' %}?page={{ parties.next_page_number }}"
+            hx-get="{% url 'citations:parties' %}?{{ query_next }}"
             hx-target="#load-more-row"
             hx-swap="outerHTML"
         >

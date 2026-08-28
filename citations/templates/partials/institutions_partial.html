@@ -9,7 +9,7 @@
 <tr id="load-more-row">
     <td colspan="3">
         <button
-            hx-get="{% url 'citations:institutions' %}?page={{ institutions.next_page_number }}"
+            hx-get="{% url 'citations:institutions' %}?{{ query_next }}"
             hx-target="#load-more-row"
             hx-swap="outerHTML"
         >

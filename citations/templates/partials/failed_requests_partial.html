@@ -9,7 +9,7 @@
     <td></td>
     <td colspan="2">
         <button
-            hx-get="{% url 'citations:failed' %}?page={{ failedrequests.next_page_number }}"
+            hx-get="{% url 'citations:failed' %}?{{ query_next }}"
             hx-target="#load-more-row"
             hx-swap="outerHTML"
         >
