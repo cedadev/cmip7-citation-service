@@ -131,12 +131,19 @@ def mint_doi_for_record(
                     "schemeUri": "https://ror.org/",
                 },
                 "publicationYear": yyyy,  # Do we want this as a field in the citation service?
-                "types": {"resourceTypeGeneral": "Text"},
+                "types": {"resourceTypeGeneral": "Collection"},
                 "url": settings.SERVICE_URL + "/citation/" + id,
                 "version": data["version"],
                 "rightsList": [],
                 "fundingReferences": funds,
                 "relatedIdentifiers": related_identifiers,
+                "descriptions":[
+                    {
+                        "lang":"en",
+                        "description": data.get('abstract'),
+                        "descriptionType": "Abstract"
+                    }
+                ]
             },
         }
     }
