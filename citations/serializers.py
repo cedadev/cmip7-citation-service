@@ -725,7 +725,7 @@ class CitationsSerializer(GenericSerializerMixin):
             "is_referenced_by",
         ]
         required_fields = ["title", "version", "primary"]
-        non_replicating_fields = ["experiment_id", "doi_url", "publication_timestamp"]
+        non_replicating_fields = ["experiment_id", "doi_url", "publication_timestamp","abstract"]
         id_relations = ["primary"]
         insert_order_relations = ["contacts"]
 

@@ -1666,6 +1666,27 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
 
         return self.redirect_on_success(title=obj["title"], failed_publish = not pubstatus)
 
+    def _initial_formset_values(self, context):
+        init = self.get_initial()
+        initial_contacts = [init["primary"]]
+        initial_contacts += init.get("contacts", [])
+
+        references = []
+        for relation in self.serializer_class.Meta.citation_types:
+            for v in init.get(relation):
+                v["relation"] = reference_mapping.index(relation) + 1
+                v["DOI"] = v["id"]
+                references.append(v)
+
+        context["contact_formset"] = ContactFormSet(initial=initial_contacts)
+        context["institution_formset"] = InstitutionFormSet(
+            initial=init["institutions"]
+        )
+        context["funder_formset"] = FunderFormSet(initial=init["funders"])
+        context["reference_formset"] = ReferenceFormSet(initial=references)
+        context["replica_formset"] = ReplicaFormSet()
+        return context
+
 
 class NewCitationFormView(CitationFormMixin):
 
@@ -1706,9 +1727,9 @@ class NewCitationFormView(CitationFormMixin):
                 .last()
             ).get_data()
 
-        # # Map Internal to External Labels
-        # for label, facet in ESGVOC_FACET_LABELS.get(citation_data.get('project_id',''),{}).items():
-        #     citation_data[label] = citation_data.pop(facet,None)
+        # Remove non-replicable properties
+        for field in getattr(self.serializer_class.Meta, "non_replicating_fields", []):
+            citation_data.pop(field, "")
 
         initial = super().get_initial() | citation_data
         return initial
@@ -1716,6 +1737,7 @@ class NewCitationFormView(CitationFormMixin):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         if self.request.GET.get("title"):
+            context = self._initial_formset_values(context)
             context['citation_title'] = self.request.GET.get("title")
             context['next_version'] = Citations.objects.filter(
                 title=self.request.GET.get("title")).order_by('version').last().version + 1
@@ -1785,25 +1807,7 @@ class EditCitationFormView(CitationFormMixin):
         return initial
 
     def initial_formset_values(self, context):
-        init = self.get_initial()
-        initial_contacts = [init["primary"]]
-        initial_contacts += init.get("contacts", [])
-
-        references = []
-        for relation in self.serializer_class.Meta.citation_types:
-            for v in init.get(relation):
-                v["relation"] = reference_mapping.index(relation) + 1
-                v["DOI"] = v["id"]
-                references.append(v)
-
-        context["contact_formset"] = ContactFormSet(initial=initial_contacts)
-        context["institution_formset"] = InstitutionFormSet(
-            initial=init["institutions"]
-        )
-        context["funder_formset"] = FunderFormSet(initial=init["funders"])
-        context["reference_formset"] = ReferenceFormSet(initial=references)
-        context["replica_formset"] = ReplicaFormSet()
-        return context
+        return self._initial_formset_values(context)
 
     def new_version(self, title: str, version: str, **kwargs):
         version_requested = version
