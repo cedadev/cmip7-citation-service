@@ -1917,7 +1917,28 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">serializer</span><span class="o">.</span><span class="n">validated_data</span><span class="p">[</span><span class="s2">&quot;institution_id&quot;</span><span class="p">]</span>
             <span class="p">)</span>
 
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">redirect_on_success</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">obj</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">],</span> <span class="n">failed_publish</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">pubstatus</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">redirect_on_success</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">obj</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">],</span> <span class="n">failed_publish</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">pubstatus</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_initial_formset_values</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+        <span class="n">init</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_initial</span><span class="p">()</span>
+        <span class="n">initial_contacts</span> <span class="o">=</span> <span class="p">[</span><span class="n">init</span><span class="p">[</span><span class="s2">&quot;primary&quot;</span><span class="p">]]</span>
+        <span class="n">initial_contacts</span> <span class="o">+=</span> <span class="n">init</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;contacts&quot;</span><span class="p">,</span> <span class="p">[])</span>
+
+        <span class="n">references</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">relation</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">serializer_class</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">citation_types</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">init</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">relation</span><span class="p">):</span>
+                <span class="n">v</span><span class="p">[</span><span class="s2">&quot;relation&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">reference_mapping</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">relation</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+                <span class="n">v</span><span class="p">[</span><span class="s2">&quot;DOI&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span>
+                <span class="n">references</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+
+        <span class="n">context</span><span class="p">[</span><span class="s2">&quot;contact_formset&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ContactFormSet</span><span class="p">(</span><span class="n">initial</span><span class="o">=</span><span class="n">initial_contacts</span><span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s2">&quot;institution_formset&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">InstitutionFormSet</span><span class="p">(</span>
+            <span class="n">initial</span><span class="o">=</span><span class="n">init</span><span class="p">[</span><span class="s2">&quot;institutions&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s2">&quot;funder_formset&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">FunderFormSet</span><span class="p">(</span><span class="n">initial</span><span class="o">=</span><span class="n">init</span><span class="p">[</span><span class="s2">&quot;funders&quot;</span><span class="p">])</span>
+        <span class="n">context</span><span class="p">[</span><span class="s2">&quot;reference_formset&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ReferenceFormSet</span><span class="p">(</span><span class="n">initial</span><span class="o">=</span><span class="n">references</span><span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s2">&quot;replica_formset&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ReplicaFormSet</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">context</span></div>
 
 
 
@@ -1967,9 +1988,9 @@
                 <span class="o">.</span><span class="n">last</span><span class="p">()</span>
             <span class="p">)</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
 
-        <span class="c1"># # Map Internal to External Labels</span>
-        <span class="c1"># for label, facet in ESGVOC_FACET_LABELS.get(citation_data.get(&#39;project_id&#39;,&#39;&#39;),{}).items():</span>
-        <span class="c1">#     citation_data[label] = citation_data.pop(facet,None)</span>
+        <span class="c1"># Remove non-replicable properties</span>
+        <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">serializer_class</span><span class="o">.</span><span class="n">Meta</span><span class="p">,</span> <span class="s2">&quot;non_replicating_fields&quot;</span><span class="p">,</span> <span class="p">[]):</span>
+            <span class="n">citation_data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">field</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
 
         <span class="n">initial</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_initial</span><span class="p">()</span> <span class="o">|</span> <span class="n">citation_data</span>
         <span class="k">return</span> <span class="n">initial</span></div>
@@ -1980,6 +2001,7 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="n">context</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">):</span>
+            <span class="n">context</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_initial_formset_values</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
             <span class="n">context</span><span class="p">[</span><span class="s1">&#39;citation_title&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">)</span>
             <span class="n">context</span><span class="p">[</span><span class="s1">&#39;next_version&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span>
                 <span class="n">title</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s1">&#39;version&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">last</span><span class="p">()</span><span class="o">.</span><span class="n">version</span> <span class="o">+</span> <span class="mi">1</span>
@@ -2059,25 +2081,7 @@
 
 
     <span class="k">def</span><span class="w"> </span><span class="nf">initial_formset_values</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
-        <span class="n">init</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_initial</span><span class="p">()</span>
-        <span class="n">initial_contacts</span> <span class="o">=</span> <span class="p">[</span><span class="n">init</span><span class="p">[</span><span class="s2">&quot;primary&quot;</span><span class="p">]]</span>
-        <span class="n">initial_contacts</span> <span class="o">+=</span> <span class="n">init</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;contacts&quot;</span><span class="p">,</span> <span class="p">[])</span>
-
-        <span class="n">references</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">relation</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">serializer_class</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">citation_types</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">init</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">relation</span><span class="p">):</span>
-                <span class="n">v</span><span class="p">[</span><span class="s2">&quot;relation&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">reference_mapping</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">relation</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
-                <span class="n">v</span><span class="p">[</span><span class="s2">&quot;DOI&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span>
-                <span class="n">references</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
-
-        <span class="n">context</span><span class="p">[</span><span class="s2">&quot;contact_formset&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ContactFormSet</span><span class="p">(</span><span class="n">initial</span><span class="o">=</span><span class="n">initial_contacts</span><span class="p">)</span>
-        <span class="n">context</span><span class="p">[</span><span class="s2">&quot;institution_formset&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">InstitutionFormSet</span><span class="p">(</span>
-            <span class="n">initial</span><span class="o">=</span><span class="n">init</span><span class="p">[</span><span class="s2">&quot;institutions&quot;</span><span class="p">]</span>
-        <span class="p">)</span>
-        <span class="n">context</span><span class="p">[</span><span class="s2">&quot;funder_formset&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">FunderFormSet</span><span class="p">(</span><span class="n">initial</span><span class="o">=</span><span class="n">init</span><span class="p">[</span><span class="s2">&quot;funders&quot;</span><span class="p">])</span>
-        <span class="n">context</span><span class="p">[</span><span class="s2">&quot;reference_formset&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ReferenceFormSet</span><span class="p">(</span><span class="n">initial</span><span class="o">=</span><span class="n">references</span><span class="p">)</span>
-        <span class="n">context</span><span class="p">[</span><span class="s2">&quot;replica_formset&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ReplicaFormSet</span><span class="p">()</span>
-        <span class="k">return</span> <span class="n">context</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_initial_formset_values</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">new_version</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">title</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">version</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="n">version_requested</span> <span class="o">=</span> <span class="n">version</span>
