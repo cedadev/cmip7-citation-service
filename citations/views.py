@@ -1597,21 +1597,25 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
         ndata = copy.deepcopy(cloned_data)
         ndata["title"] = ntitle
         ndata.pop("id", None)
+        ndata.pop("version",None)
 
-        instance = None
-        queryset = self.model.objects.filter(title=ntitle).order_by("-version")
-        if queryset:
-            instance = queryset[0]
-            ndata["id"] = ndata["title"] + "_v" + str(instance.version)
-            ndata["version"] = instance.version
-        else:
-            ndata["id"] = ndata["title"] + "_v1"
-            ndata["version"] = 1
+        instance = self.model.objects.filter(title=ntitle).order_by("version").last()
 
-        for field in getattr(self.serializer_class.Meta, "non_replicating_fields", []):
+        # Search facets are not replicating, but they do copy.
+        for field in getattr(self.serializer_class.Meta, "non_copying_fields", []):
+            ndata.pop(field, "")
+        for field in getattr(self.serializer_class.Meta, "search_facets", []):
             ndata.pop(field, "")
 
-        return ndata, instance
+        # Explicitly update the content of the serialized data representation.
+        newdata = self.serializer_class(instance=instance).get_data()
+        newdata.update(ndata)
+
+        # Remove old primary data
+        if 'primary_id' in newdata:
+            newdata.pop('primary',None)
+
+        return newdata, instance
 
     def replicate_data(self, instance=None, data=None):
 
@@ -1630,7 +1634,14 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
         if publish:
             obj, pubstatus = check_publish_ok(self.request, obj)
 
-        # Determine replicas
+        if "institution_id" in serializer.validated_data:
+            create_new_permission(
+                self.request.user, serializer.validated_data["institution_id"]
+            )
+
+        # Determine replication
+        prime_title = obj['title']
+
         replica_formset = ReplicaFormSet(self.request.POST)
         replicas = []
         for r in replica_formset:
@@ -1639,13 +1650,21 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
                     replicas.append(r.cleaned_data["title"])
 
         if "replicate" in self.request.POST:
+            replicate_failed = []
             for r in replicas:
+
+                if not self.model.objects.filter(title=r):
+                    replicate_failed.append(r)
+                    continue
 
                 ndata, inst = self.clean_replica_data(serializer.validated_data, r)
 
-                serializer = self.serializer_class(instance=inst, data=ndata)
+                serializer = self.serializer_class(instance=inst, data=ndata, partial=True)
 
-                serializer.is_valid(raise_exception=True)
+                try:
+                    serializer.is_valid(raise_exception=True)
+                except Exception as e:
+                    pass
                 obj = serializer.save(
                     publish=publish, user_id=self.request.user.username
                 )
@@ -1656,15 +1675,17 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
             # pubstatus = True if publication either successful or not run
             # pubstatus = False only if publication is unsuccessful
 
-            if len(replicas) > 0:
-                return self.redirect_on_success(failed_publish = not pubstatus)
-
-        if "institution_id" in serializer.validated_data:
-            create_new_permission(
-                self.request.user, serializer.validated_data["institution_id"]
-            )
-
-        return self.redirect_on_success(title=obj["title"], failed_publish = not pubstatus)
+            if len(replicate_failed) > 0:
+                messages.error(
+                    self.request,
+                    f'The following titles failed replication as they do not exist: {",".join(replicate_failed)}'
+                )
+            else:
+                messages.success(
+                    self.request,
+                    "All replications complete."
+                )
+        return self.redirect_on_success(title=prime_title, failed_publish = not pubstatus)
 
     def _initial_formset_values(self, context):
         init = self.get_initial()
@@ -1728,8 +1749,11 @@ class NewCitationFormView(CitationFormMixin):
             ).get_data()
 
         # Remove non-replicable properties
-        for field in getattr(self.serializer_class.Meta, "non_replicating_fields", []):
-            citation_data.pop(field, "")
+        for field in getattr(self.serializer_class.Meta, "non_copying_fields", []):
+
+            # Exceptions for search facets which are copyable but non-replicating.
+            if field not in getattr(self.serializer_class.Meta, "search_facets", []):
+                citation_data.pop(field, "")
 
         initial = super().get_initial() | citation_data
         return initial

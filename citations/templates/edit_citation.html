@@ -64,6 +64,8 @@
 
         <h2>Contacts</h2>
         <p><i>If the person already exists as part of another citation record, you are only required to enter their full name information (including middle names) to match to the existing record.</i></p>
+        <br>
+        <p><i>Please ensure that if the "Citation Support" primary author appears here that it is removed before attempting to add any new Contacts. Records with "Citation Support" as an author cannot be published.</i></p>
 
         <div id="contact-formset-div">
             {% if extra_errors.contact %}
@@ -299,6 +301,11 @@
         <div hidden id="replication-div">
             <h3>Replications</h3>
             <p><i>Enter here the titles of other citation records to be created/updated with the above content. These changes will be applied to the latest version in all cases.</i></p>
+            <ul>
+                <li><i>The Search facets are not replicated to the other citations. This interface can therefore not be used to create citations, only copy content to existing citations.</i></li>
+                <li><i>The DOI and publication date will not be copied (if provided) to another citation on replicating.</i></li>
+                <li><i>The abstract will not be copied to another citation on replicating. This is because the abstract construction is based on the search facets which do not replicate.</i></li>
+            </ul>
             {% if extra_errors.replicas %}
             <div class="alert alert-warning">
                 Errors:
@@ -345,6 +352,23 @@
             </div>
         </div>
         <br>
+        {% if publishable %}
+        <h2>Mint a DOI</h2>
+        <p><i>Check the box below to mint a DOI for this citation record upon saving/updating.</i></p>
+        <ul>
+            <li><i>WARNING: Ticking this box when replicating data will mint all the other DOIs at the same time. It is advised to instead replicate and check all the data first, then mint DOIs individually.</i></li>
+            <li><i>NOTE: Published records are not editable after a DOI has been minted. The option to 'Edit' will not be accessible. In the future this may be allowed, but only for non-DOI-breaking changes.</i></li>
+        </ul>
+        <table>
+            <tr>
+                <td>
+                    <input type="checkbox" id="publish" name="publish" value="Mint DOI on Save">
+                    <label for="publish">Mint DOI on Save</label><br>
+                </td>
+            </tr>
+        </table>
+        {% endif %}
+        <br>
         <br>
         <table>
             <tr>
@@ -356,12 +380,6 @@
                     value="Update version {{ new_version }}" title="Update version (v{{ new_version }}).">
                 {% endif %}
                 </td>
-                {% if publishable %}
-                <td>
-                    <input type="checkbox" id="publish" name="publish" value="Publish on Save">
-                    <label for="publish">Publish on Save</label><br>
-                </td>
-                {% endif %}
             </tr>
         </table>
     </form>

@@ -724,8 +724,16 @@ class CitationsSerializer(GenericSerializerMixin):
             "is_cited_by",
             "is_referenced_by",
         ]
+        search_facets = [
+            "project_id",
+            "activity_id",
+            "domain_id",
+            "institution_id",
+            "source_id",
+            "experiment_id"
+        ]
         required_fields = ["title", "version", "primary"]
-        non_replicating_fields = ["experiment_id", "doi_url", "publication_timestamp","abstract"]
+        non_copying_fields = ["doi_url", "publication_timestamp","abstract", "experiment_id"]
         id_relations = ["primary"]
         insert_order_relations = ["contacts"]
 
