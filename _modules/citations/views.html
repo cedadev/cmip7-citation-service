@@ -1850,21 +1850,25 @@
         <span class="n">ndata</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">cloned_data</span><span class="p">)</span>
         <span class="n">ndata</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ntitle</span>
         <span class="n">ndata</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">ndata</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">,</span><span class="kc">None</span><span class="p">)</span>
 
-        <span class="n">instance</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="n">queryset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">ntitle</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s2">&quot;-version&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">queryset</span><span class="p">:</span>
-            <span class="n">instance</span> <span class="o">=</span> <span class="n">queryset</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="n">ndata</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ndata</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;_v&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">instance</span><span class="o">.</span><span class="n">version</span><span class="p">)</span>
-            <span class="n">ndata</span><span class="p">[</span><span class="s2">&quot;version&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">version</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">ndata</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ndata</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;_v1&quot;</span>
-            <span class="n">ndata</span><span class="p">[</span><span class="s2">&quot;version&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">instance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">ntitle</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">last</span><span class="p">()</span>
 
-        <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">serializer_class</span><span class="o">.</span><span class="n">Meta</span><span class="p">,</span> <span class="s2">&quot;non_replicating_fields&quot;</span><span class="p">,</span> <span class="p">[]):</span>
+        <span class="c1"># Search facets are not replicating, but they do copy.</span>
+        <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">serializer_class</span><span class="o">.</span><span class="n">Meta</span><span class="p">,</span> <span class="s2">&quot;non_copying_fields&quot;</span><span class="p">,</span> <span class="p">[]):</span>
+            <span class="n">ndata</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">field</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">serializer_class</span><span class="o">.</span><span class="n">Meta</span><span class="p">,</span> <span class="s2">&quot;search_facets&quot;</span><span class="p">,</span> <span class="p">[]):</span>
             <span class="n">ndata</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">field</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">ndata</span><span class="p">,</span> <span class="n">instance</span>
+        <span class="c1"># Explicitly update the content of the serialized data representation.</span>
+        <span class="n">newdata</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">serializer_class</span><span class="p">(</span><span class="n">instance</span><span class="o">=</span><span class="n">instance</span><span class="p">)</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
+        <span class="n">newdata</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">ndata</span><span class="p">)</span>
+
+        <span class="c1"># Remove old primary data</span>
+        <span class="k">if</span> <span class="s1">&#39;primary_id&#39;</span> <span class="ow">in</span> <span class="n">newdata</span><span class="p">:</span>
+            <span class="n">newdata</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;primary&#39;</span><span class="p">,</span><span class="kc">None</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">newdata</span><span class="p">,</span> <span class="n">instance</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">replicate_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 
@@ -1883,7 +1887,14 @@
         <span class="k">if</span> <span class="n">publish</span><span class="p">:</span>
             <span class="n">obj</span><span class="p">,</span> <span class="n">pubstatus</span> <span class="o">=</span> <span class="n">check_publish_ok</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="p">,</span> <span class="n">obj</span><span class="p">)</span>
 
-        <span class="c1"># Determine replicas</span>
+        <span class="k">if</span> <span class="s2">&quot;institution_id&quot;</span> <span class="ow">in</span> <span class="n">serializer</span><span class="o">.</span><span class="n">validated_data</span><span class="p">:</span>
+            <span class="n">create_new_permission</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">serializer</span><span class="o">.</span><span class="n">validated_data</span><span class="p">[</span><span class="s2">&quot;institution_id&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Determine replication</span>
+        <span class="n">prime_title</span> <span class="o">=</span> <span class="n">obj</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span>
+
         <span class="n">replica_formset</span> <span class="o">=</span> <span class="n">ReplicaFormSet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">)</span>
         <span class="n">replicas</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">replica_formset</span><span class="p">:</span>
@@ -1892,13 +1903,21 @@
                     <span class="n">replicas</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">])</span>
 
         <span class="k">if</span> <span class="s2">&quot;replicate&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">:</span>
+            <span class="n">replicate_failed</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">replicas</span><span class="p">:</span>
+
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">r</span><span class="p">):</span>
+                    <span class="n">replicate_failed</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+                    <span class="k">continue</span>
 
                 <span class="n">ndata</span><span class="p">,</span> <span class="n">inst</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">clean_replica_data</span><span class="p">(</span><span class="n">serializer</span><span class="o">.</span><span class="n">validated_data</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span>
 
-                <span class="n">serializer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">serializer_class</span><span class="p">(</span><span class="n">instance</span><span class="o">=</span><span class="n">inst</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">ndata</span><span class="p">)</span>
+                <span class="n">serializer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">serializer_class</span><span class="p">(</span><span class="n">instance</span><span class="o">=</span><span class="n">inst</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">ndata</span><span class="p">,</span> <span class="n">partial</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-                <span class="n">serializer</span><span class="o">.</span><span class="n">is_valid</span><span class="p">(</span><span class="n">raise_exception</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">serializer</span><span class="o">.</span><span class="n">is_valid</span><span class="p">(</span><span class="n">raise_exception</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="k">pass</span>
                 <span class="n">obj</span> <span class="o">=</span> <span class="n">serializer</span><span class="o">.</span><span class="n">save</span><span class="p">(</span>
                     <span class="n">publish</span><span class="o">=</span><span class="n">publish</span><span class="p">,</span> <span class="n">user_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">username</span>
                 <span class="p">)</span>
@@ -1909,15 +1928,17 @@
             <span class="c1"># pubstatus = True if publication either successful or not run</span>
             <span class="c1"># pubstatus = False only if publication is unsuccessful</span>
 
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">replicas</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">redirect_on_success</span><span class="p">(</span><span class="n">failed_publish</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">pubstatus</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="s2">&quot;institution_id&quot;</span> <span class="ow">in</span> <span class="n">serializer</span><span class="o">.</span><span class="n">validated_data</span><span class="p">:</span>
-            <span class="n">create_new_permission</span><span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">serializer</span><span class="o">.</span><span class="n">validated_data</span><span class="p">[</span><span class="s2">&quot;institution_id&quot;</span><span class="p">]</span>
-            <span class="p">)</span>
-
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">redirect_on_success</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">obj</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">],</span> <span class="n">failed_publish</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">pubstatus</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">replicate_failed</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">messages</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="p">,</span>
+                    <span class="sa">f</span><span class="s1">&#39;The following titles failed replication as they do not exist: </span><span class="si">{</span><span class="s2">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">replicate_failed</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">messages</span><span class="o">.</span><span class="n">success</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="p">,</span>
+                    <span class="s2">&quot;All replications complete.&quot;</span>
+                <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">redirect_on_success</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">prime_title</span><span class="p">,</span> <span class="n">failed_publish</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">pubstatus</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_initial_formset_values</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
         <span class="n">init</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_initial</span><span class="p">()</span>
@@ -1989,8 +2010,11 @@
             <span class="p">)</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
 
         <span class="c1"># Remove non-replicable properties</span>
-        <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">serializer_class</span><span class="o">.</span><span class="n">Meta</span><span class="p">,</span> <span class="s2">&quot;non_replicating_fields&quot;</span><span class="p">,</span> <span class="p">[]):</span>
-            <span class="n">citation_data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">field</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">serializer_class</span><span class="o">.</span><span class="n">Meta</span><span class="p">,</span> <span class="s2">&quot;non_copying_fields&quot;</span><span class="p">,</span> <span class="p">[]):</span>
+
+            <span class="c1"># Exceptions for search facets which are copyable but non-replicating.</span>
+            <span class="k">if</span> <span class="n">field</span> <span class="ow">not</span> <span class="ow">in</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">serializer_class</span><span class="o">.</span><span class="n">Meta</span><span class="p">,</span> <span class="s2">&quot;search_facets&quot;</span><span class="p">,</span> <span class="p">[]):</span>
+                <span class="n">citation_data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">field</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
 
         <span class="n">initial</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_initial</span><span class="p">()</span> <span class="o">|</span> <span class="n">citation_data</span>
         <span class="k">return</span> <span class="n">initial</span></div>
