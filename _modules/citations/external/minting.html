@@ -213,12 +213,19 @@
                     <span class="s2">&quot;schemeUri&quot;</span><span class="p">:</span> <span class="s2">&quot;https://ror.org/&quot;</span><span class="p">,</span>
                 <span class="p">},</span>
                 <span class="s2">&quot;publicationYear&quot;</span><span class="p">:</span> <span class="n">yyyy</span><span class="p">,</span>  <span class="c1"># Do we want this as a field in the citation service?</span>
-                <span class="s2">&quot;types&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;resourceTypeGeneral&quot;</span><span class="p">:</span> <span class="s2">&quot;Text&quot;</span><span class="p">},</span>
+                <span class="s2">&quot;types&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;resourceTypeGeneral&quot;</span><span class="p">:</span> <span class="s2">&quot;Collection&quot;</span><span class="p">},</span>
                 <span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="n">settings</span><span class="o">.</span><span class="n">SERVICE_URL</span> <span class="o">+</span> <span class="s2">&quot;/citation/&quot;</span> <span class="o">+</span> <span class="nb">id</span><span class="p">,</span>
                 <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;version&quot;</span><span class="p">],</span>
                 <span class="s2">&quot;rightsList&quot;</span><span class="p">:</span> <span class="p">[],</span>
                 <span class="s2">&quot;fundingReferences&quot;</span><span class="p">:</span> <span class="n">funds</span><span class="p">,</span>
                 <span class="s2">&quot;relatedIdentifiers&quot;</span><span class="p">:</span> <span class="n">related_identifiers</span><span class="p">,</span>
+                <span class="s2">&quot;descriptions&quot;</span><span class="p">:[</span>
+                    <span class="p">{</span>
+                        <span class="s2">&quot;lang&quot;</span><span class="p">:</span><span class="s2">&quot;en&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;abstract&#39;</span><span class="p">),</span>
+                        <span class="s2">&quot;descriptionType&quot;</span><span class="p">:</span> <span class="s2">&quot;Abstract&quot;</span>
+                    <span class="p">}</span>
+                <span class="p">]</span>
             <span class="p">},</span>
         <span class="p">}</span>
     <span class="p">}</span>
