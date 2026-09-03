@@ -103,7 +103,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">slack_sdk</span><span class="w"> </span><span class="kn">import</span> <span class="n">WebClient</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">citations.consumer.write</span><span class="w"> </span><span class="kn">import</span> <span class="n">delete_instance</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">citations.external</span><span class="w"> </span><span class="kn">import</span> <span class="n">resolve_drs</span><span class="p">,</span> <span class="n">resolve_stac_query</span><span class="p">,</span> <span class="n">get_stac_query</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">citations.external</span><span class="w"> </span><span class="kn">import</span> <span class="n">resolve_drs</span><span class="p">,</span> <span class="n">resolve_stac_query</span><span class="p">,</span> <span class="n">get_stac_query</span><span class="p">,</span> <span class="n">get_metagrid_query</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">citations.facet_mappings</span><span class="w"> </span><span class="kn">import</span> <span class="n">ESGVOC_FACET_LABELS</span><span class="p">,</span> <span class="n">STAC_LABELS</span><span class="p">,</span> <span class="n">STAC_COLLECTIONS</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">citations.forms</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">ContactFormSet</span><span class="p">,</span>
@@ -1157,6 +1157,8 @@
         <span class="n">context</span><span class="p">[</span><span class="s2">&quot;code_snippet&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">render_code_snippet</span><span class="p">(</span><span class="n">citation_data</span><span class="p">)</span>
 
         <span class="n">context</span><span class="p">[</span><span class="s2">&quot;stac_query_url&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">get_stac_query</span><span class="p">(</span><span class="n">citation_data</span><span class="p">)</span>
+
+        <span class="n">context</span><span class="p">[</span><span class="s2">&quot;metagrid_query_url&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">get_metagrid_query</span><span class="p">(</span><span class="n">citation_data</span><span class="p">)</span>
 
         <span class="c1"># 4. Render Rights</span>
         <span class="n">context</span><span class="p">[</span><span class="s2">&quot;rights&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">render_rights</span><span class="p">(</span><span class="n">citation_data</span><span class="p">)</span>
