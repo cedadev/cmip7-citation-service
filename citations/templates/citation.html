@@ -63,12 +63,6 @@
                     <th>Abstract</th>
                     <td>{{ abstract|safe|linebreaksbr }}</td>
                 </tr>
-                {% if data_access %}
-                <tr>
-                    <th>Data Access URL</th>
-                    <td style="word-break: break-all;"><a href="{{ data_access }}">{{ data_access }}</a></td>
-                </tr>
-                {% endif %}
                 <tr>
                     <th>Rights</th>
                     <td>{{ rights|safe }}</td>
@@ -126,21 +120,28 @@
                 
             </table>
             <br>
-            {% if code_snippet  or stac_query_url%}
+            {% if code_snippet  or stac_query_url or metagrid_query_url %}
             <h3><b>Data Access</b></h3>
+            <p>This citation record represents all ESGF-NG data corresponding to the search facets above. See the abstract for details on any limitations of coverage. The data can be discovered using either the ESGF STAC API directly or by viewing the Metagrid Search interface to ESGF-NG.</p>
             <div>
-                {% if stac_query_url %}
-                <h4>STAC API Query</h4>
-                <p><i>Use this STAC API query to retrieve items corresponding to this citation record.</i></p>
                 <div>
-                <a href="{{ stac_query_url }}">{{ stac_query_url }}</a>
+                    {% if stac_query_url %}
+                    <a href="{{ stac_query_url }}">
+                    <input id="stac" class="btn btn-primary m-0" value="View in STAC API" readonly type="button" title="{{ stac_query_url }}">
+                    </a>
+                    {% endif %}
+
+                    {% if metagrid_query_url %}
+                    <a href="{{ metagrid_query_url }}">
+                    <input id="metagrid" class="btn btn-primary m-0" value="View in Metagrid UI" readonly type="button" title="{{ metagrid_query_url }}">
+                    </a>
+                    {% endif %}
                 </div>
                 <br>
-                {% endif %}
 
                 {% if code_snippet %}
                 <h4>Python Client</h4>
-                <p><i>Interfacing with the STAC API in python typically requires the pystac client or similar. Below is an example code snippet to fetch items to which this Citation record applies.</i></p>
+                <p>Interfacing with the STAC API can be done programatically in python using the pystac client or similar. Below is an example code snippet to fetch items to which this Citation record applies.</p>
                 <br>
                 <div class="box">
                     <pre>
