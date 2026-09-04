@@ -91,6 +91,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#citations.views.FailedRequestsView"><code class="docutils literal notranslate"><span class="pre">FailedRequestsView</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#citations.views.FailedRequestsView.model"><code class="docutils literal notranslate"><span class="pre">FailedRequestsView.model</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#citations.views.FailedRequestsView.serializer_class"><code class="docutils literal notranslate"><span class="pre">FailedRequestsView.serializer_class</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.FailedRequestsView.get"><code class="docutils literal notranslate"><span class="pre">FailedRequestsView.get()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#citations.views.FailedRequestsView.get_context_data"><code class="docutils literal notranslate"><span class="pre">FailedRequestsView.get_context_data()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#citations.views.FailedRequestsView.dispatch"><code class="docutils literal notranslate"><span class="pre">FailedRequestsView.dispatch()</span></code></a></li>
 </ul>
@@ -475,6 +476,12 @@ if the user already has permission for that institution.</p>
 <dt class="sig sig-object py" id="citations.views.FailedRequestsView.serializer_class">
 <span class="sig-name descname"><span class="pre">serializer_class</span></span><a class="headerlink" href="#citations.views.FailedRequestsView.serializer_class" title="Link to this definition"></a></dt>
 <dd><p>alias of <a class="reference internal" href="serializer.html#citations.serializers.FailedRequestsSerializer" title="citations.serializers.FailedRequestsSerializer"><code class="xref py py-class docutils literal notranslate"><span class="pre">FailedRequestsSerializer</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.FailedRequestsView.get">
+<span class="sig-name descname"><span class="pre">get</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#FailedRequestsView.get"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.FailedRequestsView.get" title="Link to this definition"></a></dt>
+<dd><p>Get list view with filtering and pagination</p>
 </dd></dl>
 
 <dl class="py method">
