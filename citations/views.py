@@ -731,6 +731,16 @@ class FailedRequestsView(PaginatedListView):
     paginate_by = 10
     order_by = ("id",)
 
+    def get(self, request, *args, **kwargs):
+        
+        # Allow JSON header response from failed page directly.
+        if 'application/json' in request.headers.get('Accept','') or 'application/json' in request.GET.get('httpAccept',''):
+
+            content = {'items': [self.serializer_class(m).data for m in self.model.objects.all()]}
+            return JsonResponse(content)
+
+        return super().get(request, *args, **kwargs)
+
     def get_context_data(self, *args, **kwargs):
 
         # Remove items that are now present
@@ -740,11 +750,17 @@ class FailedRequestsView(PaginatedListView):
 
         return super().get_context_data(*args, **kwargs)
 
+    def token_auth(self, token):
+        # Manual Token authentication
+
+        token_key = token.replace('Token ','')
+        return bool(Token.objects.filter(key=token_key))
+
     def dispatch(self, request, *args, **kwargs):
         """
         Setup for form view
         """
-        if not request.user.is_superuser:
+        if not request.user.is_superuser and not self.token_auth(request.headers.get('Authorization')):
             raise PermissionDenied()
         return super().dispatch(request, *args, **kwargs)
 
