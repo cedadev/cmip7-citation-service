@@ -30,7 +30,7 @@ class Institutions(models.Model):
     """
 
     name = models.CharField(max_length=120)
-    acronym = models.CharField(max_length=10)
+    acronym = models.CharField(max_length=30)
     country = models.CharField(max_length=120)
 
     id = models.CharField(max_length=120, primary_key=True)
