@@ -750,8 +750,11 @@ class FailedRequestsView(PaginatedListView):
 
         return super().get_context_data(*args, **kwargs)
 
-    def token_auth(self, token):
+    def token_auth(self, token: str | None):
         # Manual Token authentication
+
+        if token is None:
+            return False
 
         token_key = token.replace('Token ','')
         return bool(Token.objects.filter(key=token_key))
@@ -760,7 +763,7 @@ class FailedRequestsView(PaginatedListView):
         """
         Setup for form view
         """
-        if not request.user.is_superuser and not self.token_auth(request.headers.get('Authorization')):
+        if not request.user.is_superuser and not self.token_auth(request.headers.get('Authorization',None)):
             raise PermissionDenied()
         return super().dispatch(request, *args, **kwargs)
 
