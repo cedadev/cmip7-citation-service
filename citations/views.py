@@ -60,7 +60,7 @@ from citations.serializers import (
     chain_new_objects,
     handle_update,
 )
-from citations.utils import logstream, get_drs_url
+from citations.utils import logstream, get_drs_url, add_new_references
 import logging
 
 logger = logging.getLogger(__name__)
@@ -367,8 +367,8 @@ def render_reference_html(ref: dict) -> dict:
     This occurs on rendering the citation view.
     """
 
-    if ref["title"][-1] != ".":
-        ref["title"] += "."
+    if ref['title'][-1] != ")":
+        ref["title"] += ')'
 
     ref["citeas"] = (
         ref["citeas"]
@@ -965,7 +965,26 @@ class CitationView(GenericRenderedView):
                     '%Y-%m-%dT%H:%M:%SZ'),
                 "%d/%m/%Y at %H:%M:%S (UK)")
 
-        # 2. Render References
+        # 2. Add/Render References
+
+        citation_data, added = add_new_references(
+            citation_data,
+            CitationsSerializer.Meta.citation_types)
+
+        ## 2.1 Automatically add new references when rendering,
+        ## even if the citation record is not traditionally editable.
+        if added:
+            citation_s = CitationsSerializer(instance=citation, data=copy.deepcopy(citation_data))
+            try:
+                citation_s.is_valid(raise_exception=True)
+                citation_s.save()
+
+            except Exception as e:
+                messages.error(
+                    self.request, 
+                    f'A problem occurred collecting new references - {e} - ' \
+                    'contact the CEDA helpdesk to report this issue')
+
         for reference_type in CitationsSerializer.Meta.citation_types:
             if citation_data.get(reference_type):
                 for ref in citation_data[reference_type]:

@@ -32,7 +32,7 @@ from citations.models import (
     extract_from_orcid,
     locate_institute,
 )
-from citations.utils import logstream
+from citations.utils import logstream, add_new_references
 from citations.validators import validate_component, validate_project
 
 try:
@@ -236,50 +236,6 @@ def title_from_facets(
             return False, pseudo_title, v
 
     return True, pseudo_title, None
-
-
-def obtain_all_references(data: dict) -> dict:
-    """
-    Obtain Citation references from the EMD (ESGVOC)
-
-    Prevent adding a reference if it already exists.
-    """
-
-    if not ev:
-        return {}
-
-    project_id = data.get("project_id").lower()
-
-    cites = []
-    for label, facet in ESGVOC_FACET_LABELS[project_id].items():
-        component = ev.get_term_in_collection(
-            project_id=project_id, 
-            collection_id=label, 
-            term_id=data[facet].lower().replace('_','-') # Shift to dashes
-        ) or ev.get_term_in_collection(
-            project_id=project_id, 
-            collection_id=label, 
-            term_id=data[facet].lower().replace('-','_') # Shift to underscores
-        )
-
-        if not component:
-            continue
-        if not hasattr(component, "references"):
-            continue
-
-        for ref in component.references:
-
-            if ref.doi in ref.citation:
-                citeas = ref.citation
-            else:
-                citeas = f"{ref.citation} {ref.doi}"
-
-            title = getattr(ref, "title", None) or re.search(
-                r"^.*?\d{4}", ref.citation
-            ).group(0)
-            cites.append({"title": title, "citeas": citeas, "id": ref.doi})
-
-    return cites
 
 
 def assemble_license_info(data: dict) -> str:
@@ -828,16 +784,8 @@ class CitationsSerializer(GenericSerializerMixin):
         Locate or create references based on the provided information.
         """
 
-        # Only add references if they are not already present
-        for gr in obtain_all_references(data):
-            new_ref = True
-            for reftype in self.Meta.citation_types:
-                if gr["id"] in data.get(reftype,[]):
-                    new_ref = False
-            if new_ref:
-                if 'cites' not in data:
-                    data['cites'] = []
-                data["cites"].append(gr)
+        # We don't care here if any references were added new. All will be saved.
+        data, _ = add_new_references(data, self.Meta.citation_types)
 
         # Auto-fill from ESGVOC
         if not bool(data.get("abstract")):
