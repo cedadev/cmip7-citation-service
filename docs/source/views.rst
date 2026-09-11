@@ -23,6 +23,8 @@ Render functions listed below may perform changes to the content rendered to the
  - Rendering the Cite As option from the DOI and available info
  - Adding the STAC Code Snippet if available.
 
+In addition, references are now re-assessed in relation to the current ESGVOC API content from the EMD. This occurs every time the citation view is accessed for a particular record, but updates will only occur if the references are new and do not already exist in some form in the citation record already. Any loading of the citation view will trigger this update but only valid new references from ESGVOC are taken.
+
 Permissions apply to all create/update/delete views including for the API (PUT/POST/DELETE methods), where a user/token provided must have both the ``add_citations`` and ``edit_<institution>`` permissions to edit an existing record, or just the ``add_citations`` permission to create new records.
 
 .. automodule:: citations.views
