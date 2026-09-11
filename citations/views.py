@@ -48,7 +48,8 @@ from citations.models import (
     References,
     FailedRequests,
     CitationParty,
-    ListenerPause
+    ListenerPause,
+    get_ror_content
 )
 from citations.serializers import (
     CitationsSerializer,
@@ -1027,6 +1028,12 @@ class InstitutionView(GenericRenderedView):
         context["funding_contribs"] = [
             n for n in FundingStreams.objects.filter(affiliation=pk)
         ]
+
+        ror_content = get_ror_content(inst['name'])
+        if ror_content:
+            if len(ror_content['items']) > 0:
+                context['ror_link'] = ror_content['items'][0]['id']
+
         context["citations"] = (
             Citations.objects.filter(institutions__id=pk)
             .values_list("title", flat=True)

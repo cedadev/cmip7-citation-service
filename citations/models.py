@@ -175,19 +175,25 @@ class CitationParty(models.Model):
         ordering = ["position"]
 
 
-def locate_institute(inst: str):
-    """
-    Use ROR lookup API to find institute-level metadata
-    """
+def get_ror_content(inst: str) -> dict | None:
     ROR_api = "https://api.ror.org/v2/organizations?query=" + "%20".join(
         inst.split(" ")
     )
     r = requests.get(ROR_api)
     if int(r.status_code) >= 300:
         print("Institute not found")
+        return None
+    return r.json()
+
+
+def locate_institute(inst: str):
+    """
+    Use ROR lookup API to find institute-level metadata
+    """
+    resp = get_ror_content(inst)
+    if not resp:
         return {"name": inst}
 
-    resp = r.json()
     found = False
     inst_count = 0
     while not found and inst_count < 10:
