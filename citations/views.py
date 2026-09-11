@@ -1030,9 +1030,11 @@ class InstitutionView(GenericRenderedView):
         ]
 
         ror_content = get_ror_content(inst['name'])
-        if ror_content:
+        if ror_content is not None:
             if len(ror_content['items']) > 0:
-                context['ror_link'] = ror_content['items'][0]['id']
+                # Name must match exactly
+                if any([name['value'] == inst['name'] for name in ror_content['items'][0]['names']]):
+                    context['ror_link'] = ror_content['items'][0]['id']
 
         context["citations"] = (
             Citations.objects.filter(institutions__id=pk)

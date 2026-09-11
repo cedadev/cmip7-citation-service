@@ -183,6 +183,9 @@ def get_ror_content(inst: str) -> dict | None:
     if int(r.status_code) >= 300:
         print("Institute not found")
         return None
+
+    if 'errors' in r.json():
+        return None
     return r.json()
 
 
