@@ -1,4 +1,6 @@
 import logging
+import re
+import esgvoc.api as ev
 from typing import Union
 
 from django.conf import settings
@@ -53,3 +55,74 @@ def get_drs_url(data: dict) -> Union[str, None]:
     drs_url = "%2C".join(queries)
 
     return drs_url
+
+
+def add_new_references(data: dict, citation_types: list) -> tuple:
+    # Only add references if they are not already present
+    any_new = False
+    for gr in obtain_all_references(data):
+        new_ref = True
+        for reftype in citation_types:
+
+            ids = [ref['id'] for ref in data.get(reftype,[])]
+
+            # Only add new references using this method.
+            if gr["id"] in ids:
+                new_ref = False
+
+        # Add all CV references as 'cites'
+        if new_ref:
+            any_new = True
+            if 'cites' not in data:
+                data['cites'] = []
+            data["cites"].append(gr)
+
+    return data, any_new
+
+
+def obtain_all_references(data: dict) -> dict:
+    """
+    Obtain Citation references from the EMD (ESGVOC)
+
+    Prevent adding a reference if it already exists.
+    """
+
+    if not ev:
+        return {}
+
+    project_id = data.get("project_id").lower()
+
+    cites = []
+    for label, facet in ESGVOC_FACET_LABELS[project_id].items():
+        component = ev.get_term_in_collection(
+            project_id=project_id, 
+            collection_id=label, 
+            term_id=data[facet].lower().replace('_','-') # Shift to dashes
+        ) or ev.get_term_in_collection(
+            project_id=project_id, 
+            collection_id=label, 
+            term_id=data[facet].lower().replace('-','_') # Shift to underscores
+        )
+
+        if not component:
+            continue
+        if not hasattr(component, "references"):
+            continue
+
+        # Under review based on ESGVOC changes.
+        for ref in component.references:
+
+            if not hasattr(ref,'doi'):
+                continue
+            
+            if ref.doi in ref.citation:
+                citeas = ref.citation
+            else:
+                citeas = f"{ref.citation} {ref.doi}"
+
+            title = getattr(ref, "title", None) or re.search(
+                r"^.*?\d{4}", ref.citation
+            ).group(0)
+            cites.append({"title": title, "citeas": citeas, "id": ref.doi})
+
+    return cites

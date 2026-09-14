@@ -46,8 +46,10 @@ SITE_URL = 'http://localhost:8000'
 
 with httpx.Client(verify=False) as client:
     print(
-        client.post(f'{SITE_URL}/api/citations/', 
+        client.put(f'{SITE_URL}/api/citations/{citation["title"]}', 
             json=citation, 
             headers={'Authorization':f'Token {temp_token}'},
         )
     )
+
+    

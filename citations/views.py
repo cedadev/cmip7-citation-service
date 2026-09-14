@@ -48,7 +48,8 @@ from citations.models import (
     References,
     FailedRequests,
     CitationParty,
-    ListenerPause
+    ListenerPause,
+    get_ror_content
 )
 from citations.serializers import (
     CitationsSerializer,
@@ -60,7 +61,7 @@ from citations.serializers import (
     chain_new_objects,
     handle_update,
 )
-from citations.utils import logstream, get_drs_url
+from citations.utils import logstream, get_drs_url, add_new_references
 import logging
 
 logger = logging.getLogger(__name__)
@@ -367,8 +368,8 @@ def render_reference_html(ref: dict) -> dict:
     This occurs on rendering the citation view.
     """
 
-    if ref["title"][-1] != ".":
-        ref["title"] += "."
+    if ref['title'][-1] != ")":
+        ref["title"] += ')'
 
     ref["citeas"] = (
         ref["citeas"]
@@ -750,8 +751,11 @@ class FailedRequestsView(PaginatedListView):
 
         return super().get_context_data(*args, **kwargs)
 
-    def token_auth(self, token):
+    def token_auth(self, token: str | None):
         # Manual Token authentication
+
+        if token is None:
+            return False
 
         token_key = token.replace('Token ','')
         return bool(Token.objects.filter(key=token_key))
@@ -760,7 +764,7 @@ class FailedRequestsView(PaginatedListView):
         """
         Setup for form view
         """
-        if not request.user.is_superuser and not self.token_auth(request.headers.get('Authorization')):
+        if not request.user.is_superuser and not self.token_auth(request.headers.get('Authorization',None)):
             raise PermissionDenied()
         return super().dispatch(request, *args, **kwargs)
 
@@ -962,7 +966,35 @@ class CitationView(GenericRenderedView):
                     '%Y-%m-%dT%H:%M:%SZ'),
                 "%d/%m/%Y at %H:%M:%S (UK)")
 
-        # 2. Render References
+        # 2. Add/Render References
+
+        added = False
+        try:
+            citation_data, added = add_new_references(
+                citation_data,
+                CitationsSerializer.Meta.citation_types)
+        except Exception as e:
+            logger.error(e)
+            messages.error(
+                self.request,
+                f'Warning: Reference updating failed - {e} '
+                '- contact the CEDA Helpdesk'
+            )
+
+        ## 2.1 Automatically add new references when rendering,
+        ## even if the citation record is not traditionally editable.
+        if added:
+            citation_s = CitationsSerializer(instance=citation, data=copy.deepcopy(citation_data))
+            try:
+                citation_s.is_valid(raise_exception=True)
+                citation_s.save()
+
+            except Exception as e:
+                messages.error(
+                    self.request, 
+                    f'A problem occurred collecting new references - {e} - ' \
+                    'contact the CEDA helpdesk to report this issue')
+
         for reference_type in CitationsSerializer.Meta.citation_types:
             if citation_data.get(reference_type):
                 for ref in citation_data[reference_type]:
@@ -1005,6 +1037,14 @@ class InstitutionView(GenericRenderedView):
         context["funding_contribs"] = [
             n for n in FundingStreams.objects.filter(affiliation=pk)
         ]
+
+        ror_content = get_ror_content(inst['name'])
+        if ror_content is not None:
+            if len(ror_content['items']) > 0:
+                # Name must match exactly
+                if any([name['value'] == inst['name'] for name in ror_content['items'][0]['names']]):
+                    context['ror_link'] = ror_content['items'][0]['id']
+
         context["citations"] = (
             Citations.objects.filter(institutions__id=pk)
             .values_list("title", flat=True)

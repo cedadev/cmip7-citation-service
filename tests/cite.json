@@ -1,0 +1,61 @@
+{
+    "data": {
+        "type": "dois",
+        "attributes": {
+            "event": "publish",
+            "creators": [
+                {
+                    "name": "Westwood, Daniel ",
+                    "affiliation": [
+                        {
+                            "affiliationIdentifier": "https://ror.org/04m01e293",
+                            "affiliationIdentifierScheme": "ROR",
+                            "name": "University of York",
+                            "schemeUri": "https://ror.org/"
+                        },
+                        {
+                            "affiliationIdentifier": "https://ror.org/04j4kad11",
+                            "affiliationIdentifierScheme": "ROR",
+                            "name": "Centre for Environmental Data Analysis",
+                            "schemeUri": "https://ror.org/"
+                        }
+                    ]
+                }
+            ],
+            "titles": [
+                {
+                    "lang": "en",
+                    "title": "ESGF-NG CMIP7 CMIP7.PMIP.MOHC.cnrm_esm2_1e.abrupt-127k"
+                }
+            ],
+            "publisher": {
+                "name": "STFC",
+                "publisherIdentifier": "https://ror.org/057g20z61",
+                "publisherIdentifierScheme": "ROR",
+                "schemeUri": "https://ror.org/"
+            },
+            "publicationYear": 2026,
+            "types": {
+                "resourceTypeGeneral": "Text"
+            },
+            "url": "/citation/CMIP7.PMIP.MOHC.cnrm_esm2_1e.abrupt-127k_v1",
+            "version": 1,
+            "rightsList": [],
+            "fundingReferences": [],
+            "relatedIdentifiers": [
+                {
+                    "relatedIdentifier": "https://doi.org/10.1029/2019MS001683",
+                    "relationType": "Cites"
+                },
+                {
+                    "relatedIdentifier": "https://doi.org/10.1029/2019MS001791",
+                    "relationType": "Cites"
+                },
+                {
+                    "relatedIdentifier": "https://doi.org/10.22541/essoar.175977424.42948487/v1",
+                    "relationType": "Cites"
+                }
+            ]
+        }
+    }
+}

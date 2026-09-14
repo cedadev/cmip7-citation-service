@@ -8,6 +8,12 @@
         <h3>Country: {{ institute.country }}</h3>
     {% endif %}
 
+    {% if ror_link %}
+    <a href="{{ ror_link }}">
+        <input id="ror_entry" target='_blank' rel="noopener noreferrer" class="btn btn-primary m-0" value="See ROR Entry" type="button" readonly>
+    </a>
+    {% endif %}
+
     <p></p>
 
     {% if funding_contribs %}
@@ -30,6 +36,8 @@
         <li><a href="{% url 'citations:citation' title=cite %}">{{ cite }}</a></li>
         {% endfor %}
     </ul>
+    {% else %}
+    <p><i>No direct citation contributions within this service.</i></p>
     {% endif %}
 
 {% endblock %}
