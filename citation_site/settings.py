@@ -148,10 +148,24 @@ CEDA_INFO = """
 This record was created via the CEDA Citation Service, maintained and hosted on the CEDA JASMIN Infrastructure.
 """
 
-GENERAL_INFO = """
-CMIP7 is a project of the World Climate Research Programme (WCRP), coordinated by the Working Group on Coupled Modelling (WGCM). 
-Phase 7 builds on previous phases executed under the leadership of the Program for Climate Model Diagnosis and Intercomparison (PCMDI) and relies on the Earth System Grid Federation (ESGF) and the Centre for Environmental Data Analysis (CEDA) along with numerous related activities for implementation.
-"""
+GENERAL_INFO = {
+    'CMIP7':"CMIP7 is a project of the World Climate Research Programme (WCRP)," \
+        " coordinated by the Working Group on Coupled Modelling (WGCM)." \
+        " Phase 7 builds on previous phases executed under the leadership of the" \
+        " Program for Climate Model Diagnosis and Intercomparison (PCMDI)"\
+        " and relies on the Earth System Grid Federation (ESGF) and the Centre for" \
+        " Environmental Data Analysis (CEDA) along with numerous related activities" \
+        " for implementation.",
+    'CMIP6Plus':"",
+    'CORDEX-CMIP6': "CORDEX is a programme of the World Climate Research Programme" \
+        " (WCRP), coordinated under the umbrella of the Regional Information for" \
+        " Society (RIfS). CORDEX-CMIP6 builds on the work of the 6th phase of the" \
+        " Coupled Model Intercomparison Project (CMIP6) and the European Centre for" \
+        " Medium-Range Weather Forecasts (ECMWF) ERA5 reanalysis and relies on the" \
+        " Earth System Grid Federation (ESGF) and the Centre for Environmental Data" \
+        " Analysis (CEDA) along with numerous related activities" \
+        " for implementation."
+}
 
 DEFAULT_RIGHTS = 'CC-BY-4.0'
 

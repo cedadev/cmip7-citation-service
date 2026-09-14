@@ -244,7 +244,9 @@ def assemble_license_info(data: dict) -> str:
     """
     license = []
     if hasattr(settings, "GENERAL_INFO"):
-        license += settings.GENERAL_INFO.split(".")
+        project_id = data.get("project_id").lower()
+        if project_id in settings.GENERAL_INFO:
+            license += settings.GENERAL_INFO[project_id].split(".")
     if hasattr(settings, "CITATION_GUIDANCE"):
         license += settings.CITATION_GUIDANCE.split(".")
 
@@ -313,7 +315,8 @@ def abstract_from_esgvoc(data: dict):
             abstract.append(facet_desc + " - ".join(entry))
 
     if abstract and hasattr(settings, "GENERAL_INFO"):
-        abstract += [settings.GENERAL_INFO]
+        if project_id in settings.GENERAL_INFO:
+            abstract += [settings.GENERAL_INFO[project_id]]
 
     if abstract and hasattr(settings, "CEDA_INFO"):
         abstract += [settings.CEDA_INFO]
