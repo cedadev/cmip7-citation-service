@@ -5,5 +5,5 @@ docs/build
 db.sqlite3
 local/
 .vscode/
-.DS_Store/
+.DS_Store
 static/
