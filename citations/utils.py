@@ -112,6 +112,9 @@ def obtain_all_references(data: dict) -> dict:
         # Under review based on ESGVOC changes.
         for ref in component.references:
 
+            if not hasattr(ref,'doi'):
+                continue
+            
             if ref.doi in ref.citation:
                 citeas = ref.citation
             else:
