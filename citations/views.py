@@ -968,9 +968,18 @@ class CitationView(GenericRenderedView):
 
         # 2. Add/Render References
 
-        citation_data, added = add_new_references(
-            citation_data,
-            CitationsSerializer.Meta.citation_types)
+        added = False
+        try:
+            citation_data, added = add_new_references(
+                citation_data,
+                CitationsSerializer.Meta.citation_types)
+        except Exception as e:
+            logger.error(e)
+            messages.error(
+                self.request,
+                f'Warning: Reference updating failed - {e} '
+                '- contact the CEDA Helpdesk'
+            )
 
         ## 2.1 Automatically add new references when rendering,
         ## even if the citation record is not traditionally editable.
