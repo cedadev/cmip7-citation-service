@@ -2,3 +2,8 @@
 citation_site/settings_local.py
 *.pyc
 docs/build
+db.sqlite3
+local/
+.vscode/
+.DS_Store/
+static/
