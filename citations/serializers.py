@@ -32,7 +32,7 @@ from citations.models import (
     extract_from_orcid,
     locate_institute,
 )
-from citations.utils import logstream, add_new_references
+from citations.utils import logstream, add_new_references, party_hash_func
 from citations.validators import validate_component, validate_project
 
 try:
@@ -583,14 +583,7 @@ class PartiesSerializer(GenericSerializerMixin):
 
         if "id" not in data:
             # Add ID from hashed version of all names
-            naming_hash = (
-                data["first_name"]
-                + data.get("middle_names", "")
-                + data.get("last_name")
-            )
-            party_id = hashlib.sha1(naming_hash.encode()).hexdigest()
-
-            data["id"] = party_id
+            data["id"] = party_hash_func(data)
         return data
 
 

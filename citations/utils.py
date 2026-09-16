@@ -2,6 +2,7 @@ import logging
 import re
 import esgvoc.api as ev
 from typing import Union
+import hashlib
 
 from django.conf import settings
 from citations.facet_mappings import ESGVOC_FACET_LABELS
@@ -14,6 +15,15 @@ logstream = logging.StreamHandler()
 
 formatter = logging.Formatter("%(levelname)s [%(name)s]: %(message)s")
 logstream.setFormatter(formatter)
+
+def party_hash_func(data: dict):
+
+    naming_hash = (
+        data["first_name"]
+        + data.get("middle_names", "")
+        + data.get("last_name")
+    )
+    return hashlib.sha1(naming_hash.encode()).hexdigest()
 
 def is_support_user(data: dict):
     if data.get('id','') == settings.SUPPORT_ID:

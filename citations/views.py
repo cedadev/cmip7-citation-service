@@ -61,7 +61,7 @@ from citations.serializers import (
     chain_new_objects,
     handle_update,
 )
-from citations.utils import logstream, get_drs_url, add_new_references
+from citations.utils import logstream, get_drs_url, add_new_references, party_hash_func
 import logging
 
 logger = logging.getLogger(__name__)
@@ -1317,6 +1317,105 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
     model = Citations
     serializer_class = CitationsSerializer
 
+    def check_form_clashes(
+            self, 
+            formset, 
+            serializer, 
+            model, 
+            check_fields,
+            id_func) -> dict:
+        """
+        Check information clashes for a specific form
+        """
+
+        clashes = {}
+
+        form_set_iter = formset
+        if hasattr(formset, "ordered_forms"):
+            form_set_iter = formset.ordered_forms
+
+        for fd in form_set_iter:
+
+            if not fd:
+                continue
+
+            formdata = dict(getattr(fd, "cleaned_data", {}))
+            formdata.pop('ORDER',None)
+
+            if not formdata:
+                continue
+
+            if all(not v for v in formdata.values()):
+                continue
+
+            pkid = id_func(formdata)
+
+            if not model.objects.filter(pk=pkid):
+                continue
+
+            currentdata = serializer(model.objects.get(pk=pkid)).data
+            for field in check_fields:
+                if currentdata[field] != formdata[field]:
+
+                    clash = [field, currentdata[field], formdata[field]]
+                    if pkid not in clashes:
+                        clashes[pkid] = []
+                    clashes[pkid].append(clash)
+
+        return clashes
+
+    def check_all_clashes(self, contact_formset, form, **kwargs):
+        """
+        Check all clashing information here
+        """
+
+        clashes = self.check_clashes(
+            contact_formset,
+            PartiesSerializer,
+            Parties,
+            ['email','orcid'],
+            party_hash_func)
+        
+        if not clashes:
+            return
+
+        proceed = False
+        if self.request.session.get('citation_clashes'):
+            if len(clashes.keys()) <= len(self.request.session['citation_clashes'].keys()):
+                proceed = True
+                for k in clashes.keys():
+                    if clashes[k] != self.request.session['citation_clashes'][k]:
+                        print(clashes[k],self.request.session['citation_clashes'][k])
+                        proceed = False
+
+        if proceed:
+            return
+        
+        self.request.session['citation_clashes'] = clashes
+
+        contact_map = []
+        clash_count = 0
+        for pid, pclashes in clashes.items():
+            for pclash in pclashes:
+                field    = pclash[0]
+                existing = pclash[1]
+                new      = pclash[2]
+                clash_count += 1
+
+                contact_map.append(
+                    f'{fullname(PartiesSerializer(
+                        Parties.objects.get(pk=pid)).data)} ' \
+                    f'already exists with {field}: "{existing}". If you wish to continue, this value will be ' \
+                    f'updated to "{new}", simply press the button to submit this form again.' \
+                    'If instead you are trying to create a new user, please add middle name ' \
+                    'information to distinguish the new user from the existing user, use the Parties ' \
+                    'tab to check existing party information.'
+                )
+        return self.render_to_response(
+            self.get_context_data(form=form, reload=True, **kwargs)
+            | {"extra_errors": {'contact':contact_map}, "errors": clash_count}
+        )
+
     def redirect_on_success(self, title: str = None, failed_publish: bool = False):
 
         args = [title]
@@ -1619,6 +1718,11 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
         main_data["funders"] = []
 
         primary_index = int(self.request.POST.get("primary_contact"))
+
+        resp = self.check_all_clashes()
+        if resp is not None:
+            return resp
+
         contacts = self.clean_formset_data(
             contact_formset, PartiesSerializer, Parties, allow_update=True
         )
