@@ -149,14 +149,14 @@ This record was created via the CEDA Citation Service, maintained and hosted on 
 """
 
 GENERAL_INFO = {
-    'CMIP7':"CMIP7 is a project of the World Climate Research Programme (WCRP)," \
+    'CMIP7'.lower():"CMIP7 is a project of the World Climate Research Programme (WCRP)," \
         " coordinated by the Working Group on Coupled Modelling (WGCM)." \
         " Phase 7 builds on previous phases executed under the leadership of the" \
         " Program for Climate Model Diagnosis and Intercomparison (PCMDI)"\
         " and relies on the Earth System Grid Federation (ESGF) and the Centre for" \
         " Environmental Data Analysis (CEDA) along with numerous related activities" \
         " for implementation.",
-    'CMIP6Plus':"CMIP Phase 6 Plus (CMIP6Plus) is a continuity activity that enables" \
+    'CMIP6Plus'.lower():"CMIP Phase 6 Plus (CMIP6Plus) is a continuity activity that enables" \
         " modelling groups to contribute to projects initiated post-CMIP6 but before" \
         " the CMIP7 infrastructure and experiment design is available. Unlike CMIP6" \
         " and CMIP7, CMIP6Plus has no coordinated or managed Data Request, instead" \
@@ -164,7 +164,7 @@ GENERAL_INFO = {
         " groups independently. CMIP6Plus controlled vocabularies (CVs) are project" \
         " specific, CMIP6Plus CVs for activity, experiment and model (source_id) are" \
         " listed in the CMIP6Plus_CVs github repository.",
-    'CORDEX-CMIP6': "CORDEX is a programme of the World Climate Research Programme" \
+    'CORDEX-CMIP6'.lower(): "CORDEX is a programme of the World Climate Research Programme" \
         " (WCRP), coordinated under the umbrella of the Regional Information for" \
         " Society (RIfS). CORDEX-CMIP6 builds on the work of the 6th phase of the" \
         " Coupled Model Intercomparison Project (CMIP6) and the European Centre for" \

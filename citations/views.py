@@ -1772,12 +1772,16 @@ class NewCitationFormView(CitationFormMixin):
     form_class = NewCitationForm
     on_submit = "create"
 
+
     def form_valid(self, form):
 
         if not form.is_valid():
             return self.render_to_response(self.get_context_data(form=form, reload=True))
 
         main_data = form.cleaned_data
+        if "institution_id" in main_data:
+            create_new_permission(self.request.user, main_data["institution_id"])
+
         formset_data = self.create_from_formsets(form)
         if not isinstance(formset_data, dict):
             return formset_data
