@@ -261,6 +261,7 @@
 </ul>
 </dd>
 </dl>
+<p>In addition, references are now re-assessed in relation to the current ESGVOC API content from the EMD. This occurs every time the citation view is accessed for a particular record, but updates will only occur if the references are new and do not already exist in some form in the citation record already. Any loading of the citation view will trigger this update but only valid new references from ESGVOC are taken.</p>
 <p>Permissions apply to all create/update/delete views including for the API (PUT/POST/DELETE methods), where a user/token provided must have both the <code class="docutils literal notranslate"><span class="pre">add_citations</span></code> and <code class="docutils literal notranslate"><span class="pre">edit_&lt;institution&gt;</span></code> permissions to edit an existing record, or just the <code class="docutils literal notranslate"><span class="pre">add_citations</span></code> permission to create new records.</p>
 <dl class="py function" id="module-citations.views">
 <dt class="sig sig-object py" id="citations.views.listener_check">
