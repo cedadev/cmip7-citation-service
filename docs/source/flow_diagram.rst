@@ -2,8 +2,8 @@
 Citation Flow Diagram
 =====================
 
-.. image:: _images/flowdiagram_280526.png
-   :alt: Image flow diagram for the citation service, including ESGF planned integration, DOI Minting and User Interaction.
+.. image:: _images/flowdiagram_280826.png
+   :alt: Image flow diagram for the citation service, including ESGF integration, DOI Minting and User Interaction.
 
 The diagram above provides a visual aid to understanding the workflow of the citation service from a top-level perspective, including the integration with the ESGF publication workflow via a Listener service, the publication of datacite records to mint DOIs based on Citation Landing pages, the searchability of Citation and other record types, and the ability for reviewers to log in and create/edit records as needed.
 
