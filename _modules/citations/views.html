@@ -296,7 +296,7 @@
 
 <div class="viewcode-block" id="create_new_permission">
 <a class="viewcode-back" href="../../views.html#citations.views.create_new_permission">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">create_new_permission</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">institution_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">create_new_permission</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">institution_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">raise_exception</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span> <span class="o">|</span> <span class="n">HttpResponseRedirect</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Create a new permission type based on the newly added institution.</span>
 
@@ -313,10 +313,12 @@
     <span class="k">if</span> <span class="n">Permission</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">codename</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;edit_</span><span class="si">{</span><span class="n">institution_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">user</span><span class="o">.</span><span class="n">has_perm</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;citations.edit_</span><span class="si">{</span><span class="n">institution_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="n">PermissionDenied</span><span class="p">(</span>
-                <span class="s2">&quot;Cannot create a record for an institution you are not allowed to review.&quot;</span>
-            <span class="p">)</span>
-        <span class="k">return</span>
+            <span class="k">if</span> <span class="n">raise_exception</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">PermissionDenied</span><span class="p">(</span>
+                    <span class="s2">&quot;Cannot create a record for an institution you are not allowed to review.&quot;</span>
+                <span class="p">)</span>
+            <span class="k">return</span> <span class="n">HttpResponseRedirect</span><span class="p">(</span><span class="n">reverse</span><span class="p">(</span><span class="s2">&quot;citations:reviewer_request&quot;</span><span class="p">))</span>
+        <span class="k">return</span> <span class="kc">None</span>
 
     <span class="n">pm</span> <span class="o">=</span> <span class="n">Permission</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
         <span class="n">codename</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;edit_</span><span class="si">{</span><span class="n">institution_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
@@ -1446,7 +1448,7 @@
         <span class="n">serializer</span><span class="o">.</span><span class="n">is_valid</span><span class="p">(</span><span class="n">raise_exception</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="s2">&quot;institution_id&quot;</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
-            <span class="n">create_new_permission</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;institution_id&quot;</span><span class="p">])</span>
+            <span class="n">create_new_permission</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;institution_id&quot;</span><span class="p">],</span> <span class="n">raise_exception</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             
         <span class="n">title</span> <span class="o">=</span> <span class="n">serializer</span><span class="o">.</span><span class="n">validated_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">)</span>
 
@@ -1949,9 +1951,13 @@
             <span class="n">obj</span><span class="p">,</span> <span class="n">pubstatus</span> <span class="o">=</span> <span class="n">check_publish_ok</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="p">,</span> <span class="n">obj</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="s2">&quot;institution_id&quot;</span> <span class="ow">in</span> <span class="n">serializer</span><span class="o">.</span><span class="n">validated_data</span><span class="p">:</span>
-            <span class="n">create_new_permission</span><span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">serializer</span><span class="o">.</span><span class="n">validated_data</span><span class="p">[</span><span class="s2">&quot;institution_id&quot;</span><span class="p">]</span>
+            <span class="n">redirection</span> <span class="o">=</span> <span class="n">create_new_permission</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">serializer</span><span class="o">.</span><span class="n">validated_data</span><span class="p">[</span><span class="s2">&quot;institution_id&quot;</span><span class="p">],</span>
+                <span class="n">raise_exception</span> <span class="o">=</span> <span class="kc">False</span>
             <span class="p">)</span>
+            <span class="c1"># Exit here</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">redirection</span><span class="p">,</span> <span class="n">HttpResponseRedirect</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">redirection</span>
 
         <span class="c1"># Determine replication</span>
         <span class="n">prime_title</span> <span class="o">=</span> <span class="n">obj</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span>
@@ -2031,6 +2037,7 @@
     <span class="n">form_class</span> <span class="o">=</span> <span class="n">NewCitationForm</span>
     <span class="n">on_submit</span> <span class="o">=</span> <span class="s2">&quot;create&quot;</span>
 
+
 <div class="viewcode-block" id="NewCitationFormView.form_valid">
 <a class="viewcode-back" href="../../views.html#citations.views.NewCitationFormView.form_valid">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">form_valid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">form</span><span class="p">):</span>
@@ -2039,6 +2046,11 @@
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">render_to_response</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="n">form</span><span class="o">=</span><span class="n">form</span><span class="p">,</span> <span class="n">reload</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
 
         <span class="n">main_data</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span>
+        <span class="k">if</span> <span class="s2">&quot;institution_id&quot;</span> <span class="ow">in</span> <span class="n">main_data</span><span class="p">:</span>
+            <span class="n">redirection</span> <span class="o">=</span> <span class="n">create_new_permission</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">main_data</span><span class="p">[</span><span class="s2">&quot;institution_id&quot;</span><span class="p">],</span> <span class="n">raise_exception</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">redirection</span><span class="p">,</span> <span class="n">HttpResponseRedirect</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">redirection</span>
+
         <span class="n">formset_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_from_formsets</span><span class="p">(</span><span class="n">form</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">formset_data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
             <span class="k">return</span> <span class="n">formset_data</span>
@@ -2259,14 +2271,18 @@
     <span class="n">template_name</span> <span class="o">=</span> <span class="s2">&quot;reviewer_request.html&quot;</span>
     <span class="n">form_class</span> <span class="o">=</span> <span class="n">InstitutionIdForm</span>
 
+<div class="viewcode-block" id="ReviewerRequestView.get_institution_ids">
+<a class="viewcode-back" href="../../views.html#citations.views.ReviewerRequestView.get_institution_ids">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_institution_ids</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Now based on institution permissions that already exist as these are</span>
+<span class="sd">        permanent. Individual citation records may be deleted.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="p">[</span>
-            <span class="n">c</span>
-            <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">values_list</span><span class="p">(</span>
-                <span class="s2">&quot;institution_id&quot;</span><span class="p">,</span> <span class="n">flat</span><span class="o">=</span><span class="kc">True</span>
-            <span class="p">)</span><span class="o">.</span><span class="n">distinct</span><span class="p">()</span>
-            <span class="k">if</span> <span class="n">c</span>
-        <span class="p">]</span>
+            <span class="nb">str</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">codename</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;edit_&#39;</span><span class="p">,</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">Permission</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">codename__startswith</span><span class="o">=</span><span class="s2">&quot;edit_&quot;</span><span class="p">)</span>
+        <span class="p">]</span></div>
+
 
     <span class="k">def</span><span class="w"> </span><span class="nf">get_institutions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">insts</span> <span class="o">=</span> <span class="p">{}</span>
