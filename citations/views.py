@@ -208,7 +208,7 @@ def download_ris(request, title, *args, **kwargs):
     return response
 
 
-def create_new_permission(user, institution_id: str):
+def create_new_permission(user, institution_id: str, raise_exception: bool = False) -> None | HttpResponseRedirect:
     """
     Create a new permission type based on the newly added institution.
 
@@ -225,10 +225,12 @@ def create_new_permission(user, institution_id: str):
     if Permission.objects.filter(codename=f"edit_{institution_id}").exists():
 
         if not user.has_perm(f"citations.edit_{institution_id}"):
-            raise PermissionDenied(
-                "Cannot create a record for an institution you are not allowed to review."
-            )
-        return
+            if raise_exception:
+                raise PermissionDenied(
+                    "Cannot create a record for an institution you are not allowed to review."
+                )
+            return HttpResponseRedirect(reverse("citations:reviewer_request"))
+        return None
 
     pm = Permission.objects.create(
         codename=f"edit_{institution_id}",
@@ -1208,7 +1210,7 @@ class CitationAPIView(GenericAPIView):
         serializer.is_valid(raise_exception=True)
 
         if "institution_id" in data:
-            create_new_permission(request.user, data["institution_id"])
+            create_new_permission(request.user, data["institution_id"], raise_exception=True)
             
         title = serializer.validated_data.get("title")
 
@@ -1693,9 +1695,13 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
             obj, pubstatus = check_publish_ok(self.request, obj)
 
         if "institution_id" in serializer.validated_data:
-            create_new_permission(
-                self.request.user, serializer.validated_data["institution_id"]
+            redirection = create_new_permission(
+                self.request.user, serializer.validated_data["institution_id"],
+                raise_exception = False
             )
+            # Exit here
+            if isinstance(redirection, HttpResponseRedirect):
+                return redirection
 
         # Determine replication
         prime_title = obj['title']
@@ -1780,7 +1786,9 @@ class NewCitationFormView(CitationFormMixin):
 
         main_data = form.cleaned_data
         if "institution_id" in main_data:
-            create_new_permission(self.request.user, main_data["institution_id"])
+            redirection = create_new_permission(self.request.user, main_data["institution_id"], raise_exception=False)
+            if isinstance(redirection, HttpResponseRedirect):
+                return redirection
 
         formset_data = self.create_from_formsets(form)
         if not isinstance(formset_data, dict):
@@ -1975,12 +1983,13 @@ class ReviewerRequestView(LoginRequiredMixin, GenericRenderedView, FormView):
     form_class = InstitutionIdForm
 
     def get_institution_ids(self):
+        """
+        Now based on institution permissions that already exist as these are
+        permanent. Individual citation records may be deleted.
+        """
         return [
-            c
-            for c in Citations.objects.values_list(
-                "institution_id", flat=True
-            ).distinct()
-            if c
+            str(c.codename).replace('edit_','')
+            for c in Permission.objects.filter(codename__startswith="edit_")
         ]
 
     def get_institutions(self):
