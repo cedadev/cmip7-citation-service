@@ -1091,6 +1091,7 @@ class PartyView(GenericRenderedView):
 
         instance = Parties.objects.get(id=pk)
         context["party"] = PartiesSerializer(instance).get_data()
+        context["party_fullname"] = fullname(context["party"])
 
         primary_citations = [
             {"title": citation.title, "version": citation.version, "id": citation.id}
@@ -1355,7 +1356,8 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
 
             currentdata = serializer(model.objects.get(pk=pkid)).data
             for field in check_fields:
-                if currentdata[field] != formdata[field]:
+                # Only clashing if both fields are non-Null.
+                if bool(currentdata[field]) and bool(formdata[field]) and currentdata[field] != formdata[field]:
 
                     clash = [field, currentdata[field], formdata[field]]
                     if pkid not in clashes:
@@ -1369,7 +1371,7 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
         Check all clashing information here
         """
 
-        clashes = self.check_clashes(
+        clashes = self.check_form_clashes(
             contact_formset,
             PartiesSerializer,
             Parties,
@@ -1377,6 +1379,7 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
             party_hash_func)
         
         if not clashes:
+            self.request.session['citation_clashes'] = None
             return
 
         proceed = False
@@ -1384,11 +1387,12 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
             if len(clashes.keys()) <= len(self.request.session['citation_clashes'].keys()):
                 proceed = True
                 for k in clashes.keys():
-                    if clashes[k] != self.request.session['citation_clashes'][k]:
-                        print(clashes[k],self.request.session['citation_clashes'][k])
-                        proceed = False
+                    for swipe in clashes[k]:
+                        if not any([swipe == scar for scar in self.request.session['citation_clashes'][k]]):
+                            proceed = False
 
         if proceed:
+            self.request.session['citation_clashes'] = None
             return
         
         self.request.session['citation_clashes'] = clashes
@@ -1574,7 +1578,11 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
         return context
 
     def clean_formset_data(
-        self, formset: dict, serializer, model, allow_update: bool = False
+        self, 
+        formset: dict, 
+        serializer, 
+        model, 
+        allow_update: bool = False
     ) -> list:
         """
         Clean data from a formset and determine if updates are required
@@ -1599,9 +1607,7 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
                 continue
 
             filter_kwargs = {
-                k: v
-                for k, v in formdata.items()
-                if k in serializer.Meta.required_fields
+                'pk': serializer.Meta.get_id(formdata)
             }
             inst = model.objects.filter(**filter_kwargs)
 
@@ -1617,8 +1623,8 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
                     data=changed_data | filter_kwargs,
                     serializer=serializer,
                     model=model,
-                    filter_kwargs=serializer.Meta.required_fields,
                     allow_update=allow_update,
+                    user_id=self.request.user.username
                 )  # Allowed updates from citation form directly to contacts
             pks.append(inst_pk)
         return pks
@@ -1656,8 +1662,8 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
                     data=changed_data | {"id": formdata["id"]},
                     serializer=ReferencesSerializer,
                     model=References,
-                    filter_kwargs=["id"],
                     allow_update=True,
+                    user_id=self.request.user.username
                 )
             ref_data[relation].append(inst_pk)
         return ref_data
@@ -1719,7 +1725,7 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
 
         primary_index = int(self.request.POST.get("primary_contact"))
 
-        resp = self.check_all_clashes()
+        resp = self.check_all_clashes(contact_formset, form, **kwargs)
         if resp is not None:
             return resp
 
