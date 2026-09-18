@@ -17,7 +17,7 @@ from django.http import Http404, HttpResponse, HttpResponseForbidden, HttpRespon
 from django.urls import reverse
 from django.views.generic.base import TemplateView
 from django.views.generic.edit import FormView
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render
 from rest_framework import generics, mixins, permissions, status
 from rest_framework.authtoken.models import Token
 from rest_framework.authentication import TokenAuthentication, BasicAuthentication
@@ -69,6 +69,7 @@ logger.addHandler(logstream)
 logger.propagate = False
 
 
+# functional view
 def listener_check(request, title, *args, **kwargs):
     """
     Custom check endpoint for the listener.
@@ -99,7 +100,7 @@ def listener_check(request, title, *args, **kwargs):
         status=status.HTTP_200_OK,
     )
         
-
+# functional view
 def download_bibtex(request, title, *args, **kwargs):
     """
     Download a BibTeX representation of a given DOI
@@ -151,8 +152,7 @@ def download_bibtex(request, title, *args, **kwargs):
     )
     return response
 
-
-
+# functional view
 def download_ris(request, title, *args, **kwargs):
     """
     Download a RIS representation of a given DOI
@@ -206,6 +206,21 @@ def download_ris(request, title, *args, **kwargs):
         f'attachment; filename="{record.pk}.ris"'
     )
     return response
+
+# functional view
+def api_token_request(request, *args, **kwargs):
+
+    if not request.user.user_permissions.filter(codename="add_citations"):
+        return HttpResponseRedirect(reverse("citations:reviewer_request"))
+
+    token, created = Token.objects.get_or_create(user=request.user)
+
+    r = GenericRenderedView()
+
+    context = r.get_context_data()
+    
+    return render(request, 'reviewer_api_token.html',context | {'api_user_token':token})
+    
 
 
 def create_new_permission(user, institution_id: str, raise_exception: bool = False) -> None | HttpResponseRedirect:

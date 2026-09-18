@@ -24,7 +24,8 @@ from citations.views import (
     SuperuserTokenView,
     download_bibtex,
     download_ris,
-    listener_check
+    listener_check,
+    api_token_request
 )
 
 app_name = "citations"
@@ -62,4 +63,5 @@ urlpatterns = [
     path("api/citations/", CitationAPIView.as_view(), name="citations_api"),
     path("api/citation/<str:pk>", SpecificCitationAPIView.as_view(), name='citation_api'),
     path("reviewer_request/", ReviewerRequestView.as_view(), name="reviewer_request"),
+    path("reviewer_api_token/", api_token_request, name="reviewer_api_token"),
 ]
