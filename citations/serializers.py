@@ -242,19 +242,18 @@ def assemble_license_info(data: dict) -> str:
     """
     Determine the paragraph of text to use for the license.
     """
+    project_id = data.get("project_id").lower()
+
     license = []
-    if hasattr(settings, "GENERAL_INFO"):
-        project_id = data.get("project_id").lower()
-        if project_id in settings.GENERAL_INFO:
-            license += settings.GENERAL_INFO[project_id].split(".")
-    if hasattr(settings, "CITATION_GUIDANCE"):
-        license += settings.CITATION_GUIDANCE.split(".")
+    if hasattr(settings, "LICENSE_TEXT"):
+        if project_id in settings.LICENSE_TEXT:
+            license += settings.LICENSE_TEXT[project_id].split('.')
 
     license.append(f'Published under {data["rights"]}.')
 
     license = [lp for lp in license if lp.replace("\n", "")]
 
-    return ". ".join(license).replace("\n", "")
+    return ".".join(license).replace("\n", "")
 
 
 def abstract_from_esgvoc(data: dict):
