@@ -20,6 +20,21 @@ class ListenerPause(models.Model):
         obj, _ = cls.objects.get_or_create(pk=1)
         return obj.pause_listener
 
+class EditorPause(models.Model):
+    pause_editor = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = "Pause Edit"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1 # Ensures only one row
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_paused(cls) -> bool:
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj.pause_editor
+
 
 # Create your models here.
 class Institutions(models.Model):
