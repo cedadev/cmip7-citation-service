@@ -7,6 +7,7 @@ from citations.views import (
     CitationView,
     ConfirmDeleteCitationView,
     EditCitationFormView,
+    EditPublishedCitationFormView,
     FundingStreamAPIView,
     FundingStreamsView,
     FundingStreamView,
@@ -48,6 +49,11 @@ urlpatterns = [
         EditCitationFormView.as_view(),
         name="edit_citation",
     ),
+    path(
+            "citation/edit_pub/<str:pk>",
+            EditPublishedCitationFormView.as_view(),
+            name="edit_published_citation",
+        ),
     path(
         "citation/delete/<str:pk>",
         ConfirmDeleteCitationView.as_view(),

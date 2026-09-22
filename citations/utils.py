@@ -74,7 +74,7 @@ def add_new_references(data: dict, citation_types: list) -> tuple:
         new_ref = True
         for reftype in citation_types:
 
-            ids = [ref['id'] for ref in data.get(reftype,[])]
+            ids = [ref['id'] if isinstance(ref,dict) else ref for ref in data.get(reftype,[])]
 
             # Only add new references using this method.
             if gr["id"] in ids:

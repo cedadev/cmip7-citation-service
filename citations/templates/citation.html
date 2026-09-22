@@ -248,8 +248,8 @@
                 <input id="edit" class="btn btn-primary m-0" value="Edit Record" type="button" readonly>
             </a>
             {% else %}
-            <a href="{% url 'citations:edit_citation' pk=citation.id %}">
-                <input id="edit" class="btn btn-primary m-0" value="Edit Record" readonly type="button" disabled title="Not editable">
+            <a href="{% url 'citations:edit_published_citation' pk=citation.id %}">
+                <input id="edit" class="btn btn-primary m-0" value="Edit Record" readonly type="button">
             </a>
             {% endif %}
 
