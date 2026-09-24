@@ -49,7 +49,7 @@ from citations.models import (
     FailedRequests,
     CitationParty,
     ListenerPause,
-    EditorPause,
+    publisher_paused,
     get_ror_content
 )
 from citations.serializers import (
@@ -241,10 +241,6 @@ def create_new_permission(user, institution_id: str, raise_exception: bool = Fal
 
     user.user_permissions.add(pm)
     user.save()
-
-
-def editor_check():
-    return EditorPause.get_paused()
 
 def get_citable_party(party: Parties):
     """
@@ -453,6 +449,11 @@ def check_publish_ok(request, data: dict) -> tuple:
             messages.error(
                 request,
                 "Failed to resolve DRS URL - either the Metagrid or STAC query must resolve. DOI cannot be minted until data is available.",
+            )
+        elif publisher_paused():
+            messages.error(
+                request,
+                "DOI Minting is temporarily paused for the citation service due to maintenance.",
             )
         else:
             messages.error(
@@ -1178,13 +1179,6 @@ class CitationAPIView(GenericAPIView):
 
     def create(self, request, *args, **kwargs):
 
-        if not editor_check():
-            return JsonResponse({'error':
-                'The Citation Service is currently not accepting any edits - '
-                'Please check back later or contact the CEDA helpdesk if this '
-                'has been the case for some time.'},
-                status=status.HTTP_403_FORBIDDEN)
-
         id = None
         try:
             is_ok, id, response = self._create(request, *args, **kwargs)
@@ -1241,9 +1235,9 @@ class CitationAPIView(GenericAPIView):
                         serializer.validated_data, status=status.HTTP_405_METHOD_NOT_ALLOWED
                     )
 
+            data = serializer.save(publish=publish, user_id=request.user.username)
             if publish:
                 data, _ = check_publish_ok(request, data)
-            data = serializer.save(publish=publish, user_id=request.user.username)
             return True, title, Response(data, status=status.HTTP_201_CREATED)
         except Exception as e:
             return False, title, e
@@ -1269,13 +1263,6 @@ class SpecificCitationAPIView(SpecificAPIView):
     ]
 
     def update(self, request, *args, **kwargs):
-
-        if not editor_check():
-            return JsonResponse({'error':
-                'The Citation Service is currently not accepting any edits - '
-                'Please check back later or contact the CEDA helpdesk if this '
-                'has been the case for some time.'},
-                status=status.HTTP_403_FORBIDDEN)
 
         data = unwrap_request(request.data)
         instance = self.get_object()
@@ -1347,6 +1334,7 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
             msg = "Your citations have been submitted and will appear here when they have been processed."
 
         if failed_publish:
+
             messages.error(
                 self.request,
                 "DOI Minting has not been completed. The record will remain unpublished until the above issue is resolved.",
@@ -1391,12 +1379,6 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
         """
         Setup for form view
         """
-
-        if not editor_check():
-            raise PermissionDenied(
-                'The Citation Service is currently not accepting any edits - '
-                'Please check back later or contact the CEDA helpdesk if this '
-                'has been the case for some time.')
 
         if not request.user.user_permissions.filter(codename="add_citations"):
             return HttpResponseRedirect(reverse("citations:reviewer_request"))
@@ -1975,12 +1957,6 @@ class ConfirmDeleteCitationView(GenericRenderedView):
 
     def dispatch(self, request, *args, **kwargs):
         id = kwargs.get("pk") or request.GET.get("pk")
-
-        if not editor_check():
-            return HttpResponseForbidden(
-                'The Citation Service is currently not accepting any edits - '
-                'Please check back later or contact the CEDA helpdesk if this '
-                'has been the case for some time.')
 
         record = self.model.objects.filter(pk=id)
         if not record:

@@ -4,6 +4,8 @@ from django.db import models
 
 from citations.validators import validate_orcid
 
+def publisher_paused():
+    return PublisherPause.get_paused()
 
 class ListenerPause(models.Model):
     pause_listener = models.BooleanField(default=False)
@@ -20,11 +22,11 @@ class ListenerPause(models.Model):
         obj, _ = cls.objects.get_or_create(pk=1)
         return obj.pause_listener
 
-class EditorPause(models.Model):
-    pause_editor = models.BooleanField(default=False)
+class PublisherPause(models.Model):
+    pause_publisher = models.BooleanField(default=False)
 
     class Meta:
-        verbose_name = "Pause Edit"
+        verbose_name = "Pause DOI"
 
     def save(self, *args, **kwargs):
         self.pk = 1 # Ensures only one row
@@ -33,7 +35,7 @@ class EditorPause(models.Model):
     @classmethod
     def get_paused(cls) -> bool:
         obj, _ = cls.objects.get_or_create(pk=1)
-        return obj.pause_editor
+        return obj.pause_publisher
 
 
 # Create your models here.

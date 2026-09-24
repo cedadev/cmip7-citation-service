@@ -31,6 +31,7 @@ from citations.models import (
     FailedRequests,
     extract_from_orcid,
     locate_institute,
+    publisher_paused
 )
 from citations.utils import logstream, add_new_references
 from citations.validators import validate_component, validate_project
@@ -456,7 +457,7 @@ class GenericSerializerMixin(serializers.ModelSerializer):
             )
 
         # Run publication (DOI Minting workflow)
-        if publish:
+        if publish and not publisher_paused():
             pubdata = mint_doi_for_data(filtered_data, id=pk)
             if isinstance(pubdata, dict):
                 filtered_data.update(pubdata)
@@ -494,7 +495,7 @@ class GenericSerializerMixin(serializers.ModelSerializer):
                 raise MethodNotAllowed(f'The field "{field}" is immutable')
 
         # Run publication (DOI Minting workflow)
-        if publish:
+        if publish and not publisher_paused():
             pubdata = mint_doi_for_data(filtered_data, id=id)
             if isinstance(pubdata, dict):
                 filtered_data.update(pubdata)
