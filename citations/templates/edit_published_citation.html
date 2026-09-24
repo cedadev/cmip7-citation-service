@@ -3,13 +3,7 @@
 {% block head_title %}CMIP7 Citation{% endblock %}
 
 {% block content_main_inner %}
-    {% if next_version %}
-    <h2><b>Create Version {{ next_version }} for {{ citation_title }}</b></h2>
-    {% elif on_submit == 'create' %}
-    <h2><b>Add New Citation</b></h2>
-    {% else %}
-    <h2><b>Edit Citation Record</b></h2>
-    {% endif %}
+    <h2><b>Update Published Citation</b></h2>
     <p></p>
     {% if errors %}
         <div class="alert alert-warning">
@@ -35,105 +29,12 @@
             </p>
         </div>
 
-        {% for title, fields in form.field_groups.items %}
-            <h3>{{ title }}
-            {% if title == 'General Information' %}
-                </h3>
-            <p><i>Title is typically of the form: <ul>
-                <li>"project_id.activity_id.institution_id.source_id.experiment_id" for CMIP7/CMIP6Plus.</li>
-                <li>"project_id.activity_id.domain_id.institution_id.driving_experiment_id.source_id" for CORDEX-CMIP6.</li>
-            </ul></i></p>
-            {% elif title == 'Search Facets' %}
-            <span style="color: red;">*</span></h3>
-            <!-- CMIP7 Facets section - will be used in validation -->
-             <p><i>Facets will be validated against CMIP7/CORDEX EMD (ESGVOC package)</i></p>
-            {% else %}
-            </h3>
-            {% endif %}
-            <table class="table table-striped border border-light">
-                {% for field in form %}
-                    {% if field.label in fields %}
-                        <tr>
-                            <td>{{ field.label }} {% if field.label in required_fields %}<span style="color: red;">*</span>{% endif %}</td>
-                            <td>{{ field }}</td>
-                        </tr>
-                    {% endif %}
-                {% endfor %}
-            </table>
-        {% endfor %}
-
-        <h2>Contacts</h2>
-        <p><i>Enter the full name information (including middle names), along with email and ORCID values to create users or match with existing users.</i></p>
-        <p><i>Adding email and ORCID information helps in the case of multiple parties with the same names. You may encounter warnings when linking to existing parties if their information differs. 
-            Please check all appropriate information correctly matches, then proceed with the submission. If there are any issues please contact the CEDA Helpdesk</i></p>
-        <br>
-        <p><i>Please ensure that if the "Citation Support" primary author appears here that it is removed before attempting to add any new Contacts. Records with "Citation Support" as an author cannot be published.</i></p>
-
-        <div id="contact-formset-div">
-            {% if extra_errors.contact %}
-            <div class="alert alert-warning">
-                Errors:
-                <ul>
-                {% for err in extra_errors.contact %}
-                    <li>{{ err }}</li>
-                {% endfor %}
-                </ul>
-            </div>
-            {% endif %}
-            <div id="formset-area">
-
-                <table class="table table-striped border border-light">
-                    <thead>
-                        <tr>
-                            <td></td>
-                            {% for field in contact_formset.empty_form %}
-                                {% if field.label != "Order" %}
-                                    <td>{{ field.label }} {% if field.label in required_fields %}<span style="color: red;">*</span>{% endif %}</td>
-                                {% endif %}
-                            {% endfor %}
-                            <td>Primary</td>
-                            <td><b>Remove</b></td>
-
-                        </tr>
-                    </thead>
-                    <tbody id="contact-formset-body">
-                        {{ contact_formset.management_form }}
-
-                        {% for form in contact_formset %}
-                        <tr class="contact-row">
-
-                            <td class="drag-handle" style="cursor: move;">☰</td>
-                            {% for field in form %}
-                                {% if field.name != "ORDER" %}
-                                <td>{{ field }}</td>
-                                {% endif %}
-                            {% endfor %}
-                            <td>
-
-                                <input type="radio"
-                                    name="primary_contact"
-                                    value="{{ forloop.counter0 }}"
-                                    class="primary-radio"
-                                    {% if forloop.first %}checked{% endif %}>
-                            </td>
-                            <td>
-                                <button type="button" class="remove-contact btn btn-danger btn-sm">
-                                    ✕
-                                </button>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                        <tr id="add_contact_row">
-                            <td colspan="3"></td>
-                            <td colspan="3">
-                                <input type="button" class="btn btn-primary m-0" id="add-contact" readonly value="+ Add Contact" title="New Contact">
-                            </td>
-                            <td colspan="2"></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        <table class="table table-striped border border-light">
+            <tr>
+                <td>Abstract</td>
+                <td>{{ form.abstract }}</td>
+            </tr>
+        </table>
 
         <h2>Affiliated Institutions</h2>
         <p><i>If the institution already exists as part of another citation record, you are only required to enter the institution name to match to existing records.</i></p>
@@ -290,97 +191,11 @@
         </div> 
         
         <br>
-        <h2>Replicate Citation Records</h2>
-        <table>
-            <tr>
-                <p><i>If you wish to apply the above data to multiple citation records, tick the box below to replicate data, and enter the titles of records where this information applies.</i></p>
-            </tr>
-            <tr>
-                <input type="checkbox" id="replicate" name="replicate" value="Replicate Info">
-                <label for="replicate">Replicate Info</label><br>
-            </tr>
-        </table>
-        <div hidden id="replication-div">
-            <h3>Replications</h3>
-            <p><i>Enter here the titles of other citation records to be created/updated with the above content. These changes will be applied to the latest version in all cases.</i></p>
-            <ul>
-                <li><i>The Search facets are not replicated to the other citations. This interface can therefore not be used to create citations, only copy content to existing citations.</i></li>
-                <li><i>The DOI and publication date will not be copied (if provided) to another citation on replicating.</i></li>
-                <li><i>The abstract will not be copied to another citation on replicating. This is because the abstract construction is based on the search facets which do not replicate.</i></li>
-            </ul>
-            {% if extra_errors.replicas %}
-            <div class="alert alert-warning">
-                Errors:
-                <ul>
-                {% for err in extra_errors.replicas %}
-                    <li>{{ err }}</li>
-                {% endfor %}
-                </ul>
-            </div>
-            {% endif %}
-            <div id="replicas-formset-div">
-                <div id="formset-area">
-
-                    <table class="table table-striped border border-light">
-                        <thead>
-                            <tr>
-                                <td>Record Title</td>
-                                <td><b>Remove</b></td>
-                            </tr>
-                        </thead>
-                        <tbody id="replica-formset-body">
-                            {{ replica_formset.management_form }}
-
-                            {% for form in replica_formset %}
-                            <tr class="replica-row">
-                                {% for field in form %}
-                                    <td>{{ field }}</td>
-                                {% endfor %}
-                                <td>
-                                    <button type="button" class="remove-replica btn btn-danger btn-sm">
-                                        ✕
-                                    </button>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                            <tr id="add_replica_row">
-                                <td colspan="2">
-                                    <input type="button" class="btn btn-primary m-0" id="add-replica" readonly value="+ Add Record ID" title="Add Record">
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-        <br>
-        {% if publishable %}
-        <h2>Mint a DOI</h2>
-        <p><i>Check the box below to mint a DOI for this citation record upon saving/updating.</i></p>
-        <ul>
-            <li><i>WARNING: Ticking this box when replicating data will mint all the other DOIs at the same time. It is advised to instead replicate and check all the data first, then mint DOIs individually.</i></li>
-            <li><i>NOTE: Published records are not editable after a DOI has been minted. The option to 'Edit' will not be accessible. In the future this may be allowed, but only for non-DOI-breaking changes.</i></li>
-        </ul>
-        <table>
-            <tr>
-                <td>
-                    <input type="checkbox" id="publish" name="publish" value="Mint DOI on Save">
-                    <label for="publish">Mint DOI on Save</label><br>
-                </td>
-            </tr>
-        </table>
-        {% endif %}
-        <br>
-        <br>
         <table>
             <tr>
                 <td>
                     <input class="btn btn-primary m-0" type="submit"
-                {% if on_submit == 'create' %} 
-                    value="Create" title="Create New Record">
-                {% else %}
-                    value="Update version {{ new_version }}" title="Update version (v{{ new_version }}).">
-                {% endif %}
+                    value="Update" title="Update Published Record">
                 </td>
             </tr>
         </table>

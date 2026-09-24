@@ -33,7 +33,7 @@ from citations.models import (
     locate_institute,
     publisher_paused
 )
-from citations.utils import logstream, add_new_references
+from citations.utils import logstream, add_new_references, party_hash_func
 from citations.validators import validate_component, validate_project
 
 try:
@@ -243,19 +243,18 @@ def assemble_license_info(data: dict) -> str:
     """
     Determine the paragraph of text to use for the license.
     """
+    project_id = data.get("project_id").lower()
+
     license = []
-    if hasattr(settings, "GENERAL_INFO"):
-        project_id = data.get("project_id").lower()
-        if project_id in settings.GENERAL_INFO:
-            license += settings.GENERAL_INFO[project_id].split(".")
-    if hasattr(settings, "CITATION_GUIDANCE"):
-        license += settings.CITATION_GUIDANCE.split(".")
+    if hasattr(settings, "LICENSE_TEXT"):
+        if project_id in settings.LICENSE_TEXT:
+            license += settings.LICENSE_TEXT[project_id].split('.')
 
     license.append(f'Published under {data["rights"]}.')
 
     license = [lp for lp in license if lp.replace("\n", "")]
 
-    return ". ".join(license).replace("\n", "")
+    return ".".join(license).replace("\n", "")
 
 
 def abstract_from_esgvoc(data: dict):
@@ -329,7 +328,6 @@ def chain_new_objects(
     data: dict,
     serializer: serializers.ModelSerializer,
     model: type[models.Model],
-    filter_kwargs: list,
     optionals: list = None,
     allow_update: bool = False,
     user_id: str | None = None
@@ -342,7 +340,7 @@ def chain_new_objects(
     """
 
     optionals = optionals or []
-    filters = {k: data.get(k) for k in filter_kwargs if k in data}
+    filters = {'pk': serializer.Meta.get_id(data)}
     for opt in optionals:
         if data.get(opt):
             filters[opt] = data[opt]
@@ -517,7 +515,17 @@ class InstitutionsSerializer(GenericSerializerMixin):
         required_fields = ["name"]
         fields = ["name", "acronym", "country", "id"]
         relations = []
+        id_relations = []
         internal_fields = []
+
+        @classmethod
+        def get_id(cls, data):
+
+            if 'pk' in data:
+                return data['pk']
+            if 'id' in data:
+                return data['id']
+            return hashlib.sha1(data["name"].encode()).hexdigest()
 
     def fill_data_parameters(self, data, *args, **kwargs):
         """
@@ -528,7 +536,7 @@ class InstitutionsSerializer(GenericSerializerMixin):
         if not data.get("acronym", None) and not data.get("country", None):
             data.update(locate_institute(data["name"]))
 
-        data["id"] = hashlib.sha1(data["name"].encode()).hexdigest()
+        data["id"] = InstitutionsSerializer.Meta.get_id(data)
         return data
 
 
@@ -541,6 +549,7 @@ class FailedRequestsSerializer(GenericSerializerMixin):
     def fill_data_parameters(self, data: dict, *args, **kwargs):
         return data
 
+
 class PartiesSerializer(GenericSerializerMixin):
     affiliations = InstitutionsSerializer(required=False, many=True)
 
@@ -551,6 +560,22 @@ class PartiesSerializer(GenericSerializerMixin):
         fields = immutable_fields + ["email", "orcid", "affiliations", "id"]
         relations = ["affiliations"]
         internal_fields = []
+        id_relations = []
+
+        @classmethod
+        def get_id(cls, data):
+
+            if 'pk' in data:
+                return data['pk']
+            if 'id' in data:
+                return data['id']
+
+            naming_hash = (
+                data["first_name"]
+                + data.get("middle_names", "")
+                + data.get("last_name")
+            )
+            return hashlib.sha1(naming_hash.encode()).hexdigest()
 
     def fill_data_parameters(self, data: dict, user_id: str):
         """
@@ -576,7 +601,6 @@ class PartiesSerializer(GenericSerializerMixin):
                     {"name": a},
                     InstitutionsSerializer,
                     Institutions,
-                    filter_kwargs={"name": a},
                     user_id=user_id
                 )
                 for a in affiliation_data
@@ -584,14 +608,7 @@ class PartiesSerializer(GenericSerializerMixin):
 
         if "id" not in data:
             # Add ID from hashed version of all names
-            naming_hash = (
-                data["first_name"]
-                + data.get("middle_names", "")
-                + data.get("last_name")
-            )
-            party_id = hashlib.sha1(naming_hash.encode()).hexdigest()
-
-            data["id"] = party_id
+            data["id"] = PartiesSerializer.Meta.get_id(data)
         return data
 
 
@@ -606,6 +623,14 @@ class FundingStreamsSerializer(GenericSerializerMixin):
         id_relations = ["affiliation"]
         internal_fields = []
 
+        @classmethod
+        def get_id(cls, data):
+            if 'pk' in data:
+                return data['pk']
+            if 'id' in data:
+                return data['id']
+            return hashlib.sha1(data["name"].encode()).hexdigest()
+
     def fill_data_parameters(self, data: dict, user_id: str):
         """
         Auto-fill content into the data dict.
@@ -618,12 +643,11 @@ class FundingStreamsSerializer(GenericSerializerMixin):
                 {"name": affiliation},
                 InstitutionsSerializer,
                 Institutions,
-                filter_kwargs={"name": affiliation},
                 user_id=user_id
             )
 
         if "id" not in data:
-            data["id"] = hashlib.sha1(data["name"].encode()).hexdigest()
+            data["id"] = FundingStreamsSerializer.Meta.get_id(data)
 
         return data
 
@@ -638,6 +662,14 @@ class ReferencesSerializer(GenericSerializerMixin):
         id_relations = []
         field_mappings = {"DOI": "id"}
         internal_fields = []
+
+        @classmethod
+        def get_id(cls, data):
+            if 'pk' in data:
+                return data['pk']
+            if 'id' in data:
+                return data['id']
+            return data['id']
 
     def fill_data_parameters(self, data: dict, *args, **kwargs):
         """
@@ -828,7 +860,6 @@ class CitationsSerializer(GenericSerializerMixin):
                 inst_data,
                 InstitutionsSerializer,
                 Institutions,
-                filter_kwargs={"name": inst_data["name"]},
                 allow_update=True,
                 user_id=user_id
             )
@@ -860,7 +891,6 @@ class CitationsSerializer(GenericSerializerMixin):
                     primary,
                     PartiesSerializer,
                     Parties,
-                    filter_kwargs=PartiesSerializer.Meta.required_fields,
                     optionals=optional_party,
                     user_id=user_id
                 )
@@ -875,7 +905,6 @@ class CitationsSerializer(GenericSerializerMixin):
                         contact,
                         PartiesSerializer,
                         Parties,
-                        filter_kwargs=PartiesSerializer.Meta.required_fields,
                         optionals=optional_party,
                         user_id=user_id
                     )
@@ -893,7 +922,6 @@ class CitationsSerializer(GenericSerializerMixin):
                         funder,
                         FundingStreamsSerializer,
                         FundingStreams,
-                        filter_kwargs=FundingStreamsSerializer.Meta.required_fields,
                         user_id=user_id
                     )
                     funders.append(search_funder)
@@ -910,7 +938,6 @@ class CitationsSerializer(GenericSerializerMixin):
                         institution,
                         InstitutionsSerializer,
                         Institutions,
-                        filter_kwargs=InstitutionsSerializer.Meta.required_fields,
                         user_id=user_id
                     )
                     institutions.append(search_institution)
@@ -929,7 +956,6 @@ class CitationsSerializer(GenericSerializerMixin):
                         ref,
                         ReferencesSerializer,
                         References,
-                        filter_kwargs=ReferencesSerializer.Meta.required_fields,
                         allow_update=True,
                         user_id=user_id
                     )

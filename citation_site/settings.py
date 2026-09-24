@@ -145,8 +145,15 @@ except ImportError:
 SITE_ID = 1
 
 CEDA_INFO = """
-This record was created via the CEDA Citation Service, maintained and hosted on the CEDA JASMIN Infrastructure.
+This record was created via the Citation Service, maintained and hosted on the CEDA-JASMIN Infrastructure.
 """
+
+LICENSE = {
+    'CMIP7'.lower():'',
+    'CMIP6Plus'.lower():'',
+    'CORDEX-CMIP6'.lower():''
+}
+
 
 GENERAL_INFO = {
     'CMIP7'.lower():"CMIP7 is a project of the World Climate Research Programme (WCRP)," \

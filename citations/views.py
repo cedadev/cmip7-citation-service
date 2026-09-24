@@ -17,7 +17,7 @@ from django.http import Http404, HttpResponse, HttpResponseForbidden, HttpRespon
 from django.urls import reverse
 from django.views.generic.base import TemplateView
 from django.views.generic.edit import FormView
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render
 from rest_framework import generics, mixins, permissions, status
 from rest_framework.authtoken.models import Token
 from rest_framework.authentication import TokenAuthentication, BasicAuthentication
@@ -31,6 +31,7 @@ from citations.facet_mappings import ESGVOC_FACET_LABELS, STAC_LABELS, STAC_COLL
 from citations.forms import (
     ContactFormSet,
     EditCitationForm,
+    EditPublishedCitationForm,
     FunderFormSet,
     InstitutionFormSet,
     InstitutionIdForm,
@@ -62,7 +63,7 @@ from citations.serializers import (
     chain_new_objects,
     handle_update,
 )
-from citations.utils import logstream, get_drs_url, add_new_references
+from citations.utils import logstream, get_drs_url, add_new_references, party_hash_func
 import logging
 
 logger = logging.getLogger(__name__)
@@ -70,6 +71,7 @@ logger.addHandler(logstream)
 logger.propagate = False
 
 
+# functional view
 def listener_check(request, title, *args, **kwargs):
     """
     Custom check endpoint for the listener.
@@ -100,7 +102,7 @@ def listener_check(request, title, *args, **kwargs):
         status=status.HTTP_200_OK,
     )
         
-
+# functional view
 def download_bibtex(request, title, *args, **kwargs):
     """
     Download a BibTeX representation of a given DOI
@@ -152,8 +154,7 @@ def download_bibtex(request, title, *args, **kwargs):
     )
     return response
 
-
-
+# functional view
 def download_ris(request, title, *args, **kwargs):
     """
     Download a RIS representation of a given DOI
@@ -208,6 +209,20 @@ def download_ris(request, title, *args, **kwargs):
     )
     return response
 
+# functional view
+def api_token_request(request, *args, **kwargs):
+
+    if not request.user.user_permissions.filter(codename="add_citations"):
+        return HttpResponseRedirect(reverse("citations:reviewer_request"))
+
+    token, created = Token.objects.get_or_create(user=request.user)
+
+    r = GenericRenderedView()
+
+    context = r.get_context_data()
+    
+    return render(request, 'reviewer_api_token.html',context | {'api_user_token':token})
+    
 
 def create_new_permission(user, institution_id: str, raise_exception: bool = False) -> None | HttpResponseRedirect:
     """
@@ -1096,6 +1111,7 @@ class PartyView(GenericRenderedView):
 
         instance = Parties.objects.get(id=pk)
         context["party"] = PartiesSerializer(instance).get_data()
+        context["party_fullname"] = fullname(context["party"])
 
         primary_citations = [
             {"title": citation.title, "version": citation.version, "id": citation.id}
@@ -1324,6 +1340,108 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
     model = Citations
     serializer_class = CitationsSerializer
 
+    def check_form_clashes(
+            self, 
+            formset, 
+            serializer, 
+            model, 
+            check_fields,
+            id_func) -> dict:
+        """
+        Check information clashes for a specific form
+        """
+
+        clashes = {}
+
+        form_set_iter = formset
+        if hasattr(formset, "ordered_forms"):
+            form_set_iter = formset.ordered_forms
+
+        for fd in form_set_iter:
+
+            if not fd:
+                continue
+
+            formdata = dict(getattr(fd, "cleaned_data", {}))
+            formdata.pop('ORDER',None)
+
+            if not formdata:
+                continue
+
+            if all(not v for v in formdata.values()):
+                continue
+
+            pkid = id_func(formdata)
+
+            if not model.objects.filter(pk=pkid):
+                continue
+
+            currentdata = serializer(model.objects.get(pk=pkid)).data
+            for field in check_fields:
+                # Only clashing if both fields are non-Null.
+                if bool(currentdata[field]) and bool(formdata[field]) and currentdata[field] != formdata[field]:
+
+                    clash = [field, currentdata[field], formdata[field]]
+                    if pkid not in clashes:
+                        clashes[pkid] = []
+                    clashes[pkid].append(clash)
+
+        return clashes
+
+    def check_all_clashes(self, contact_formset, form, **kwargs):
+        """
+        Check all clashing information here
+        """
+
+        clashes = self.check_form_clashes(
+            contact_formset,
+            PartiesSerializer,
+            Parties,
+            ['email','orcid'],
+            party_hash_func)
+        
+        if not clashes:
+            self.request.session['citation_clashes'] = None
+            return
+
+        proceed = False
+        if self.request.session.get('citation_clashes'):
+            if len(clashes.keys()) <= len(self.request.session['citation_clashes'].keys()):
+                proceed = True
+                for k in clashes.keys():
+                    for swipe in clashes[k]:
+                        if not any([swipe == scar for scar in self.request.session['citation_clashes'][k]]):
+                            proceed = False
+
+        if proceed:
+            self.request.session['citation_clashes'] = None
+            return
+        
+        self.request.session['citation_clashes'] = clashes
+
+        contact_map = []
+        clash_count = 0
+        for pid, pclashes in clashes.items():
+            for pclash in pclashes:
+                field    = pclash[0]
+                existing = pclash[1]
+                new      = pclash[2]
+                clash_count += 1
+
+                contact_map.append(
+                    f'{fullname(PartiesSerializer(
+                        Parties.objects.get(pk=pid)).data)} ' \
+                    f'already exists with {field}: "{existing}". If you wish to continue, this value will be ' \
+                    f'updated to "{new}", simply press the button to submit this form again.' \
+                    'If instead you are trying to create a new user, please add middle name ' \
+                    'information to distinguish the new user from the existing user, use the Parties ' \
+                    'tab to check existing party information.'
+                )
+        return self.render_to_response(
+            self.get_context_data(form=form, reload=True, **kwargs)
+            | {"extra_errors": {'contact':contact_map}, "errors": clash_count}
+        )
+
     def redirect_on_success(self, title: str = None, failed_publish: bool = False):
 
         args = [title]
@@ -1484,7 +1602,11 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
         return context
 
     def clean_formset_data(
-        self, formset: dict, serializer, model, allow_update: bool = False
+        self, 
+        formset: dict, 
+        serializer, 
+        model, 
+        allow_update: bool = False
     ) -> list:
         """
         Clean data from a formset and determine if updates are required
@@ -1509,9 +1631,7 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
                 continue
 
             filter_kwargs = {
-                k: v
-                for k, v in formdata.items()
-                if k in serializer.Meta.required_fields
+                'pk': serializer.Meta.get_id(formdata)
             }
             inst = model.objects.filter(**filter_kwargs)
 
@@ -1527,8 +1647,8 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
                     data=changed_data | filter_kwargs,
                     serializer=serializer,
                     model=model,
-                    filter_kwargs=serializer.Meta.required_fields,
                     allow_update=allow_update,
+                    user_id=self.request.user.username
                 )  # Allowed updates from citation form directly to contacts
             pks.append(inst_pk)
         return pks
@@ -1566,8 +1686,8 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
                     data=changed_data | {"id": formdata["id"]},
                     serializer=ReferencesSerializer,
                     model=References,
-                    filter_kwargs=["id"],
                     allow_update=True,
+                    user_id=self.request.user.username
                 )
             ref_data[relation].append(inst_pk)
         return ref_data
@@ -1628,6 +1748,11 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
         main_data["funders"] = []
 
         primary_index = int(self.request.POST.get("primary_contact"))
+
+        resp = self.check_all_clashes(contact_formset, form, **kwargs)
+        if resp is not None:
+            return resp
+
         contacts = self.clean_formset_data(
             contact_formset, PartiesSerializer, Parties, allow_update=True
         )
@@ -2069,3 +2194,367 @@ class ReviewerRequestView(LoginRequiredMixin, GenericRenderedView, FormView):
             messages.success(self.request, "Your permissions have not been changed.")
 
         return HttpResponseRedirect(reverse("citations:citations"))
+
+class EditPublishedCitationFormView(PermissionRequiredMixin, GenericRenderedView, FormView):
+
+    permission_required = "citations.add_citations"
+    raise_exception = True
+    template_name = "edit_published_citation.html"
+    model = Citations
+    serializer_class = CitationsSerializer
+
+    form_class = EditPublishedCitationForm
+    on_submit = "update"
+
+    editable_fields = [
+        'abstract',
+        'institutions',
+        'funders',
+        'cites',
+        'is_cited_by',
+        'is_referenced_by'
+    ]
+
+    # Needs to pre-populate form with existing values
+
+    # Also adds context to either edit the existing record on form submission
+    # Or creates a new record with the given data
+
+    def update_data(self, instance, data):
+        """
+        Update the set of limited information."""
+
+        serializer = self.serializer_class(instance=instance, data=data)
+        
+        serializer.is_valid(raise_exception=True)
+        serializer.save(publish=False, user_id=self.request.user.username)
+
+        return self.redirect_on_success(data['id'])
+
+    def form_valid(self, form):
+
+        newdata = form.cleaned_data
+
+        instance = (
+            Citations.objects.filter(pk=self.kwargs["pk"])
+            .order_by("version")
+            .last()
+        )
+
+        # Handle edits to the joined attributes
+
+        formset_data = self.create_from_formsets(form, title=instance.title, pk=instance.id)
+        if not isinstance(formset_data, dict):
+            return formset_data
+        newdata.update(formset_data)
+
+        data = CitationsSerializer(instance).get_data()
+        data.update(newdata)
+
+        try:
+            return self.update_data(instance=instance, data=data)
+        except ValidationError as err:
+            return self.render_to_response(
+                self.get_context_data(form=form, pk=instance.pk, reload=True)
+                | {
+                    "errors": "1 or more",
+                    "extra_errors": {"general": [getattr(err, "message", str(err))]},
+                }
+            )
+        except Exception as err:
+            raise err
+
+    def get_initial(self):
+
+        try:
+            citation = Citations.objects.get(pk=self.kwargs['pk'])
+        except Citations.DoesNotExist:
+            raise Http404(
+                f'Citation "{self.kwargs["pk"]}" does not exist'
+            )
+
+        if not citation.published:
+            raise PermissionDenied(
+                f'Citation "{citation.title} (v{citation.version})" is not published.'
+                ' This page is only for updating published records.'
+            )
+
+        citation_data = CitationsSerializer(citation).get_data()
+
+        editable = {k: citation_data.get(k) for k in self.editable_fields}
+
+        initial = super().get_initial() | editable
+        return initial
+
+    def initial_formset_values(self, context):
+        init = self.get_initial()
+
+        references = []
+        for relation in self.serializer_class.Meta.citation_types:
+            for v in init.get(relation):
+                v["relation"] = reference_mapping.index(relation) + 1
+                v["DOI"] = v["id"]
+                references.append(v)
+
+        context["institution_formset"] = InstitutionFormSet(
+            initial=init["institutions"]
+        )
+        context["funder_formset"] = FunderFormSet(initial=init["funders"])
+        context["reference_formset"] = ReferenceFormSet(initial=references)
+        return context
+
+    def get_context_data(self, pk: str, reload: bool = False, **kwargs):
+
+        citation = Citations.objects.get(pk=pk)
+        kwargs['title'] = citation.title
+        kwargs['version'] = citation.version
+
+        context = super().get_context_data(**kwargs)
+        
+        if self.request.POST:
+            if reload:
+                context = self.reload_formset_values(context, self.request.POST)
+            else:
+                context["contact_formset"] = ContactFormSet(self.request.POST)
+                context["institution_formset"] = InstitutionFormSet(self.request.POST)
+                context["funder_formset"] = FunderFormSet(self.request.POST)
+                context["replica_formset"] = ReplicaFormSet(self.request.POST)
+                context["reference_formset"] = ReferenceFormSet(self.request.POST)
+        else:
+            context = self.initial_formset_values(context)
+
+        context["on_submit"] = self.on_submit
+
+        required_fields = []
+        for serializer in [
+            InstitutionsSerializer,
+            PartiesSerializer,
+            FundingStreamsSerializer,
+            CitationsSerializer,
+            ReferencesSerializer,
+        ]:
+            required_fields += [
+                f[0].upper() + f[1:].replace("_", " ")
+                for f in serializer.Meta.required_fields
+            ]
+
+        context["required_fields"] = list(set(required_fields))
+        return context
+    
+    def redirect_on_success(self, title: str):
+
+        args = [title]
+
+        msg = "Your citation updates have been submitted and will appear here when they have been processed."
+
+        messages.success(self.request, msg)
+
+        return HttpResponseRedirect(reverse("citations:citation", args=args))
+
+    def dispatch(self, request, *args, **kwargs):
+        """
+        Setup for form view
+        """
+        if not request.user.user_permissions.filter(codename="add_citations"):
+            return HttpResponseRedirect(reverse("citations:reviewer_request"))
+
+        pk = kwargs.get("pk") or request.GET.get("pk")
+        if pk:
+            # Editing existing record or creating from template.
+            citation = self.model.objects.filter(pk=pk).order_by("version").last()
+            if not citation:
+                raise Http404(f'Citation for {pk} does not exist')
+            if request.user.user_permissions.filter(
+                codename=f"edit_{citation.institution_id}"
+            ):
+                return super().dispatch(request, *args, **kwargs)
+            return HttpResponseRedirect(reverse("citations:reviewer_request"))
+        else:
+            return super().dispatch(request, *args, **kwargs)
+
+    def reload_formset_values(self, context: dict, post):
+        """
+        Reload new posted values into the formsets for the context
+        """
+        
+        context["institution_formset"] = InstitutionFormSet(
+            initial=[
+                {
+                    field: form[field].value()
+                    for field in form.fields
+                } for form in InstitutionFormSet(post).forms if not form.empty_permitted
+            ]
+        )
+        context["funder_formset"] = FunderFormSet(
+            initial=[
+                {
+                    field: form[field].value()
+                    for field in form.fields
+                } for form in FunderFormSet(post).forms if not form.empty_permitted
+            ]
+        )
+        context["reference_formset"] = ReferenceFormSet(
+            initial=[
+                {
+                    field: form[field].value()
+                    for field in form.fields
+                } for form in ReferenceFormSet(post).forms if not form.empty_permitted
+            ]
+        )
+        return context
+
+    def clean_formset_data(
+        self, 
+        formset: dict, 
+        serializer, 
+        model, 
+        allow_update: bool = False
+    ) -> list:
+        """
+        Clean data from a formset and determine if updates are required
+        """
+        pks = []
+        form_set_iter = formset
+        if hasattr(formset, "ordered_forms"):
+            form_set_iter = formset.ordered_forms
+
+        for fd in form_set_iter:
+
+            if not fd:
+                continue
+
+            formdata = dict(getattr(fd, "cleaned_data", {}))
+            formdata.pop('ORDER',None)
+
+            if not formdata:
+                continue
+
+            if all(not v for v in formdata.values()):
+                continue
+
+            filter_kwargs = {
+                'pk': serializer.Meta.get_id(formdata)
+            }
+            inst = model.objects.filter(**filter_kwargs)
+
+            if inst:
+                inst = inst[0]
+                changed_data = check_changes(inst, formdata)
+                inst_pk = inst.pk
+            else:
+                changed_data = formdata
+
+            if changed_data:
+                inst_pk = chain_new_objects(
+                    data=changed_data | filter_kwargs,
+                    serializer=serializer,
+                    model=model,
+                    allow_update=allow_update,
+                    user_id=self.request.user.username
+                )  # Allowed updates from citation form directly to contacts
+            pks.append(inst_pk)
+        return pks
+
+    def process_references(self, formset) -> dict:
+        ref_data = {}
+        ref_data["is_cited_by"] = []
+        ref_data["is_referenced_by"] = []
+        ref_data["cites"] = []
+
+        for form in formset:
+
+            if not form:
+                continue
+            formdata = dict(getattr(form, "cleaned_data", {}))
+            if not formdata:
+                continue
+            if len(formdata.keys()) < 3:
+                continue
+
+            formdata["id"] = formdata.pop("DOI")
+            rel_id = formdata.pop("relation")
+            relation = [r[1] for r in reference_options if str(r[0]) == str(rel_id)][0]
+
+            inst = References.objects.filter(id=formdata["id"])
+            if inst:
+                inst = inst[0]
+                changed_data = check_changes(inst, formdata)
+                inst_pk = inst.pk
+            else:
+                changed_data = formdata
+
+            if changed_data:
+                inst_pk = chain_new_objects(
+                    data=changed_data | {"id": formdata["id"]},
+                    serializer=ReferencesSerializer,
+                    model=References,
+                    allow_update=True,
+                    user_id=self.request.user.username
+                )
+            ref_data[relation].append(inst_pk)
+        return ref_data
+
+    def create_from_formsets(self, form, **kwargs) -> dict:
+
+        institution_formset = InstitutionFormSet(self.request.POST)
+        funder_formset = FunderFormSet(self.request.POST)
+        reference_formset = ReferenceFormSet(self.request.POST)
+
+        def check_empty_custom(form, nonempty_fields: list) -> bool:
+            """
+            Allow this form to be empty based on custom logic.
+
+            If a field in the form evaluates to True it is not empty.
+
+            Returns True if the form is considered empty for all relevant fields.
+            """
+
+            for field, value in form.cleaned_data.items():
+                if field in nonempty_fields:
+                    continue
+
+                if value:
+                    return False
+            return True
+
+        errors = 0
+
+        # Check all forms for errors - this does not involve creating new entries yet
+        error_map = {}
+        for formset in [institution_formset,
+                funder_formset, reference_formset]:
+        
+            # Don't need correct form order when validating
+            for form_pt in formset:
+                if not form_pt.is_valid() and not form_pt.empty_permitted:
+
+                    if formset == reference_formset:
+                        if check_empty_custom(form_pt, nonempty_fields=["relation"]):
+                            continue
+                    err_msgs = []
+                    for err, msg in form_pt.errors.items():
+                        err_msgs.append(f"{err}: {msg[0]}")
+                        errors += 1
+                    error_map[formset.prefix] = err_msgs
+
+        if errors > 0:
+            return self.render_to_response(
+                self.get_context_data(form=form, reload=True, **kwargs)
+                | {"extra_errors": error_map, "errors": errors}
+            )
+
+        main_data = {}
+        main_data["institutions"] = []
+        main_data["funders"] = []
+
+        main_data["institutions"] = self.clean_formset_data(
+            institution_formset, InstitutionsSerializer, Institutions
+        )
+
+        main_data["funders"] = self.clean_formset_data(
+            funder_formset, FundingStreamsSerializer, FundingStreams
+        )
+
+        main_data.update(self.process_references(reference_formset))
+
+        return main_data
