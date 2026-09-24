@@ -789,6 +789,25 @@ class CitationsSerializer(GenericSerializerMixin):
         """
 
         # We don't care here if any references were added new. All will be saved.
+
+        # Format references correctly - coming from Forms they may be auto-fitted to IDs
+        for reftype in self.Meta.citation_types:
+            ref_jsons = []
+            for ref in data.get(reftype, []):
+                if isinstance(ref, str):
+
+                    if not ReferencesSerializer(References.objects.filter(pk=ref)):
+                        raise ValueError(
+                            "Unable to interpret reference ID with no existing " \
+                            "reference record."
+                        )
+
+                    ref_jsons.append(
+                        ReferencesSerializer(
+                            References.objects.get(pk=ref)).data
+                    )
+            data[reftype] = ref_jsons
+
         data, _ = add_new_references(data, self.Meta.citation_types)
 
         # Auto-fill from ESGVOC
