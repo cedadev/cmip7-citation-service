@@ -50,6 +50,7 @@ from citations.models import (
     FailedRequests,
     CitationParty,
     ListenerPause,
+    publisher_paused,
     get_ror_content
 )
 from citations.serializers import (
@@ -255,7 +256,6 @@ def create_new_permission(user, institution_id: str, raise_exception: bool = Fal
 
     user.user_permissions.add(pm)
     user.save()
-
 
 def get_citable_party(party: Parties):
     """
@@ -464,6 +464,11 @@ def check_publish_ok(request, data: dict) -> tuple:
             messages.error(
                 request,
                 "Failed to resolve DRS URL - either the Metagrid or STAC query must resolve. DOI cannot be minted until data is available.",
+            )
+        elif publisher_paused():
+            messages.error(
+                request,
+                "DOI Minting is temporarily paused for the citation service due to maintenance.",
             )
         else:
             messages.error(
@@ -1215,7 +1220,7 @@ class CitationAPIView(GenericAPIView):
         except Exception as _:
             error = {"error": str(response)}
 
-        return Response(error, status=status.HTTP_400_BAD_REQUEST)
+        return JsonResponse(error, status=status.HTTP_400_BAD_REQUEST)
 
     def _create(self, request, *args, **kwargs) -> tuple:
         data = unwrap_request(request.data)
@@ -1246,9 +1251,9 @@ class CitationAPIView(GenericAPIView):
                         serializer.validated_data, status=status.HTTP_405_METHOD_NOT_ALLOWED
                     )
 
+            data = serializer.save(publish=publish, user_id=request.user.username)
             if publish:
                 data, _ = check_publish_ok(request, data)
-            data = serializer.save(publish=publish, user_id=request.user.username)
             return True, title, Response(data, status=status.HTTP_201_CREATED)
         except Exception as e:
             return False, title, e
@@ -1274,11 +1279,13 @@ class SpecificCitationAPIView(SpecificAPIView):
     ]
 
     def update(self, request, *args, **kwargs):
+
         data = unwrap_request(request.data)
         instance = self.get_object()
         if not instance.editable:
-            return HttpResponseForbidden(
-                f"Editing the record {instance.id} is forbidden"
+            return JsonResponse({'error':
+                f"Editing the record {instance.id} is forbidden"},
+                status=status.HTTP_403_FORBIDDEN
             )
 
         publish = data.pop("publish_on_save", None)
@@ -1292,7 +1299,7 @@ class SpecificCitationAPIView(SpecificAPIView):
         if publish:
             data, _ = check_publish_ok(request, data)
 
-        return Response(data, status=status.HTTP_201_CREATED)
+        return JsonResponse(data, status=status.HTTP_201_CREATED)
 
     def get(self, request, *args, **kwargs):
 
@@ -1445,6 +1452,7 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
             msg = "Your citations have been submitted and will appear here when they have been processed."
 
         if failed_publish:
+
             messages.error(
                 self.request,
                 "DOI Minting has not been completed. The record will remain unpublished until the above issue is resolved.",
@@ -1489,6 +1497,7 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
         """
         Setup for form view
         """
+
         if not request.user.user_permissions.filter(codename="add_citations"):
             return HttpResponseRedirect(reverse("citations:reviewer_request"))
 

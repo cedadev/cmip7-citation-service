@@ -31,6 +31,7 @@ from citations.models import (
     FailedRequests,
     extract_from_orcid,
     locate_institute,
+    publisher_paused
 )
 from citations.utils import logstream, add_new_references, party_hash_func
 from citations.validators import validate_component, validate_project
@@ -454,7 +455,7 @@ class GenericSerializerMixin(serializers.ModelSerializer):
             )
 
         # Run publication (DOI Minting workflow)
-        if publish:
+        if publish and not publisher_paused():
             pubdata = mint_doi_for_data(filtered_data, id=pk)
             if isinstance(pubdata, dict):
                 filtered_data.update(pubdata)
@@ -492,7 +493,7 @@ class GenericSerializerMixin(serializers.ModelSerializer):
                 raise MethodNotAllowed(f'The field "{field}" is immutable')
 
         # Run publication (DOI Minting workflow)
-        if publish:
+        if publish and not publisher_paused():
             pubdata = mint_doi_for_data(filtered_data, id=id)
             if isinstance(pubdata, dict):
                 filtered_data.update(pubdata)
@@ -820,6 +821,25 @@ class CitationsSerializer(GenericSerializerMixin):
         """
 
         # We don't care here if any references were added new. All will be saved.
+
+        # Format references correctly - coming from Forms they may be auto-fitted to IDs
+        for reftype in self.Meta.citation_types:
+            ref_jsons = []
+            for ref in data.get(reftype, []):
+                if isinstance(ref, str):
+
+                    if not ReferencesSerializer(References.objects.filter(pk=ref)):
+                        raise ValueError(
+                            "Unable to interpret reference ID with no existing " \
+                            "reference record."
+                        )
+
+                    ref_jsons.append(
+                        ReferencesSerializer(
+                            References.objects.get(pk=ref)).data
+                    )
+            data[reftype] = ref_jsons
+
         data, _ = add_new_references(data, self.Meta.citation_types)
 
         # Auto-fill from ESGVOC
