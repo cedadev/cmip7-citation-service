@@ -334,6 +334,31 @@ def render_cite_as(citation: Citations):
     }
 
 
+def render_license_text(data: dict) -> str:
+    """
+    Apply formatting in the form of links to references identified in the license
+
+    This occurs on rendering the citation view."""
+
+    replace_refs = {}
+    if '](' in data['license']:
+        # md-style references
+        sectored = data['license'].split('](')
+        for id in range(len(sectored)-1):
+            title = sectored[id].split('[')[-1]
+            url = sectored[id+1].split(')')[0]
+
+            replace_refs[f'[{title}]({url})'] = "".join(
+                ['<a href="', url, '">', title, "</a>"]
+            )
+
+    license = data['license']
+    for k, v in replace_refs.items():
+        license = license.replace(k, v)
+    
+    return str(license)
+
+
 def render_abstract(data: dict) -> str:
     """
     Apply formatting in the form of links to references identified in the abstract
@@ -355,6 +380,17 @@ def render_abstract(data: dict) -> str:
                         )
         except IndexError:
             pass
+
+    if '](' in data['abstract']:
+        # md-style references
+        sectored = data['abstract'].split('](')
+        for id in range(len(sectored)-1):
+            title = sectored[id].split('[')[-1]
+            url = sectored[id+1].split(')')[0]
+
+            replace_refs[f'[{title}]({url})'] = "".join(
+                ['<a href="', url, '">', title, "</a>"]
+            )
 
     abstract = data["abstract"]
     for k, v in replace_refs.items():
@@ -1040,6 +1076,9 @@ class CitationView(GenericRenderedView):
             context['data_access'] = citation_data['drs_url']
         else:
             context['data_access'] = get_drs_url(citation_data)
+
+        # 7. Render License Text
+        context['license'] = render_license_text(citation_data)
 
         context["citation"] = citation_data
         return context
