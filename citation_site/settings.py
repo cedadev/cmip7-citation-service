@@ -202,7 +202,7 @@ GENERAL_INFO = {
         "requirements. Further information can be found [here](https://www.wcrp-cmip.org/cmip-phases/cmip6plus/). " \
         "Parties using CMIP data should ensure they have read the [WCRP CMIP (2026) CMIP Data Disclaimer](" \
         "https://doi.org/10.5281/zenodo.18155119).",
-    'CORDEX-CMIP6'.lower(): "CORDEX is a [World Climate Research Programme (WCRP)]" \
+    'CORDEX-CMIP6'.lower(): "[CORDEX](https://cordex.org) is a [World Climate Research Programme (WCRP)]" \
         "(https://www.wcrp-climate.org/) initiative that advances the science and " \
         "application of regional climate downscaling by coordinating experiments " \
         "across fourteen continental domains and fostering related strategic " \
