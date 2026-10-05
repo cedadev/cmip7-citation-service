@@ -110,7 +110,7 @@
     <span class="n">locate_institute</span><span class="p">,</span>
     <span class="n">publisher_paused</span>
 <span class="p">)</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">citations.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">logstream</span><span class="p">,</span> <span class="n">add_new_references</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">citations.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">logstream</span><span class="p">,</span> <span class="n">add_new_references</span><span class="p">,</span> <span class="n">party_hash_func</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">citations.validators</span><span class="w"> </span><span class="kn">import</span> <span class="n">validate_component</span><span class="p">,</span> <span class="n">validate_project</span>
 
 <span class="k">try</span><span class="p">:</span>
@@ -331,19 +331,20 @@
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Determine the paragraph of text to use for the license.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">license</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="s2">&quot;GENERAL_INFO&quot;</span><span class="p">):</span>
-        <span class="n">project_id</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;project_id&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
-        <span class="k">if</span> <span class="n">project_id</span> <span class="ow">in</span> <span class="n">settings</span><span class="o">.</span><span class="n">GENERAL_INFO</span><span class="p">:</span>
-            <span class="n">license</span> <span class="o">+=</span> <span class="n">settings</span><span class="o">.</span><span class="n">GENERAL_INFO</span><span class="p">[</span><span class="n">project_id</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="s2">&quot;CITATION_GUIDANCE&quot;</span><span class="p">):</span>
-        <span class="n">license</span> <span class="o">+=</span> <span class="n">settings</span><span class="o">.</span><span class="n">CITATION_GUIDANCE</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span>
+    <span class="n">project_id</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;project_id&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
 
-    <span class="n">license</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Published under </span><span class="si">{</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;rights&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">.&#39;</span><span class="p">)</span>
+    <span class="n">license</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="s2">&quot;LICENSE_TEXT&quot;</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">project_id</span><span class="o">.</span><span class="n">lower</span><span class="p">(),</span> <span class="n">settings</span><span class="o">.</span><span class="n">LICENSE_TEXT</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">project_id</span> <span class="ow">in</span> <span class="n">settings</span><span class="o">.</span><span class="n">LICENSE_TEXT</span><span class="p">:</span>
+            <span class="n">license</span> <span class="o">+=</span> <span class="n">settings</span><span class="o">.</span><span class="n">LICENSE_TEXT</span><span class="p">[</span><span class="n">project_id</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
+                <span class="s1">&#39;INSTITUTION_ID&#39;</span><span class="p">,</span>
+                <span class="n">data</span><span class="p">[</span><span class="s1">&#39;institution_id&#39;</span><span class="p">]</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span>
 
     <span class="n">license</span> <span class="o">=</span> <span class="p">[</span><span class="n">lp</span> <span class="k">for</span> <span class="n">lp</span> <span class="ow">in</span> <span class="n">license</span> <span class="k">if</span> <span class="n">lp</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)]</span>
 
-    <span class="k">return</span> <span class="s2">&quot;. &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">license</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="s2">&quot;.&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">license</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;.&#39;</span></div>
 
 
 
@@ -423,7 +424,6 @@
     <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
     <span class="n">serializer</span><span class="p">:</span> <span class="n">serializers</span><span class="o">.</span><span class="n">ModelSerializer</span><span class="p">,</span>
     <span class="n">model</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">],</span>
-    <span class="n">filter_kwargs</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
     <span class="n">optionals</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">allow_update</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
@@ -436,7 +436,7 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">optionals</span> <span class="o">=</span> <span class="n">optionals</span> <span class="ow">or</span> <span class="p">[]</span>
-    <span class="n">filters</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">filter_kwargs</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">data</span><span class="p">}</span>
+    <span class="n">filters</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;pk&#39;</span><span class="p">:</span> <span class="n">serializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">get_id</span><span class="p">(</span><span class="n">data</span><span class="p">)}</span>
     <span class="k">for</span> <span class="n">opt</span> <span class="ow">in</span> <span class="n">optionals</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">opt</span><span class="p">):</span>
             <span class="n">filters</span><span class="p">[</span><span class="n">opt</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">opt</span><span class="p">]</span>
@@ -632,7 +632,17 @@
         <span class="n">required_fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span>
         <span class="n">fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="s2">&quot;acronym&quot;</span><span class="p">,</span> <span class="s2">&quot;country&quot;</span><span class="p">,</span> <span class="s2">&quot;id&quot;</span><span class="p">]</span>
         <span class="n">relations</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">id_relations</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">internal_fields</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="nd">@classmethod</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">get_id</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+
+            <span class="k">if</span> <span class="s1">&#39;pk&#39;</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;pk&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="s1">&#39;id&#39;</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span>
+            <span class="k">return</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha1</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
 
 <div class="viewcode-block" id="InstitutionsSerializer.fill_data_parameters">
 <a class="viewcode-back" href="../../serializer.html#citations.serializers.InstitutionsSerializer.fill_data_parameters">[docs]</a>
@@ -645,7 +655,7 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;acronym&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;country&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
             <span class="n">data</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">locate_institute</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]))</span>
 
-        <span class="n">data</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha1</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
+        <span class="n">data</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">InstitutionsSerializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">get_id</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">data</span></div>
 </div>
 
@@ -663,6 +673,7 @@
         <span class="k">return</span> <span class="n">data</span></div>
 
 
+
 <div class="viewcode-block" id="PartiesSerializer">
 <a class="viewcode-back" href="../../serializer.html#citations.serializers.PartiesSerializer">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">PartiesSerializer</span><span class="p">(</span><span class="n">GenericSerializerMixin</span><span class="p">):</span>
@@ -675,6 +686,22 @@
         <span class="n">fields</span> <span class="o">=</span> <span class="n">immutable_fields</span> <span class="o">+</span> <span class="p">[</span><span class="s2">&quot;email&quot;</span><span class="p">,</span> <span class="s2">&quot;orcid&quot;</span><span class="p">,</span> <span class="s2">&quot;affiliations&quot;</span><span class="p">,</span> <span class="s2">&quot;id&quot;</span><span class="p">]</span>
         <span class="n">relations</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;affiliations&quot;</span><span class="p">]</span>
         <span class="n">internal_fields</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">id_relations</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="nd">@classmethod</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">get_id</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+
+            <span class="k">if</span> <span class="s1">&#39;pk&#39;</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;pk&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="s1">&#39;id&#39;</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span>
+
+            <span class="n">naming_hash</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">data</span><span class="p">[</span><span class="s2">&quot;first_name&quot;</span><span class="p">]</span>
+                <span class="o">+</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;middle_names&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+                <span class="o">+</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;last_name&quot;</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha1</span><span class="p">(</span><span class="n">naming_hash</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
 
 <div class="viewcode-block" id="PartiesSerializer.fill_data_parameters">
 <a class="viewcode-back" href="../../serializer.html#citations.serializers.PartiesSerializer.fill_data_parameters">[docs]</a>
@@ -702,7 +729,6 @@
                     <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">a</span><span class="p">},</span>
                     <span class="n">InstitutionsSerializer</span><span class="p">,</span>
                     <span class="n">Institutions</span><span class="p">,</span>
-                    <span class="n">filter_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">a</span><span class="p">},</span>
                     <span class="n">user_id</span><span class="o">=</span><span class="n">user_id</span>
                 <span class="p">)</span>
                 <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">affiliation_data</span>
@@ -710,14 +736,7 @@
 
         <span class="k">if</span> <span class="s2">&quot;id&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
             <span class="c1"># Add ID from hashed version of all names</span>
-            <span class="n">naming_hash</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="n">data</span><span class="p">[</span><span class="s2">&quot;first_name&quot;</span><span class="p">]</span>
-                <span class="o">+</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;middle_names&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
-                <span class="o">+</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;last_name&quot;</span><span class="p">)</span>
-            <span class="p">)</span>
-            <span class="n">party_id</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha1</span><span class="p">(</span><span class="n">naming_hash</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
-
-            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">party_id</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">PartiesSerializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">get_id</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">data</span></div>
 </div>
 
@@ -736,6 +755,14 @@
         <span class="n">id_relations</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;affiliation&quot;</span><span class="p">]</span>
         <span class="n">internal_fields</span> <span class="o">=</span> <span class="p">[]</span>
 
+        <span class="nd">@classmethod</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">get_id</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+            <span class="k">if</span> <span class="s1">&#39;pk&#39;</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;pk&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="s1">&#39;id&#39;</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span>
+            <span class="k">return</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha1</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
+
 <div class="viewcode-block" id="FundingStreamsSerializer.fill_data_parameters">
 <a class="viewcode-back" href="../../serializer.html#citations.serializers.FundingStreamsSerializer.fill_data_parameters">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">fill_data_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
@@ -750,12 +777,11 @@
                 <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">affiliation</span><span class="p">},</span>
                 <span class="n">InstitutionsSerializer</span><span class="p">,</span>
                 <span class="n">Institutions</span><span class="p">,</span>
-                <span class="n">filter_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">affiliation</span><span class="p">},</span>
                 <span class="n">user_id</span><span class="o">=</span><span class="n">user_id</span>
             <span class="p">)</span>
 
         <span class="k">if</span> <span class="s2">&quot;id&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
-            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha1</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">FundingStreamsSerializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">get_id</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">data</span></div>
 </div>
@@ -774,6 +800,14 @@
         <span class="n">id_relations</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">field_mappings</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;DOI&quot;</span><span class="p">:</span> <span class="s2">&quot;id&quot;</span><span class="p">}</span>
         <span class="n">internal_fields</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="nd">@classmethod</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">get_id</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+            <span class="k">if</span> <span class="s1">&#39;pk&#39;</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;pk&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="s1">&#39;id&#39;</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span>
+            <span class="k">return</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span>
 
 <div class="viewcode-block" id="ReferencesSerializer.fill_data_parameters">
 <a class="viewcode-back" href="../../serializer.html#citations.serializers.ReferencesSerializer.fill_data_parameters">[docs]</a>
@@ -978,7 +1012,6 @@
                 <span class="n">inst_data</span><span class="p">,</span>
                 <span class="n">InstitutionsSerializer</span><span class="p">,</span>
                 <span class="n">Institutions</span><span class="p">,</span>
-                <span class="n">filter_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">inst_data</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]},</span>
                 <span class="n">allow_update</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                 <span class="n">user_id</span><span class="o">=</span><span class="n">user_id</span>
             <span class="p">)</span>
@@ -1010,7 +1043,6 @@
                     <span class="n">primary</span><span class="p">,</span>
                     <span class="n">PartiesSerializer</span><span class="p">,</span>
                     <span class="n">Parties</span><span class="p">,</span>
-                    <span class="n">filter_kwargs</span><span class="o">=</span><span class="n">PartiesSerializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">required_fields</span><span class="p">,</span>
                     <span class="n">optionals</span><span class="o">=</span><span class="n">optional_party</span><span class="p">,</span>
                     <span class="n">user_id</span><span class="o">=</span><span class="n">user_id</span>
                 <span class="p">)</span>
@@ -1025,7 +1057,6 @@
                         <span class="n">contact</span><span class="p">,</span>
                         <span class="n">PartiesSerializer</span><span class="p">,</span>
                         <span class="n">Parties</span><span class="p">,</span>
-                        <span class="n">filter_kwargs</span><span class="o">=</span><span class="n">PartiesSerializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">required_fields</span><span class="p">,</span>
                         <span class="n">optionals</span><span class="o">=</span><span class="n">optional_party</span><span class="p">,</span>
                         <span class="n">user_id</span><span class="o">=</span><span class="n">user_id</span>
                     <span class="p">)</span>
@@ -1043,7 +1074,6 @@
                         <span class="n">funder</span><span class="p">,</span>
                         <span class="n">FundingStreamsSerializer</span><span class="p">,</span>
                         <span class="n">FundingStreams</span><span class="p">,</span>
-                        <span class="n">filter_kwargs</span><span class="o">=</span><span class="n">FundingStreamsSerializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">required_fields</span><span class="p">,</span>
                         <span class="n">user_id</span><span class="o">=</span><span class="n">user_id</span>
                     <span class="p">)</span>
                     <span class="n">funders</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">search_funder</span><span class="p">)</span>
@@ -1060,7 +1090,6 @@
                         <span class="n">institution</span><span class="p">,</span>
                         <span class="n">InstitutionsSerializer</span><span class="p">,</span>
                         <span class="n">Institutions</span><span class="p">,</span>
-                        <span class="n">filter_kwargs</span><span class="o">=</span><span class="n">InstitutionsSerializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">required_fields</span><span class="p">,</span>
                         <span class="n">user_id</span><span class="o">=</span><span class="n">user_id</span>
                     <span class="p">)</span>
                     <span class="n">institutions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">search_institution</span><span class="p">)</span>
@@ -1079,7 +1108,6 @@
                         <span class="n">ref</span><span class="p">,</span>
                         <span class="n">ReferencesSerializer</span><span class="p">,</span>
                         <span class="n">References</span><span class="p">,</span>
-                        <span class="n">filter_kwargs</span><span class="o">=</span><span class="n">ReferencesSerializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">required_fields</span><span class="p">,</span>
                         <span class="n">allow_update</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                         <span class="n">user_id</span><span class="o">=</span><span class="n">user_id</span>
                     <span class="p">)</span>

@@ -94,7 +94,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">django.urls</span><span class="w"> </span><span class="kn">import</span> <span class="n">reverse</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">django.views.generic.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">TemplateView</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">django.views.generic.edit</span><span class="w"> </span><span class="kn">import</span> <span class="n">FormView</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">django.shortcuts</span><span class="w"> </span><span class="kn">import</span> <span class="n">redirect</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">django.shortcuts</span><span class="w"> </span><span class="kn">import</span> <span class="n">redirect</span><span class="p">,</span> <span class="n">render</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">rest_framework</span><span class="w"> </span><span class="kn">import</span> <span class="n">generics</span><span class="p">,</span> <span class="n">mixins</span><span class="p">,</span> <span class="n">permissions</span><span class="p">,</span> <span class="n">status</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">rest_framework.authtoken.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">Token</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">rest_framework.authentication</span><span class="w"> </span><span class="kn">import</span> <span class="n">TokenAuthentication</span><span class="p">,</span> <span class="n">BasicAuthentication</span>
@@ -108,6 +108,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">citations.forms</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">ContactFormSet</span><span class="p">,</span>
     <span class="n">EditCitationForm</span><span class="p">,</span>
+    <span class="n">EditPublishedCitationForm</span><span class="p">,</span>
     <span class="n">FunderFormSet</span><span class="p">,</span>
     <span class="n">InstitutionFormSet</span><span class="p">,</span>
     <span class="n">InstitutionIdForm</span><span class="p">,</span>
@@ -139,7 +140,7 @@
     <span class="n">chain_new_objects</span><span class="p">,</span>
     <span class="n">handle_update</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">citations.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">logstream</span><span class="p">,</span> <span class="n">get_drs_url</span><span class="p">,</span> <span class="n">add_new_references</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">citations.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">logstream</span><span class="p">,</span> <span class="n">get_drs_url</span><span class="p">,</span> <span class="n">add_new_references</span><span class="p">,</span> <span class="n">party_hash_func</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
@@ -147,6 +148,7 @@
 <span class="n">logger</span><span class="o">.</span><span class="n">propagate</span> <span class="o">=</span> <span class="kc">False</span>
 
 
+<span class="c1"># functional view</span>
 <div class="viewcode-block" id="listener_check">
 <a class="viewcode-back" href="../../views.html#citations.views.listener_check">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">listener_check</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
@@ -180,7 +182,7 @@
     <span class="p">)</span></div>
 
         
-
+<span class="c1"># functional view</span>
 <div class="viewcode-block" id="download_bibtex">
 <a class="viewcode-back" href="../../views.html#citations.views.download_bibtex">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">download_bibtex</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
@@ -235,8 +237,7 @@
     <span class="k">return</span> <span class="n">response</span></div>
 
 
-
-
+<span class="c1"># functional view</span>
 <div class="viewcode-block" id="download_ris">
 <a class="viewcode-back" href="../../views.html#citations.views.download_ris">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">download_ris</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
@@ -294,6 +295,20 @@
     <span class="k">return</span> <span class="n">response</span></div>
 
 
+<span class="c1"># functional view</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">api_token_request</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">user_permissions</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">codename</span><span class="o">=</span><span class="s2">&quot;add_citations&quot;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">HttpResponseRedirect</span><span class="p">(</span><span class="n">reverse</span><span class="p">(</span><span class="s2">&quot;citations:reviewer_request&quot;</span><span class="p">))</span>
+
+    <span class="n">token</span><span class="p">,</span> <span class="n">created</span> <span class="o">=</span> <span class="n">Token</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get_or_create</span><span class="p">(</span><span class="n">user</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">)</span>
+
+    <span class="n">r</span> <span class="o">=</span> <span class="n">GenericRenderedView</span><span class="p">()</span>
+
+    <span class="n">context</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">()</span>
+    
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;reviewer_api_token.html&#39;</span><span class="p">,</span><span class="n">context</span> <span class="o">|</span> <span class="p">{</span><span class="s1">&#39;api_user_token&#39;</span><span class="p">:</span><span class="n">token</span><span class="p">})</span>
+    
 
 <div class="viewcode-block" id="create_new_permission">
 <a class="viewcode-back" href="../../views.html#citations.views.create_new_permission">[docs]</a>
@@ -417,6 +432,34 @@
 
 
 
+<div class="viewcode-block" id="render_license_text">
+<a class="viewcode-back" href="../../views.html#citations.views.render_license_text">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">render_license_text</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Apply formatting in the form of links to references identified in the license</span>
+
+<span class="sd">    This occurs on rendering the citation view.&quot;&quot;&quot;</span>
+
+    <span class="n">replace_refs</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="s1">&#39;](&#39;</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;license&#39;</span><span class="p">]:</span>
+        <span class="c1"># md-style references</span>
+        <span class="n">sectored</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;license&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;](&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="nb">id</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sectored</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">title</span> <span class="o">=</span> <span class="n">sectored</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;[&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="n">sectored</span><span class="p">[</span><span class="nb">id</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;)&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="n">replace_refs</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;[</span><span class="si">{</span><span class="n">title</span><span class="si">}</span><span class="s1">](</span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                <span class="p">[</span><span class="s1">&#39;&lt;a href=&quot;&#39;</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="s1">&#39;&quot;&gt;&#39;</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="s2">&quot;&lt;/a&gt;&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
+
+    <span class="n">license</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;license&#39;</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">replace_refs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">license</span> <span class="o">=</span> <span class="n">license</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">license</span><span class="p">)</span></div>
+
+
+
 <div class="viewcode-block" id="render_abstract">
 <a class="viewcode-back" href="../../views.html#citations.views.render_abstract">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">render_abstract</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
@@ -440,6 +483,17 @@
                         <span class="p">)</span>
         <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
             <span class="k">pass</span>
+
+    <span class="k">if</span> <span class="s1">&#39;](&#39;</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;abstract&#39;</span><span class="p">]:</span>
+        <span class="c1"># md-style references</span>
+        <span class="n">sectored</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;abstract&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;](&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="nb">id</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sectored</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">title</span> <span class="o">=</span> <span class="n">sectored</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;[&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="n">sectored</span><span class="p">[</span><span class="nb">id</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;)&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="n">replace_refs</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;[</span><span class="si">{</span><span class="n">title</span><span class="si">}</span><span class="s1">](</span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                <span class="p">[</span><span class="s1">&#39;&lt;a href=&quot;&#39;</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="s1">&#39;&quot;&gt;&#39;</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="s2">&quot;&lt;/a&gt;&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
 
     <span class="n">abstract</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;abstract&quot;</span><span class="p">]</span>
     <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">replace_refs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
@@ -1230,6 +1284,9 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">context</span><span class="p">[</span><span class="s1">&#39;data_access&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">get_drs_url</span><span class="p">(</span><span class="n">citation_data</span><span class="p">)</span>
 
+        <span class="c1"># 7. Render License Text</span>
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;license&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">render_license_text</span><span class="p">(</span><span class="n">citation_data</span><span class="p">)</span>
+
         <span class="n">context</span><span class="p">[</span><span class="s2">&quot;citation&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">citation_data</span>
         <span class="k">return</span> <span class="n">context</span></div>
 </div>
@@ -1318,6 +1375,7 @@
 
         <span class="n">instance</span> <span class="o">=</span> <span class="n">Parties</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">pk</span><span class="p">)</span>
         <span class="n">context</span><span class="p">[</span><span class="s2">&quot;party&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">PartiesSerializer</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
+        <span class="n">context</span><span class="p">[</span><span class="s2">&quot;party_fullname&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">fullname</span><span class="p">(</span><span class="n">context</span><span class="p">[</span><span class="s2">&quot;party&quot;</span><span class="p">])</span>
 
         <span class="n">primary_citations</span> <span class="o">=</span> <span class="p">[</span>
             <span class="p">{</span><span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="n">citation</span><span class="o">.</span><span class="n">title</span><span class="p">,</span> <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="n">citation</span><span class="o">.</span><span class="n">version</span><span class="p">,</span> <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">citation</span><span class="o">.</span><span class="n">id</span><span class="p">}</span>
@@ -1568,6 +1626,114 @@
     <span class="n">model</span> <span class="o">=</span> <span class="n">Citations</span>
     <span class="n">serializer_class</span> <span class="o">=</span> <span class="n">CitationsSerializer</span>
 
+<div class="viewcode-block" id="CitationFormMixin.check_form_clashes">
+<a class="viewcode-back" href="../../views.html#citations.views.CitationFormMixin.check_form_clashes">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">check_form_clashes</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span> 
+            <span class="n">formset</span><span class="p">,</span> 
+            <span class="n">serializer</span><span class="p">,</span> 
+            <span class="n">model</span><span class="p">,</span> 
+            <span class="n">check_fields</span><span class="p">,</span>
+            <span class="n">id_func</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Check information clashes for a specific form</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">clashes</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="n">form_set_iter</span> <span class="o">=</span> <span class="n">formset</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">formset</span><span class="p">,</span> <span class="s2">&quot;ordered_forms&quot;</span><span class="p">):</span>
+            <span class="n">form_set_iter</span> <span class="o">=</span> <span class="n">formset</span><span class="o">.</span><span class="n">ordered_forms</span>
+
+        <span class="k">for</span> <span class="n">fd</span> <span class="ow">in</span> <span class="n">form_set_iter</span><span class="p">:</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">fd</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">formdata</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="s2">&quot;cleaned_data&quot;</span><span class="p">,</span> <span class="p">{}))</span>
+            <span class="n">formdata</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;ORDER&#39;</span><span class="p">,</span><span class="kc">None</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">formdata</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="ow">not</span> <span class="n">v</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">formdata</span><span class="o">.</span><span class="n">values</span><span class="p">()):</span>
+                <span class="k">continue</span>
+
+            <span class="n">pkid</span> <span class="o">=</span> <span class="n">id_func</span><span class="p">(</span><span class="n">formdata</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">model</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">pkid</span><span class="p">):</span>
+                <span class="k">continue</span>
+
+            <span class="n">currentdata</span> <span class="o">=</span> <span class="n">serializer</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">pkid</span><span class="p">))</span><span class="o">.</span><span class="n">data</span>
+            <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">check_fields</span><span class="p">:</span>
+                <span class="c1"># Only clashing if both fields are non-Null.</span>
+                <span class="k">if</span> <span class="nb">bool</span><span class="p">(</span><span class="n">currentdata</span><span class="p">[</span><span class="n">field</span><span class="p">])</span> <span class="ow">and</span> <span class="nb">bool</span><span class="p">(</span><span class="n">formdata</span><span class="p">[</span><span class="n">field</span><span class="p">])</span> <span class="ow">and</span> <span class="n">currentdata</span><span class="p">[</span><span class="n">field</span><span class="p">]</span> <span class="o">!=</span> <span class="n">formdata</span><span class="p">[</span><span class="n">field</span><span class="p">]:</span>
+
+                    <span class="n">clash</span> <span class="o">=</span> <span class="p">[</span><span class="n">field</span><span class="p">,</span> <span class="n">currentdata</span><span class="p">[</span><span class="n">field</span><span class="p">],</span> <span class="n">formdata</span><span class="p">[</span><span class="n">field</span><span class="p">]]</span>
+                    <span class="k">if</span> <span class="n">pkid</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">clashes</span><span class="p">:</span>
+                        <span class="n">clashes</span><span class="p">[</span><span class="n">pkid</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="n">clashes</span><span class="p">[</span><span class="n">pkid</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">clash</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">clashes</span></div>
+
+
+<div class="viewcode-block" id="CitationFormMixin.check_all_clashes">
+<a class="viewcode-back" href="../../views.html#citations.views.CitationFormMixin.check_all_clashes">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">check_all_clashes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">contact_formset</span><span class="p">,</span> <span class="n">form</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Check all clashing information here</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">clashes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_form_clashes</span><span class="p">(</span>
+            <span class="n">contact_formset</span><span class="p">,</span>
+            <span class="n">PartiesSerializer</span><span class="p">,</span>
+            <span class="n">Parties</span><span class="p">,</span>
+            <span class="p">[</span><span class="s1">&#39;email&#39;</span><span class="p">,</span><span class="s1">&#39;orcid&#39;</span><span class="p">],</span>
+            <span class="n">party_hash_func</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">clashes</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="p">[</span><span class="s1">&#39;citation_clashes&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">return</span>
+
+        <span class="n">proceed</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;citation_clashes&#39;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">clashes</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">&lt;=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="p">[</span><span class="s1">&#39;citation_clashes&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+                <span class="n">proceed</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">clashes</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="k">for</span> <span class="n">swipe</span> <span class="ow">in</span> <span class="n">clashes</span><span class="p">[</span><span class="n">k</span><span class="p">]:</span>
+                        <span class="k">if</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">([</span><span class="n">swipe</span> <span class="o">==</span> <span class="n">scar</span> <span class="k">for</span> <span class="n">scar</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="p">[</span><span class="s1">&#39;citation_clashes&#39;</span><span class="p">][</span><span class="n">k</span><span class="p">]]):</span>
+                            <span class="n">proceed</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">if</span> <span class="n">proceed</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="p">[</span><span class="s1">&#39;citation_clashes&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">return</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="p">[</span><span class="s1">&#39;citation_clashes&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">clashes</span>
+
+        <span class="n">contact_map</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">clash_count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">pid</span><span class="p">,</span> <span class="n">pclashes</span> <span class="ow">in</span> <span class="n">clashes</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">pclash</span> <span class="ow">in</span> <span class="n">pclashes</span><span class="p">:</span>
+                <span class="n">field</span>    <span class="o">=</span> <span class="n">pclash</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">existing</span> <span class="o">=</span> <span class="n">pclash</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">new</span>      <span class="o">=</span> <span class="n">pclash</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+                <span class="n">clash_count</span> <span class="o">+=</span> <span class="mi">1</span>
+
+                <span class="n">contact_map</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">fullname</span><span class="p">(</span><span class="n">PartiesSerializer</span><span class="p">(</span>
+<span class="w">                        </span><span class="n">Parties</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">pid</span><span class="p">))</span><span class="o">.</span><span class="n">data</span><span class="p">)</span><span class="si">}</span><span class="s1"> &#39;</span> \
+                    <span class="sa">f</span><span class="s1">&#39;already exists with </span><span class="si">{</span><span class="n">field</span><span class="si">}</span><span class="s1">: &quot;</span><span class="si">{</span><span class="n">existing</span><span class="si">}</span><span class="s1">&quot;. If you wish to continue, this value will be &#39;</span> \
+                    <span class="sa">f</span><span class="s1">&#39;updated to &quot;</span><span class="si">{</span><span class="n">new</span><span class="si">}</span><span class="s1">&quot;, simply press the button to submit this form again.&#39;</span> \
+                    <span class="s1">&#39;If instead you are trying to create a new user, please add middle name &#39;</span> \
+                    <span class="s1">&#39;information to distinguish the new user from the existing user, use the Parties &#39;</span> \
+                    <span class="s1">&#39;tab to check existing party information.&#39;</span>
+                <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">render_to_response</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="n">form</span><span class="o">=</span><span class="n">form</span><span class="p">,</span> <span class="n">reload</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="o">|</span> <span class="p">{</span><span class="s2">&quot;extra_errors&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;contact&#39;</span><span class="p">:</span><span class="n">contact_map</span><span class="p">},</span> <span class="s2">&quot;errors&quot;</span><span class="p">:</span> <span class="n">clash_count</span><span class="p">}</span>
+        <span class="p">)</span></div>
+
+
     <span class="k">def</span><span class="w"> </span><span class="nf">redirect_on_success</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">failed_publish</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
 
         <span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="n">title</span><span class="p">]</span>
@@ -1739,7 +1905,11 @@
 <div class="viewcode-block" id="CitationFormMixin.clean_formset_data">
 <a class="viewcode-back" href="../../views.html#citations.views.CitationFormMixin.clean_formset_data">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">clean_formset_data</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">formset</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">serializer</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">allow_update</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="p">,</span> 
+        <span class="n">formset</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> 
+        <span class="n">serializer</span><span class="p">,</span> 
+        <span class="n">model</span><span class="p">,</span> 
+        <span class="n">allow_update</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Clean data from a formset and determine if updates are required</span>
@@ -1764,9 +1934,7 @@
                 <span class="k">continue</span>
 
             <span class="n">filter_kwargs</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="n">k</span><span class="p">:</span> <span class="n">v</span>
-                <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">formdata</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
-                <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">serializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">required_fields</span>
+                <span class="s1">&#39;pk&#39;</span><span class="p">:</span> <span class="n">serializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">get_id</span><span class="p">(</span><span class="n">formdata</span><span class="p">)</span>
             <span class="p">}</span>
             <span class="n">inst</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="o">**</span><span class="n">filter_kwargs</span><span class="p">)</span>
 
@@ -1782,8 +1950,8 @@
                     <span class="n">data</span><span class="o">=</span><span class="n">changed_data</span> <span class="o">|</span> <span class="n">filter_kwargs</span><span class="p">,</span>
                     <span class="n">serializer</span><span class="o">=</span><span class="n">serializer</span><span class="p">,</span>
                     <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
-                    <span class="n">filter_kwargs</span><span class="o">=</span><span class="n">serializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">required_fields</span><span class="p">,</span>
                     <span class="n">allow_update</span><span class="o">=</span><span class="n">allow_update</span><span class="p">,</span>
+                    <span class="n">user_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">username</span>
                 <span class="p">)</span>  <span class="c1"># Allowed updates from citation form directly to contacts</span>
             <span class="n">pks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">inst_pk</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">pks</span></div>
@@ -1822,8 +1990,8 @@
                     <span class="n">data</span><span class="o">=</span><span class="n">changed_data</span> <span class="o">|</span> <span class="p">{</span><span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">formdata</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]},</span>
                     <span class="n">serializer</span><span class="o">=</span><span class="n">ReferencesSerializer</span><span class="p">,</span>
                     <span class="n">model</span><span class="o">=</span><span class="n">References</span><span class="p">,</span>
-                    <span class="n">filter_kwargs</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">],</span>
                     <span class="n">allow_update</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="n">user_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">username</span>
                 <span class="p">)</span>
             <span class="n">ref_data</span><span class="p">[</span><span class="n">relation</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">inst_pk</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">ref_data</span>
@@ -1884,6 +2052,11 @@
         <span class="n">main_data</span><span class="p">[</span><span class="s2">&quot;funders&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
 
         <span class="n">primary_index</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;primary_contact&quot;</span><span class="p">))</span>
+
+        <span class="n">resp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_all_clashes</span><span class="p">(</span><span class="n">contact_formset</span><span class="p">,</span> <span class="n">form</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">resp</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">resp</span>
+
         <span class="n">contacts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">clean_formset_data</span><span class="p">(</span>
             <span class="n">contact_formset</span><span class="p">,</span> <span class="n">PartiesSerializer</span><span class="p">,</span> <span class="n">Parties</span><span class="p">,</span> <span class="n">allow_update</span><span class="o">=</span><span class="kc">True</span>
         <span class="p">)</span>
@@ -2370,6 +2543,394 @@
 
         <span class="k">return</span> <span class="n">HttpResponseRedirect</span><span class="p">(</span><span class="n">reverse</span><span class="p">(</span><span class="s2">&quot;citations:citations&quot;</span><span class="p">))</span></div>
 </div>
+
+
+<div class="viewcode-block" id="EditPublishedCitationFormView">
+<a class="viewcode-back" href="../../views.html#citations.views.EditPublishedCitationFormView">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">EditPublishedCitationFormView</span><span class="p">(</span><span class="n">PermissionRequiredMixin</span><span class="p">,</span> <span class="n">GenericRenderedView</span><span class="p">,</span> <span class="n">FormView</span><span class="p">):</span>
+
+    <span class="n">permission_required</span> <span class="o">=</span> <span class="s2">&quot;citations.add_citations&quot;</span>
+    <span class="n">raise_exception</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s2">&quot;edit_published_citation.html&quot;</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Citations</span>
+    <span class="n">serializer_class</span> <span class="o">=</span> <span class="n">CitationsSerializer</span>
+
+    <span class="n">form_class</span> <span class="o">=</span> <span class="n">EditPublishedCitationForm</span>
+    <span class="n">on_submit</span> <span class="o">=</span> <span class="s2">&quot;update&quot;</span>
+
+    <span class="n">editable_fields</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s1">&#39;abstract&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;institutions&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;funders&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;cites&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;is_cited_by&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;is_referenced_by&#39;</span>
+    <span class="p">]</span>
+
+    <span class="c1"># Needs to pre-populate form with existing values</span>
+
+    <span class="c1"># Also adds context to either edit the existing record on form submission</span>
+    <span class="c1"># Or creates a new record with the given data</span>
+
+<div class="viewcode-block" id="EditPublishedCitationFormView.update_data">
+<a class="viewcode-back" href="../../views.html#citations.views.EditPublishedCitationFormView.update_data">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Update the set of limited information.&quot;&quot;&quot;</span>
+
+        <span class="n">serializer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">serializer_class</span><span class="p">(</span><span class="n">instance</span><span class="o">=</span><span class="n">instance</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+        
+        <span class="n">serializer</span><span class="o">.</span><span class="n">is_valid</span><span class="p">(</span><span class="n">raise_exception</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">serializer</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">publish</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">user_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">username</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">redirect_on_success</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="EditPublishedCitationFormView.form_valid">
+<a class="viewcode-back" href="../../views.html#citations.views.EditPublishedCitationFormView.form_valid">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">form_valid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">form</span><span class="p">):</span>
+
+        <span class="n">newdata</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span>
+
+        <span class="n">instance</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;pk&quot;</span><span class="p">])</span>
+            <span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">last</span><span class="p">()</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Handle edits to the joined attributes</span>
+
+        <span class="n">formset_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_from_formsets</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="n">instance</span><span class="o">.</span><span class="n">title</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="n">instance</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">formset_data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">formset_data</span>
+        <span class="n">newdata</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">formset_data</span><span class="p">)</span>
+
+        <span class="n">data</span> <span class="o">=</span> <span class="n">CitationsSerializer</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">newdata</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">update_data</span><span class="p">(</span><span class="n">instance</span><span class="o">=</span><span class="n">instance</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">ValidationError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">render_to_response</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="n">form</span><span class="o">=</span><span class="n">form</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="n">instance</span><span class="o">.</span><span class="n">pk</span><span class="p">,</span> <span class="n">reload</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="o">|</span> <span class="p">{</span>
+                    <span class="s2">&quot;errors&quot;</span><span class="p">:</span> <span class="s2">&quot;1 or more&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;extra_errors&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;general&quot;</span><span class="p">:</span> <span class="p">[</span><span class="nb">getattr</span><span class="p">(</span><span class="n">err</span><span class="p">,</span> <span class="s2">&quot;message&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">err</span><span class="p">))]},</span>
+                <span class="p">}</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">err</span></div>
+
+
+<div class="viewcode-block" id="EditPublishedCitationFormView.get_initial">
+<a class="viewcode-back" href="../../views.html#citations.views.EditPublishedCitationFormView.get_initial">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_initial</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">citation</span> <span class="o">=</span> <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;pk&#39;</span><span class="p">])</span>
+        <span class="k">except</span> <span class="n">Citations</span><span class="o">.</span><span class="n">DoesNotExist</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">Http404</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s1">&#39;Citation &quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;pk&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&quot; does not exist&#39;</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">citation</span><span class="o">.</span><span class="n">published</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">PermissionDenied</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s1">&#39;Citation &quot;</span><span class="si">{</span><span class="n">citation</span><span class="o">.</span><span class="n">title</span><span class="si">}</span><span class="s1"> (v</span><span class="si">{</span><span class="n">citation</span><span class="o">.</span><span class="n">version</span><span class="si">}</span><span class="s1">)&quot; is not published.&#39;</span>
+                <span class="s1">&#39; This page is only for updating published records.&#39;</span>
+            <span class="p">)</span>
+
+        <span class="n">citation_data</span> <span class="o">=</span> <span class="n">CitationsSerializer</span><span class="p">(</span><span class="n">citation</span><span class="p">)</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
+
+        <span class="n">editable</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">citation_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">editable_fields</span><span class="p">}</span>
+
+        <span class="n">initial</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_initial</span><span class="p">()</span> <span class="o">|</span> <span class="n">editable</span>
+        <span class="k">return</span> <span class="n">initial</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">initial_formset_values</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+        <span class="n">init</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_initial</span><span class="p">()</span>
+
+        <span class="n">references</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">relation</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">serializer_class</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">citation_types</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">init</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">relation</span><span class="p">):</span>
+                <span class="n">v</span><span class="p">[</span><span class="s2">&quot;relation&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">reference_mapping</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">relation</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+                <span class="n">v</span><span class="p">[</span><span class="s2">&quot;DOI&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span>
+                <span class="n">references</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+
+        <span class="n">context</span><span class="p">[</span><span class="s2">&quot;institution_formset&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">InstitutionFormSet</span><span class="p">(</span>
+            <span class="n">initial</span><span class="o">=</span><span class="n">init</span><span class="p">[</span><span class="s2">&quot;institutions&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s2">&quot;funder_formset&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">FunderFormSet</span><span class="p">(</span><span class="n">initial</span><span class="o">=</span><span class="n">init</span><span class="p">[</span><span class="s2">&quot;funders&quot;</span><span class="p">])</span>
+        <span class="n">context</span><span class="p">[</span><span class="s2">&quot;reference_formset&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ReferenceFormSet</span><span class="p">(</span><span class="n">initial</span><span class="o">=</span><span class="n">references</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">context</span>
+
+<div class="viewcode-block" id="EditPublishedCitationFormView.get_context_data">
+<a class="viewcode-back" href="../../views.html#citations.views.EditPublishedCitationFormView.get_context_data">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pk</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">reload</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="n">citation</span> <span class="o">=</span> <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">pk</span><span class="p">)</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">citation</span><span class="o">.</span><span class="n">title</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;version&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">citation</span><span class="o">.</span><span class="n">version</span>
+
+        <span class="n">context</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">reload</span><span class="p">:</span>
+                <span class="n">context</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reload_formset_values</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">context</span><span class="p">[</span><span class="s2">&quot;contact_formset&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ContactFormSet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">)</span>
+                <span class="n">context</span><span class="p">[</span><span class="s2">&quot;institution_formset&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">InstitutionFormSet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">)</span>
+                <span class="n">context</span><span class="p">[</span><span class="s2">&quot;funder_formset&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">FunderFormSet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">)</span>
+                <span class="n">context</span><span class="p">[</span><span class="s2">&quot;replica_formset&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ReplicaFormSet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">)</span>
+                <span class="n">context</span><span class="p">[</span><span class="s2">&quot;reference_formset&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ReferenceFormSet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">context</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">initial_formset_values</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+
+        <span class="n">context</span><span class="p">[</span><span class="s2">&quot;on_submit&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_submit</span>
+
+        <span class="n">required_fields</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">serializer</span> <span class="ow">in</span> <span class="p">[</span>
+            <span class="n">InstitutionsSerializer</span><span class="p">,</span>
+            <span class="n">PartiesSerializer</span><span class="p">,</span>
+            <span class="n">FundingStreamsSerializer</span><span class="p">,</span>
+            <span class="n">CitationsSerializer</span><span class="p">,</span>
+            <span class="n">ReferencesSerializer</span><span class="p">,</span>
+        <span class="p">]:</span>
+            <span class="n">required_fields</span> <span class="o">+=</span> <span class="p">[</span>
+                <span class="n">f</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="o">+</span> <span class="n">f</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">serializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">required_fields</span>
+            <span class="p">]</span>
+
+        <span class="n">context</span><span class="p">[</span><span class="s2">&quot;required_fields&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">required_fields</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">context</span></div>
+
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">redirect_on_success</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">title</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+
+        <span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="n">title</span><span class="p">]</span>
+
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Your citation updates have been submitted and will appear here when they have been processed.&quot;</span>
+
+        <span class="n">messages</span><span class="o">.</span><span class="n">success</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="p">,</span> <span class="n">msg</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">HttpResponseRedirect</span><span class="p">(</span><span class="n">reverse</span><span class="p">(</span><span class="s2">&quot;citations:citation&quot;</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="n">args</span><span class="p">))</span>
+
+<div class="viewcode-block" id="EditPublishedCitationFormView.dispatch">
+<a class="viewcode-back" href="../../views.html#citations.views.EditPublishedCitationFormView.dispatch">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">dispatch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Setup for form view</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">user_permissions</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">codename</span><span class="o">=</span><span class="s2">&quot;add_citations&quot;</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">HttpResponseRedirect</span><span class="p">(</span><span class="n">reverse</span><span class="p">(</span><span class="s2">&quot;citations:reviewer_request&quot;</span><span class="p">))</span>
+
+        <span class="n">pk</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pk&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pk&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">pk</span><span class="p">:</span>
+            <span class="c1"># Editing existing record or creating from template.</span>
+            <span class="n">citation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">pk</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">last</span><span class="p">()</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">citation</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">Http404</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Citation for </span><span class="si">{</span><span class="n">pk</span><span class="si">}</span><span class="s1"> does not exist&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">user_permissions</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span>
+                <span class="n">codename</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;edit_</span><span class="si">{</span><span class="n">citation</span><span class="o">.</span><span class="n">institution_id</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">):</span>
+                <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">dispatch</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">HttpResponseRedirect</span><span class="p">(</span><span class="n">reverse</span><span class="p">(</span><span class="s2">&quot;citations:reviewer_request&quot;</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">dispatch</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="EditPublishedCitationFormView.reload_formset_values">
+<a class="viewcode-back" href="../../views.html#citations.views.EditPublishedCitationFormView.reload_formset_values">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">reload_formset_values</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">post</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Reload new posted values into the formsets for the context</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">context</span><span class="p">[</span><span class="s2">&quot;institution_formset&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">InstitutionFormSet</span><span class="p">(</span>
+            <span class="n">initial</span><span class="o">=</span><span class="p">[</span>
+                <span class="p">{</span>
+                    <span class="n">field</span><span class="p">:</span> <span class="n">form</span><span class="p">[</span><span class="n">field</span><span class="p">]</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+                    <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">form</span><span class="o">.</span><span class="n">fields</span>
+                <span class="p">}</span> <span class="k">for</span> <span class="n">form</span> <span class="ow">in</span> <span class="n">InstitutionFormSet</span><span class="p">(</span><span class="n">post</span><span class="p">)</span><span class="o">.</span><span class="n">forms</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">form</span><span class="o">.</span><span class="n">empty_permitted</span>
+            <span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s2">&quot;funder_formset&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">FunderFormSet</span><span class="p">(</span>
+            <span class="n">initial</span><span class="o">=</span><span class="p">[</span>
+                <span class="p">{</span>
+                    <span class="n">field</span><span class="p">:</span> <span class="n">form</span><span class="p">[</span><span class="n">field</span><span class="p">]</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+                    <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">form</span><span class="o">.</span><span class="n">fields</span>
+                <span class="p">}</span> <span class="k">for</span> <span class="n">form</span> <span class="ow">in</span> <span class="n">FunderFormSet</span><span class="p">(</span><span class="n">post</span><span class="p">)</span><span class="o">.</span><span class="n">forms</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">form</span><span class="o">.</span><span class="n">empty_permitted</span>
+            <span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s2">&quot;reference_formset&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ReferenceFormSet</span><span class="p">(</span>
+            <span class="n">initial</span><span class="o">=</span><span class="p">[</span>
+                <span class="p">{</span>
+                    <span class="n">field</span><span class="p">:</span> <span class="n">form</span><span class="p">[</span><span class="n">field</span><span class="p">]</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+                    <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">form</span><span class="o">.</span><span class="n">fields</span>
+                <span class="p">}</span> <span class="k">for</span> <span class="n">form</span> <span class="ow">in</span> <span class="n">ReferenceFormSet</span><span class="p">(</span><span class="n">post</span><span class="p">)</span><span class="o">.</span><span class="n">forms</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">form</span><span class="o">.</span><span class="n">empty_permitted</span>
+            <span class="p">]</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">context</span></div>
+
+
+<div class="viewcode-block" id="EditPublishedCitationFormView.clean_formset_data">
+<a class="viewcode-back" href="../../views.html#citations.views.EditPublishedCitationFormView.clean_formset_data">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">clean_formset_data</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> 
+        <span class="n">formset</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> 
+        <span class="n">serializer</span><span class="p">,</span> 
+        <span class="n">model</span><span class="p">,</span> 
+        <span class="n">allow_update</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Clean data from a formset and determine if updates are required</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pks</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">form_set_iter</span> <span class="o">=</span> <span class="n">formset</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">formset</span><span class="p">,</span> <span class="s2">&quot;ordered_forms&quot;</span><span class="p">):</span>
+            <span class="n">form_set_iter</span> <span class="o">=</span> <span class="n">formset</span><span class="o">.</span><span class="n">ordered_forms</span>
+
+        <span class="k">for</span> <span class="n">fd</span> <span class="ow">in</span> <span class="n">form_set_iter</span><span class="p">:</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">fd</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">formdata</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="s2">&quot;cleaned_data&quot;</span><span class="p">,</span> <span class="p">{}))</span>
+            <span class="n">formdata</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;ORDER&#39;</span><span class="p">,</span><span class="kc">None</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">formdata</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="ow">not</span> <span class="n">v</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">formdata</span><span class="o">.</span><span class="n">values</span><span class="p">()):</span>
+                <span class="k">continue</span>
+
+            <span class="n">filter_kwargs</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s1">&#39;pk&#39;</span><span class="p">:</span> <span class="n">serializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">get_id</span><span class="p">(</span><span class="n">formdata</span><span class="p">)</span>
+            <span class="p">}</span>
+            <span class="n">inst</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="o">**</span><span class="n">filter_kwargs</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">inst</span><span class="p">:</span>
+                <span class="n">inst</span> <span class="o">=</span> <span class="n">inst</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">changed_data</span> <span class="o">=</span> <span class="n">check_changes</span><span class="p">(</span><span class="n">inst</span><span class="p">,</span> <span class="n">formdata</span><span class="p">)</span>
+                <span class="n">inst_pk</span> <span class="o">=</span> <span class="n">inst</span><span class="o">.</span><span class="n">pk</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">changed_data</span> <span class="o">=</span> <span class="n">formdata</span>
+
+            <span class="k">if</span> <span class="n">changed_data</span><span class="p">:</span>
+                <span class="n">inst_pk</span> <span class="o">=</span> <span class="n">chain_new_objects</span><span class="p">(</span>
+                    <span class="n">data</span><span class="o">=</span><span class="n">changed_data</span> <span class="o">|</span> <span class="n">filter_kwargs</span><span class="p">,</span>
+                    <span class="n">serializer</span><span class="o">=</span><span class="n">serializer</span><span class="p">,</span>
+                    <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+                    <span class="n">allow_update</span><span class="o">=</span><span class="n">allow_update</span><span class="p">,</span>
+                    <span class="n">user_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">username</span>
+                <span class="p">)</span>  <span class="c1"># Allowed updates from citation form directly to contacts</span>
+            <span class="n">pks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">inst_pk</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">pks</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">process_references</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">formset</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="n">ref_data</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">ref_data</span><span class="p">[</span><span class="s2">&quot;is_cited_by&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">ref_data</span><span class="p">[</span><span class="s2">&quot;is_referenced_by&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">ref_data</span><span class="p">[</span><span class="s2">&quot;cites&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">form</span> <span class="ow">in</span> <span class="n">formset</span><span class="p">:</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">form</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">formdata</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="s2">&quot;cleaned_data&quot;</span><span class="p">,</span> <span class="p">{}))</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">formdata</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">formdata</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">formdata</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">formdata</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;DOI&quot;</span><span class="p">)</span>
+            <span class="n">rel_id</span> <span class="o">=</span> <span class="n">formdata</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;relation&quot;</span><span class="p">)</span>
+            <span class="n">relation</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">reference_options</span> <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="nb">str</span><span class="p">(</span><span class="n">rel_id</span><span class="p">)][</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="n">inst</span> <span class="o">=</span> <span class="n">References</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">formdata</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">inst</span><span class="p">:</span>
+                <span class="n">inst</span> <span class="o">=</span> <span class="n">inst</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">changed_data</span> <span class="o">=</span> <span class="n">check_changes</span><span class="p">(</span><span class="n">inst</span><span class="p">,</span> <span class="n">formdata</span><span class="p">)</span>
+                <span class="n">inst_pk</span> <span class="o">=</span> <span class="n">inst</span><span class="o">.</span><span class="n">pk</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">changed_data</span> <span class="o">=</span> <span class="n">formdata</span>
+
+            <span class="k">if</span> <span class="n">changed_data</span><span class="p">:</span>
+                <span class="n">inst_pk</span> <span class="o">=</span> <span class="n">chain_new_objects</span><span class="p">(</span>
+                    <span class="n">data</span><span class="o">=</span><span class="n">changed_data</span> <span class="o">|</span> <span class="p">{</span><span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">formdata</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]},</span>
+                    <span class="n">serializer</span><span class="o">=</span><span class="n">ReferencesSerializer</span><span class="p">,</span>
+                    <span class="n">model</span><span class="o">=</span><span class="n">References</span><span class="p">,</span>
+                    <span class="n">allow_update</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="n">user_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">username</span>
+                <span class="p">)</span>
+            <span class="n">ref_data</span><span class="p">[</span><span class="n">relation</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">inst_pk</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">ref_data</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_from_formsets</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">form</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+
+        <span class="n">institution_formset</span> <span class="o">=</span> <span class="n">InstitutionFormSet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">)</span>
+        <span class="n">funder_formset</span> <span class="o">=</span> <span class="n">FunderFormSet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">)</span>
+        <span class="n">reference_formset</span> <span class="o">=</span> <span class="n">ReferenceFormSet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">)</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">check_empty_custom</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="n">nonempty_fields</span><span class="p">:</span> <span class="nb">list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">            </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Allow this form to be empty based on custom logic.</span>
+
+<span class="sd">            If a field in the form evaluates to True it is not empty.</span>
+
+<span class="sd">            Returns True if the form is considered empty for all relevant fields.</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+
+            <span class="k">for</span> <span class="n">field</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">nonempty_fields</span><span class="p">:</span>
+                    <span class="k">continue</span>
+
+                <span class="k">if</span> <span class="n">value</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="kc">False</span>
+            <span class="k">return</span> <span class="kc">True</span>
+
+        <span class="n">errors</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1"># Check all forms for errors - this does not involve creating new entries yet</span>
+        <span class="n">error_map</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">formset</span> <span class="ow">in</span> <span class="p">[</span><span class="n">institution_formset</span><span class="p">,</span>
+                <span class="n">funder_formset</span><span class="p">,</span> <span class="n">reference_formset</span><span class="p">]:</span>
+        
+            <span class="c1"># Don&#39;t need correct form order when validating</span>
+            <span class="k">for</span> <span class="n">form_pt</span> <span class="ow">in</span> <span class="n">formset</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">form_pt</span><span class="o">.</span><span class="n">is_valid</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">form_pt</span><span class="o">.</span><span class="n">empty_permitted</span><span class="p">:</span>
+
+                    <span class="k">if</span> <span class="n">formset</span> <span class="o">==</span> <span class="n">reference_formset</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">check_empty_custom</span><span class="p">(</span><span class="n">form_pt</span><span class="p">,</span> <span class="n">nonempty_fields</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;relation&quot;</span><span class="p">]):</span>
+                            <span class="k">continue</span>
+                    <span class="n">err_msgs</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="k">for</span> <span class="n">err</span><span class="p">,</span> <span class="n">msg</span> <span class="ow">in</span> <span class="n">form_pt</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                        <span class="n">err_msgs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">msg</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                        <span class="n">errors</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="n">error_map</span><span class="p">[</span><span class="n">formset</span><span class="o">.</span><span class="n">prefix</span><span class="p">]</span> <span class="o">=</span> <span class="n">err_msgs</span>
+
+        <span class="k">if</span> <span class="n">errors</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">render_to_response</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="n">form</span><span class="o">=</span><span class="n">form</span><span class="p">,</span> <span class="n">reload</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                <span class="o">|</span> <span class="p">{</span><span class="s2">&quot;extra_errors&quot;</span><span class="p">:</span> <span class="n">error_map</span><span class="p">,</span> <span class="s2">&quot;errors&quot;</span><span class="p">:</span> <span class="n">errors</span><span class="p">}</span>
+            <span class="p">)</span>
+
+        <span class="n">main_data</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">main_data</span><span class="p">[</span><span class="s2">&quot;institutions&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">main_data</span><span class="p">[</span><span class="s2">&quot;funders&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="n">main_data</span><span class="p">[</span><span class="s2">&quot;institutions&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">clean_formset_data</span><span class="p">(</span>
+            <span class="n">institution_formset</span><span class="p">,</span> <span class="n">InstitutionsSerializer</span><span class="p">,</span> <span class="n">Institutions</span>
+        <span class="p">)</span>
+
+        <span class="n">main_data</span><span class="p">[</span><span class="s2">&quot;funders&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">clean_formset_data</span><span class="p">(</span>
+            <span class="n">funder_formset</span><span class="p">,</span> <span class="n">FundingStreamsSerializer</span><span class="p">,</span> <span class="n">FundingStreams</span>
+        <span class="p">)</span>
+
+        <span class="n">main_data</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">process_references</span><span class="p">(</span><span class="n">reference_formset</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">main_data</span></div>
 
 </pre></div>
 

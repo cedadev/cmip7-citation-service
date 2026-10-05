@@ -54,6 +54,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#citations.views.get_citable_party"><code class="docutils literal notranslate"><span class="pre">get_citable_party()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#citations.views.render_code_snippet"><code class="docutils literal notranslate"><span class="pre">render_code_snippet()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#citations.views.render_cite_as"><code class="docutils literal notranslate"><span class="pre">render_cite_as()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.render_license_text"><code class="docutils literal notranslate"><span class="pre">render_license_text()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#citations.views.render_abstract"><code class="docutils literal notranslate"><span class="pre">render_abstract()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#citations.views.render_rights"><code class="docutils literal notranslate"><span class="pre">render_rights()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#citations.views.render_reference_html"><code class="docutils literal notranslate"><span class="pre">render_reference_html()</span></code></a></li>
@@ -169,6 +170,8 @@
 <li class="toctree-l2"><a class="reference internal" href="#citations.views.CitationFormMixin"><code class="docutils literal notranslate"><span class="pre">CitationFormMixin</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#citations.views.CitationFormMixin.model"><code class="docutils literal notranslate"><span class="pre">CitationFormMixin.model</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#citations.views.CitationFormMixin.serializer_class"><code class="docutils literal notranslate"><span class="pre">CitationFormMixin.serializer_class</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.CitationFormMixin.check_form_clashes"><code class="docutils literal notranslate"><span class="pre">CitationFormMixin.check_form_clashes()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.CitationFormMixin.check_all_clashes"><code class="docutils literal notranslate"><span class="pre">CitationFormMixin.check_all_clashes()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#citations.views.CitationFormMixin.dispatch"><code class="docutils literal notranslate"><span class="pre">CitationFormMixin.dispatch()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#citations.views.CitationFormMixin.reload_formset_values"><code class="docutils literal notranslate"><span class="pre">CitationFormMixin.reload_formset_values()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#citations.views.CitationFormMixin.get_context_data"><code class="docutils literal notranslate"><span class="pre">CitationFormMixin.get_context_data()</span></code></a></li>
@@ -201,6 +204,19 @@
 <li class="toctree-l3"><a class="reference internal" href="#citations.views.ReviewerRequestView.get_context_data"><code class="docutils literal notranslate"><span class="pre">ReviewerRequestView.get_context_data()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#citations.views.ReviewerRequestView.get_form_kwargs"><code class="docutils literal notranslate"><span class="pre">ReviewerRequestView.get_form_kwargs()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#citations.views.ReviewerRequestView.form_valid"><code class="docutils literal notranslate"><span class="pre">ReviewerRequestView.form_valid()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#citations.views.EditPublishedCitationFormView"><code class="docutils literal notranslate"><span class="pre">EditPublishedCitationFormView</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.EditPublishedCitationFormView.model"><code class="docutils literal notranslate"><span class="pre">EditPublishedCitationFormView.model</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.EditPublishedCitationFormView.serializer_class"><code class="docutils literal notranslate"><span class="pre">EditPublishedCitationFormView.serializer_class</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.EditPublishedCitationFormView.form_class"><code class="docutils literal notranslate"><span class="pre">EditPublishedCitationFormView.form_class</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.EditPublishedCitationFormView.update_data"><code class="docutils literal notranslate"><span class="pre">EditPublishedCitationFormView.update_data()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.EditPublishedCitationFormView.form_valid"><code class="docutils literal notranslate"><span class="pre">EditPublishedCitationFormView.form_valid()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.EditPublishedCitationFormView.get_initial"><code class="docutils literal notranslate"><span class="pre">EditPublishedCitationFormView.get_initial()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.EditPublishedCitationFormView.get_context_data"><code class="docutils literal notranslate"><span class="pre">EditPublishedCitationFormView.get_context_data()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.EditPublishedCitationFormView.dispatch"><code class="docutils literal notranslate"><span class="pre">EditPublishedCitationFormView.dispatch()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.EditPublishedCitationFormView.reload_formset_values"><code class="docutils literal notranslate"><span class="pre">EditPublishedCitationFormView.reload_formset_values()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.EditPublishedCitationFormView.clean_formset_data"><code class="docutils literal notranslate"><span class="pre">EditPublishedCitationFormView.clean_formset_data()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -314,6 +330,13 @@ if the user already has permission for that institution.</p>
 <span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">render_cite_as</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">citation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Citations</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#render_cite_as"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.render_cite_as" title="Link to this definition"></a></dt>
 <dd><p>Generate the full Cite As description on loading the page.</p>
 <p>This is generated on rendering the citation view.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="citations.views.render_license_text">
+<span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">render_license_text</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="_modules/citations/views.html#render_license_text"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.render_license_text" title="Link to this definition"></a></dt>
+<dd><p>Apply formatting in the form of links to references identified in the license</p>
+<p>This occurs on rendering the citation view.</p>
 </dd></dl>
 
 <dl class="py function">
@@ -772,6 +795,18 @@ if the user already has permission for that institution.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="citations.views.CitationFormMixin.check_form_clashes">
+<span class="sig-name descname"><span class="pre">check_form_clashes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">formset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">serializer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">check_fields</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_func</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="_modules/citations/views.html#CitationFormMixin.check_form_clashes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.CitationFormMixin.check_form_clashes" title="Link to this definition"></a></dt>
+<dd><p>Check information clashes for a specific form</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.CitationFormMixin.check_all_clashes">
+<span class="sig-name descname"><span class="pre">check_all_clashes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">contact_formset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">form</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#CitationFormMixin.check_all_clashes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.CitationFormMixin.check_all_clashes" title="Link to this definition"></a></dt>
+<dd><p>Check all clashing information here</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="citations.views.CitationFormMixin.dispatch">
 <span class="sig-name descname"><span class="pre">dispatch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#CitationFormMixin.dispatch"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.CitationFormMixin.dispatch" title="Link to this definition"></a></dt>
 <dd><p>Setup for form view</p>
@@ -910,6 +945,71 @@ permanent. Individual citation records may be deleted.</p>
 <dt class="sig sig-object py" id="citations.views.ReviewerRequestView.form_valid">
 <span class="sig-name descname"><span class="pre">form_valid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">form</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#ReviewerRequestView.form_valid"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.ReviewerRequestView.form_valid" title="Link to this definition"></a></dt>
 <dd><p>If the form is valid, redirect to the supplied URL.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="citations.views.EditPublishedCitationFormView">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">EditPublishedCitationFormView</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#EditPublishedCitationFormView"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.EditPublishedCitationFormView" title="Link to this definition"></a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.EditPublishedCitationFormView.model">
+<span class="sig-name descname"><span class="pre">model</span></span><a class="headerlink" href="#citations.views.EditPublishedCitationFormView.model" title="Link to this definition"></a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">Citations</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.EditPublishedCitationFormView.serializer_class">
+<span class="sig-name descname"><span class="pre">serializer_class</span></span><a class="headerlink" href="#citations.views.EditPublishedCitationFormView.serializer_class" title="Link to this definition"></a></dt>
+<dd><p>alias of <a class="reference internal" href="serializer.html#citations.serializers.CitationsSerializer" title="citations.serializers.CitationsSerializer"><code class="xref py py-class docutils literal notranslate"><span class="pre">CitationsSerializer</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="citations.views.EditPublishedCitationFormView.form_class">
+<span class="sig-name descname"><span class="pre">form_class</span></span><a class="headerlink" href="#citations.views.EditPublishedCitationFormView.form_class" title="Link to this definition"></a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">EditPublishedCitationForm</span></code></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.EditPublishedCitationFormView.update_data">
+<span class="sig-name descname"><span class="pre">update_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">instance</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#EditPublishedCitationFormView.update_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.EditPublishedCitationFormView.update_data" title="Link to this definition"></a></dt>
+<dd><p>Update the set of limited information.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.EditPublishedCitationFormView.form_valid">
+<span class="sig-name descname"><span class="pre">form_valid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">form</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#EditPublishedCitationFormView.form_valid"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.EditPublishedCitationFormView.form_valid" title="Link to this definition"></a></dt>
+<dd><p>If the form is valid, redirect to the supplied URL.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.EditPublishedCitationFormView.get_initial">
+<span class="sig-name descname"><span class="pre">get_initial</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#EditPublishedCitationFormView.get_initial"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.EditPublishedCitationFormView.get_initial" title="Link to this definition"></a></dt>
+<dd><p>Return the initial data to use for forms on this view.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.EditPublishedCitationFormView.get_context_data">
+<span class="sig-name descname"><span class="pre">get_context_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pk</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reload</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#EditPublishedCitationFormView.get_context_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.EditPublishedCitationFormView.get_context_data" title="Link to this definition"></a></dt>
+<dd><p>Adds the CEDA branding or generic base for rendering.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.EditPublishedCitationFormView.dispatch">
+<span class="sig-name descname"><span class="pre">dispatch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#EditPublishedCitationFormView.dispatch"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.EditPublishedCitationFormView.dispatch" title="Link to this definition"></a></dt>
+<dd><p>Setup for form view</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.EditPublishedCitationFormView.reload_formset_values">
+<span class="sig-name descname"><span class="pre">reload_formset_values</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">post</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#EditPublishedCitationFormView.reload_formset_values"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.EditPublishedCitationFormView.reload_formset_values" title="Link to this definition"></a></dt>
+<dd><p>Reload new posted values into the formsets for the context</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="citations.views.EditPublishedCitationFormView.clean_formset_data">
+<span class="sig-name descname"><span class="pre">clean_formset_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">formset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">serializer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">allow_update</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="reference internal" href="_modules/citations/views.html#EditPublishedCitationFormView.clean_formset_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.EditPublishedCitationFormView.clean_formset_data" title="Link to this definition"></a></dt>
+<dd><p>Clean data from a formset and determine if updates are required</p>
 </dd></dl>
 
 </dd></dl>
