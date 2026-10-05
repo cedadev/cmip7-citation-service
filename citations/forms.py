@@ -415,3 +415,34 @@ class NewCitationForm(CitationForm):
         ),
         required=False,
     )
+
+
+class EditPublishedCitationForm(forms.ModelForm):
+
+    # Only editable proprties post-publication
+
+    # References
+    # Abstract
+    # Institutions
+    # Funding Streams
+
+    abstract = forms.CharField(
+        widget=forms.Textarea(
+            attrs={
+                "placeholder": "Abstract",
+                "data-bs-content": "Abstract will be prefilled from Essential Model Documentation if empty.",
+            }
+            | POPOVER_ATTRS
+        ),
+        required=False,
+    )
+
+    class Meta:
+        model = Citations
+        fields=['abstract']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        for field in self.fields.values():
+            field.widget.attrs.update({"style": "width: 100%;"})

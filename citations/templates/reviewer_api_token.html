@@ -1,0 +1,29 @@
+{% extends 'bases/citation_base.html' %}
+
+{% block head_title %}CMIP7 Citation{% endblock %}
+
+{% block content_main_inner %}
+
+    <h1>Obtain Reviewer API Token</h1>
+    <p>This page will only be displayed for users who have been granted permission to edit citation records. Your API key has the same restrictions on institution-based citations as your regular account has been granted.</p>
+    <br>
+    <p>API Token for user: <b>{{ user.username }}</b></p>
+    <br>
+    <p>Your Token is: <b>{{ api_user_token }}</b></p>
+
+    <h2>Usage</h2>
+    <p>Use this API to update the JSON content of a citation record. See the reviewer guide for more detail on how to structure the JSON data for a citation record, or better if you can retrieve the current data from /api/citations/TITLE and make local changes.</p>
+
+    <div class="box">
+        <pre>
+import httpx
+
+with httpx.Client() as client:
+   client.put(&quot;https://cmip7-citations.ceda.ac.uk/api/citations/EXAMPLE_TITLE&quot;,
+      json=content,
+      headers={&quot;Authorization&quot;:f&quot;Token {YOUR_TOKEN}&quot;})
+        </pre>
+    </div>
+
+
+{% endblock %}
