@@ -247,14 +247,16 @@ def assemble_license_info(data: dict) -> str:
 
     license = []
     if hasattr(settings, "LICENSE_TEXT"):
+        print(project_id.lower(), settings.LICENSE_TEXT.keys())
         if project_id in settings.LICENSE_TEXT:
-            license += settings.LICENSE_TEXT[project_id].split('.')
-
-    license.append(f'Published under {data["rights"]}.')
+            license += settings.LICENSE_TEXT[project_id.lower()].replace(
+                'INSTITUTION_ID',
+                data['institution_id']
+            ).split('.')
 
     license = [lp for lp in license if lp.replace("\n", "")]
 
-    return ".".join(license).replace("\n", "")
+    return ".".join(license).replace("\n", "") + '.'
 
 
 def abstract_from_esgvoc(data: dict):
