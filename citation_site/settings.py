@@ -196,7 +196,7 @@ GENERAL_INFO = {
         "https://doi.org/10.5281/zenodo.18155119).",
     'CMIP6Plus'.lower():"CMIP Phase 6 Plus (CMIP6Plus) is a continuity activity that enables " \
         "modelling groups to contribute to projects initiated post-CMIP6 but before processes " \
-        "for registering CMIP7 community MIPs and experiments is available. CMIP6Plus is supported by the " \
+        "for registering CMIP7 community MIPs and experiments are available. CMIP6Plus is supported by the " \
         "WCRP-ESMO Infrastructure Panel alongside other activities and will remain open until " \
         "CMIP7 procedures fully support the establishment of community MIPs and their data " \
         "requirements. Further information can be found [here](https://www.wcrp-cmip.org/cmip-phases/cmip6plus/). " \
