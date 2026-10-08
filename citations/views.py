@@ -553,6 +553,8 @@ class PaginatedListView(GenericRenderedView):
     Pagination for all UI List views using HTMX
     """
 
+    __slots__ = ['list_param_reqs']
+
     def get_pagination(self, search_queryset, page_number: int = 1):
         paginator = Paginator(search_queryset, self.paginate_by)
         return paginator.get_page(page_number)
@@ -607,6 +609,7 @@ class PaginatedListView(GenericRenderedView):
         """
         Get list view with filtering and pagination
         """
+
         searches, count, term = self.perform_search()
 
         adj_searches = self.adjust_for_UI_render(searches)
@@ -614,6 +617,7 @@ class PaginatedListView(GenericRenderedView):
         # Pagination
         self.page_number = int(request.GET.get("page", 1))
         page_obj = self.get_pagination(adj_searches, self.page_number)
+        #print('paginated',datetime.now())
 
         context = self.get_context_data(
             page_obj=page_obj,
@@ -621,11 +625,13 @@ class PaginatedListView(GenericRenderedView):
             page_number=self.page_number,
             count=count,
         )
+        #print('contexted',datetime.now())
 
         # HTMX request - return only the rows fragment
         if request.headers.get("HX-Request") == "true":
             from django.template.response import TemplateResponse
 
+            #print('rendered',datetime.now())
             return TemplateResponse(
                 request=self.request,
                 template=self.partial_template,
@@ -639,7 +645,10 @@ class PaginatedListView(GenericRenderedView):
         """
         Convert queryset to JSON representations
         """
-        return [self.serializer_class(q).get_data() for q in queryset]
+        return [
+            {k: getattr(q, k, None) for k in self.list_param_reqs}
+            for q in queryset
+        ]
 
 
 class GenericAPIView(
@@ -781,6 +790,10 @@ class PartiesView(PaginatedListView):
     paginate_by = 10
     order_by = ("last_name",)
 
+    list_param_reqs = [
+        'id','first_name','last_name','middle_names',
+        'email','orcid']
+
 
 class FailedRequestsView(PaginatedListView):
     template_name = "failed_requests.html"
@@ -789,6 +802,8 @@ class FailedRequestsView(PaginatedListView):
     serializer_class = FailedRequestsSerializer
     paginate_by = 10
     order_by = ("id",)
+
+    list_param_reqs = ['id','reason']
 
     def get(self, request, *args, **kwargs):
         
@@ -870,6 +885,10 @@ class InstitutionsView(PaginatedListView):
     paginate_by = 10
     order_by = (Lower("name"),)
 
+    list_param_reqs = [
+        'id','name','acronym','country'
+    ]
+
 
 class FundingStreamsView(PaginatedListView):
     template_name = "streams.html"
@@ -879,10 +898,13 @@ class FundingStreamsView(PaginatedListView):
     paginate_by = 10
     order_by = (Lower("name"),)
 
+    list_param_reqs = ['id','name','affiliation']
+
     def adjust_for_UI_render(self, queryset) -> list:
         adj_queryset = []
         for q in queryset:
-            serial = self.serializer_class(q).get_data()
+            serial = {k: getattr(q, k, None) for k in self.list_param_reqs}
+            # self.serializer_class(q).get_data()
             serial["affiliation_id"] = q.affiliation_id
             adj_queryset.append(serial)
         return adj_queryset
@@ -895,6 +917,8 @@ class CitationsView(PaginatedListView):
     serializer_class = CitationsSerializer
     paginate_by = 10
     order_by=('-version','title')
+
+    list_param_reqs = ['title','version','doi_url','primary']
 
     def get_context_data(self, *args, **kwargs):
         context = super().get_context_data(*args, **kwargs)
@@ -930,12 +954,17 @@ class CitationsView(PaginatedListView):
         # Adjustments for UI rendering
         citations = []
         for citation in queryset:
-            cite = self.serializer_class(citation).get_data()
+            #cite = self.serializer_class(citation).get_data()
+            
+            cite = {k: getattr(citation, k, None) for k in self.list_param_reqs}
+
+            # Rework this to work with list param reqs
             cite["primary"] = {
-                "fullname": fullname(cite["primary"]),
-                "id": cite["primary"]["id"],
+                "fullname": fullname(PartiesSerializer(
+                    cite['primary']
+                ).data),
+                "id": cite['primary'].id,
             }
-            cite["version"] = citation.version
             citations.append(cite)
         return citations
 
