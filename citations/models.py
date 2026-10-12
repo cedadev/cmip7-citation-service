@@ -155,11 +155,11 @@ class Citations(models.Model):
     published = models.BooleanField(default=False)
 
     project_id = models.CharField(max_length=30, null=True, blank=True)
-    activity_id = models.CharField(max_length=30, null=True, blank=True)
-    institution_id = models.CharField(max_length=30, null=True, blank=True)
-    source_id = models.CharField(max_length=30, null=True, blank=True)
-    experiment_id = models.CharField(max_length=30, null=True, blank=True)
-    domain_id = models.CharField(max_length=30, null=True, blank=True)
+    activity_id = models.CharField(max_length=60, null=True, blank=True)
+    institution_id = models.CharField(max_length=60, null=True, blank=True)
+    source_id = models.CharField(max_length=60, null=True, blank=True)
+    experiment_id = models.CharField(max_length=60, null=True, blank=True)
+    domain_id = models.CharField(max_length=60, null=True, blank=True)
 
     # keywords = ArrayField(
     #     models.CharField(max_length=50),
