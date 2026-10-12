@@ -612,6 +612,7 @@ class PaginatedListView(GenericRenderedView):
 
         searches, count, term = self.perform_search()
 
+        # Avoid adjusting ALL search results for this? Negates pagination.
         adj_searches = self.adjust_for_UI_render(searches)
 
         # Pagination
