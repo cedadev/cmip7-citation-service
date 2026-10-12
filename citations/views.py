@@ -11,7 +11,7 @@ from django.contrib.auth import authenticate
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
-from django.db.models import CharField, ForeignKey, Q, TextField
+from django.db.models import CharField, ForeignKey, Q, TextField, QuerySet
 from django.db.models.functions import Lower
 from django.http import Http404, HttpResponse, HttpResponseForbidden, HttpResponseRedirect, JsonResponse
 from django.urls import reverse
@@ -25,6 +25,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from slack_sdk import WebClient
 
+from citations.lazyqueryset import LazyQuerySet, CitationLQ, FundingStreamLQ
 from citations.consumer.write import delete_instance
 from citations.external import resolve_drs, resolve_stac_query, get_stac_query, get_metagrid_query
 from citations.facet_mappings import ESGVOC_FACET_LABELS, STAC_LABELS, STAC_COLLECTIONS
@@ -63,7 +64,7 @@ from citations.serializers import (
     chain_new_objects,
     handle_update,
 )
-from citations.utils import logstream, get_drs_url, add_new_references, party_hash_func
+from citations.utils import logstream, get_drs_url, add_new_references, party_hash_func, fullname
 import logging
 
 logger = logging.getLogger(__name__)
@@ -433,18 +434,7 @@ def render_reference_html(ref: dict) -> dict:
     return ref
 
 
-def fullname(party: dict) -> str:
-    """
-    Display the fullname of a party based on if the middle name is blank or not
-    """
-    if party.get("middle_names"):
-        if party["middle_names"] != "":
-            return f"{party['first_name']} {party['middle_names']} {party['last_name']}"
-
-    return f"{party['first_name']} {party['last_name']}"
-
-
-def deep_search(queryset, term: str, order_by: tuple, all_versions=True):
+def deep_search(queryset: QuerySet, term: str, order_by: tuple, all_versions=True):
     """
     Fuzzy search for a term within the queryset.
 
@@ -554,8 +544,9 @@ class PaginatedListView(GenericRenderedView):
     """
 
     __slots__ = ['list_param_reqs']
+    lazyqueryset = LazyQuerySet
 
-    def get_pagination(self, search_queryset, page_number: int = 1):
+    def get_pagination(self, search_queryset: LazyQuerySet, page_number: int = 1):
         paginator = Paginator(search_queryset, self.paginate_by)
         return paginator.get_page(page_number)
 
@@ -642,14 +633,11 @@ class PaginatedListView(GenericRenderedView):
         # Normal full-page load
         return self.render_to_response(context)
 
-    def adjust_for_UI_render(self, queryset) -> list:
+    def adjust_for_UI_render(self, queryset: QuerySet) -> list:
         """
         Convert queryset to JSON representations
         """
-        return [
-            {k: getattr(q, k, None) for k in self.list_param_reqs}
-            for q in queryset
-        ]
+        return self.lazyqueryset(queryset, self.list_param_reqs)
 
 
 class GenericAPIView(
@@ -900,15 +888,7 @@ class FundingStreamsView(PaginatedListView):
     order_by = (Lower("name"),)
 
     list_param_reqs = ['id','name','affiliation']
-
-    def adjust_for_UI_render(self, queryset) -> list:
-        adj_queryset = []
-        for q in queryset:
-            serial = {k: getattr(q, k, None) for k in self.list_param_reqs}
-            # self.serializer_class(q).get_data()
-            serial["affiliation_id"] = q.affiliation_id
-            adj_queryset.append(serial)
-        return adj_queryset
+    lazyqueryset = FundingStreamLQ
 
 
 class CitationsView(PaginatedListView):
@@ -916,10 +896,11 @@ class CitationsView(PaginatedListView):
     partial_template = "partials/citations_partial.html"
     model = Citations
     serializer_class = CitationsSerializer
-    paginate_by = 10
+    paginate_by = 50
     order_by=('-version','title')
 
     list_param_reqs = ['title','version','doi_url','primary']
+    lazyqueryset = CitationLQ
 
     def get_context_data(self, *args, **kwargs):
         context = super().get_context_data(*args, **kwargs)
@@ -950,24 +931,6 @@ class CitationsView(PaginatedListView):
 
         count = len(search_citations)
         return search_citations, count, term
-
-    def adjust_for_UI_render(self, queryset) -> list:
-        # Adjustments for UI rendering
-        citations = []
-        for citation in queryset:
-            #cite = self.serializer_class(citation).get_data()
-            
-            cite = {k: getattr(citation, k, None) for k in self.list_param_reqs}
-
-            # Rework this to work with list param reqs
-            cite["primary"] = {
-                "fullname": fullname(PartiesSerializer(
-                    cite['primary']
-                ).data),
-                "id": cite['primary'].id,
-            }
-            citations.append(cite)
-        return citations
 
 
 class CitationView(GenericRenderedView):
@@ -1179,6 +1142,8 @@ class PartyView(GenericRenderedView):
             raise Http404("Requested party does not exist")
 
         instance = Parties.objects.get(id=pk)
+        context['supportparty'] = bool(pk == settings.SUPPORT_ID)
+
         context["party"] = PartiesSerializer(instance).get_data()
         context["party_fullname"] = fullname(context["party"])
 

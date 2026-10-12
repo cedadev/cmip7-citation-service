@@ -16,6 +16,16 @@ logstream = logging.StreamHandler()
 formatter = logging.Formatter("%(levelname)s [%(name)s]: %(message)s")
 logstream.setFormatter(formatter)
 
+def fullname(party: dict) -> str:
+    """
+    Display the fullname of a party based on if the middle name is blank or not
+    """
+    if party.get("middle_names"):
+        if party["middle_names"] != "":
+            return f"{party['first_name']} {party['middle_names']} {party['last_name']}"
+
+    return f"{party['first_name']} {party['last_name']}"
+
 def party_hash_func(data: dict):
 
     naming_hash = (

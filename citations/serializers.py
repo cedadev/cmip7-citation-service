@@ -259,6 +259,62 @@ def assemble_license_info(data: dict) -> str:
     return ".".join(license).replace("\n", "") + '.'
 
 
+# def authors_from_esgvoc(data: dict):
+#     """
+#     Extract any authors from ev
+#     """
+#     if not ev:
+#         return ""
+
+#     # Extract existing contact authors
+
+#     new_contacts = {}
+#     existing_ids = []
+
+#     project_id = data.get("project_id").lower()
+    
+#     facet_labels = ESGVOC_FACET_LABELS[project_id]
+
+#     for label in FACET_ABSTRACT_DESCRIPTIONS.keys():
+#         if label not in facet_labels:
+#             continue
+
+#         facet = facet_labels[label]
+
+#         if not bool(data.get(facet)):
+#             continue
+        
+#         component = ev.get_term_in_collection(
+#             project_id=project_id, 
+#             collection_id=label, 
+#             term_id=data[facet].lower().replace('_','-') # Shift to dashes
+#         ) or ev.get_term_in_collection(
+#             project_id=project_id, 
+#             collection_id=label, 
+#             term_id=data[facet].lower().replace('-','_') # Shift to underscores
+#         )
+
+#         authors = getattr(component, 'authors',None)
+#         if authors:
+
+#             for party in authors:
+#                 c = {
+#                     'first_name':party['name'].split(' ')[0],
+#                     'last_name': party['name'].split(' ')[-1],
+#                     'orcid':party.get('orcid',None),
+#                     'email':party.get('email',None)
+#                 }
+#                 if len(party.split(' ')) > 2:
+#                     c['middle_names'] = party['name'].split(' ')[1:-1]
+
+#                 party_id = party_hash_func(c)
+#                 if party_id not in new_contacts and party_id not in existing_ids:
+#                     new_contacts[party_id] = c
+
+#     # Return all contacts that are new
+
+#     return [c for c in new_contacts.values()]
+
 def abstract_from_esgvoc(data: dict):
     """
     Determine the paragraph of abstract text from esgvoc parameters.
