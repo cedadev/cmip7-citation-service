@@ -458,17 +458,20 @@ def deep_search(queryset: QuerySet, term: str, order_by: tuple, all_versions=Tru
         return queryset.filter(q).order_by(*order_by)
 
 
-def filter_versions(queryset):
+def filter_versions(queryset, extra_filters: dict = None):
     """
     Find only the latest version of every citation record.
 
     Will find the titles of all records in the queryset and filter out the non-latest version records.
     """
+    extra_filters = extra_filters or {}
 
     titles = list(set(queryset.values_list("title", flat=True).distinct()))
     instances = []
     for t in sorted(titles):
-        instances.append(queryset.filter(title=t).order_by("version").last())
+        q = queryset.filter(title=t, **extra_filters).order_by("version").last()
+        if q is not None:
+            instances.append(q)
     return instances
 
 
@@ -907,9 +910,25 @@ class CitationsView(PaginatedListView):
         context["all_versions"] = bool(
             self.request.GET.get("legacy_versions", "") != ""
         )
+
+        context['facets'] = {'project_id':[{
+            'value': c,
+            'selected': True if self.request.GET.get('project_id') == c else False}
+            for c in Citations.objects.values_list('project_id', flat=True).distinct()
+        ]}
+        
+
         return context
 
     def perform_search(self, show_all_versions: bool = False) -> tuple:
+        """
+        Perform Citation Searches and apply extra filters
+        """
+
+        extra_filters = {}
+        if self.request.GET.get('project_id') != 'all':
+            extra_filters['project_id'] = self.request.GET.get('project_id')
+
         show_all_versions = bool(self.request.GET.get("legacy_versions", "") != "")
         term = None
         if (
@@ -918,16 +937,16 @@ class CitationsView(PaginatedListView):
         ):
             term = self.request.GET.get("search")
             search_citations = deep_search(
-                self.model.objects.all(),
+                self.model.objects.filter(**extra_filters),
                 term,
                 order_by=self.order_by,
                 all_versions=show_all_versions,
             )
         else:
             if show_all_versions:
-                search_citations = self.model.objects.all().order_by(*self.order_by)
+                search_citations = self.model.objects.filter(**extra_filters).order_by(*self.order_by)
             else:
-                search_citations = filter_versions(self.model.objects)
+                search_citations = filter_versions(self.model.objects, extra_filters=extra_filters)
 
         count = len(search_citations)
         return search_citations, count, term
