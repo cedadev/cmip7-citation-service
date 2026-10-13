@@ -905,29 +905,47 @@ class CitationsView(PaginatedListView):
     list_param_reqs = ['title','version','doi_url','primary']
     lazyqueryset = CitationLQ
 
+    faceted_search = ['project_id','activity_id','institution_id','source_id']
+
     def get_context_data(self, *args, **kwargs):
         context = super().get_context_data(*args, **kwargs)
         context["all_versions"] = bool(
             self.request.GET.get("legacy_versions", "") != ""
         )
 
-        context['facets'] = {'project_id':[{
-            'value': c,
-            'selected': True if self.request.GET.get('project_id') == c else False}
-            for c in Citations.objects.values_list('project_id', flat=True).distinct()
-        ]}
-        
+        context['facets'] = {
+            label:[
+                {
+                    'value': c,
+                    'selected': True if self.request.GET.get(label) == c else False
+                }
+                for c in Citations.objects.filter(**self.extra_filters()).values_list(label, flat=True).distinct()
+            ] for label in self.faceted_search
+        }
 
+        context["published_only"] = self.request.GET.get('published_only')
+            
         return context
+
+    def extra_filters(self) -> dict:
+
+        extra_filters = {}
+        for label in self.faceted_search:
+            if self.request.GET.get(label) != 'all' and self.request.GET.get(label) is not None:
+                extra_filters[label] = self.request.GET.get(label)
+
+        if self.request.GET.get('published_only'):
+            extra_filters['published'] = bool(self.request.GET.get('published_only') == 'yes')
+
+        return extra_filters
+
 
     def perform_search(self, show_all_versions: bool = False) -> tuple:
         """
         Perform Citation Searches and apply extra filters
         """
 
-        extra_filters = {}
-        if self.request.GET.get('project_id') != 'all':
-            extra_filters['project_id'] = self.request.GET.get('project_id')
+        extra_filters = self.extra_filters()
 
         show_all_versions = bool(self.request.GET.get("legacy_versions", "") != "")
         term = None
