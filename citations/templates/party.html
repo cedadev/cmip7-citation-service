@@ -3,6 +3,13 @@
 {% block head_title %}CMIP7 Citation{% endblock %}
 
 {% block content_main_inner %}
+    {% if supportparty %}
+    <h1>Citation Support</h1>
+    <p>The Citation Support entity is the placeholder Primary party for auto-generated citation records.</p>
+    <p>All valid citation records will have a real primary author, and any citation record which has the Citation Support user as 
+        the primary contact are not able to be published. For actual support with citation records, please contact the CEDA Helpdesk.
+    </p>
+    {% else %}
     <h1>Party</h1>
     <table class="table table-striped border border-light">
         <tr>
@@ -35,6 +42,7 @@
     </table>
 
     <h2>Citation Contributions</h2>
+    {% endif %}
     <table class="table table-striped border border-light">
         <tr>
             <th>Name</th>

@@ -26,7 +26,38 @@
                 </div>
                 </span>
             </div>
-            <input {% if all_versions%} checked {% endif %} type="checkbox" name="legacy_versions" value="yes" type="submit">Show All Versions</input>
+            <input {% if all_versions %} checked {% endif %} onchange="this.form.submit()" type="checkbox" name="legacy_versions" value="yes" type="submit">Show All Versions</input>
+            <input {% if published_only %} checked {% endif %} onchange="this.form.submit()" type="checkbox" name="published_only" value="yes" type="submit">Citable Only</input>
+            <div>
+                <label>Project ID: </label>
+                <select name="project_id" onchange="this.form.submit()">
+                    <option value="all">All</option>
+                    {% for facet in facets.project_id %}
+                        <option value="{{ facet.value }}" {% if facet.selected %} selected {% endif %}>{{ facet.value }}</option>
+                    {% endfor %}
+                </select>
+                <label>Activity ID: </label>
+                <select name="activity_id" onchange="this.form.submit()">
+                    <option value="all">All</option>
+                    {% for facet in facets.activity_id %}
+                        <option value="{{ facet.value }}" {% if facet.selected %} selected {% endif %}>{{ facet.value }}</option>
+                    {% endfor %}
+                </select>
+                <label>Institution ID: </label>
+                <select name="institution_id" onchange="this.form.submit()">
+                    <option value="all">All</option>
+                    {% for facet in facets.institution_id %}
+                        <option value="{{ facet.value }}" {% if facet.selected %} selected {% endif %}>{{ facet.value }}</option>
+                    {% endfor %}
+                </select>
+                <label>Source ID: </label>
+                <select name="source_id" onchange="this.form.submit()">
+                    <option value="all">All</option>
+                    {% for facet in facets.source_id %}
+                        <option value="{{ facet.value }}" {% if facet.selected %} selected {% endif %}>{{ facet.value }}</option>
+                    {% endfor %}
+                </select>
+            </div>
         </form>
         </div>
     </div>

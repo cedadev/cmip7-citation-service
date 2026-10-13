@@ -8,10 +8,17 @@ from django.utils.safestring import mark_safe
 from citations.models import Citations
 from citations.utils import is_support_user
 
+
 alphanumeric = RegexValidator(
     r"^[0-9a-zA-Z-_.]*$",
     "Only alphanumeric characters and hyphens/underscores are allowed.",
 )
+orcidvalid = RegexValidator(
+    r"^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$",
+    message="Enter a valid ORCID iD in the format 0000-0000-0000-0000",
+)
+
+
 reference_options = ((1, "is_cited_by"), (2, "is_referenced_by"), (3, "cites"))
 
 reference_mapping = ["is_cited_by", "is_referenced_by", "cites"]
@@ -52,7 +59,7 @@ class PartyForm(forms.Form):
     first_name = forms.CharField(required=True)
     middle_names = forms.CharField(required=False)
     last_name = forms.CharField(required=True)
-    orcid = forms.CharField(required=False)
+    orcid = forms.CharField(required=False, validators=[orcidvalid])
     email = forms.EmailField(required=False)
 
     field_order = [

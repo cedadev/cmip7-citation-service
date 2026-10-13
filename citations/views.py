@@ -11,7 +11,7 @@ from django.contrib.auth import authenticate
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
-from django.db.models import CharField, ForeignKey, Q, TextField
+from django.db.models import CharField, ForeignKey, Q, TextField, QuerySet
 from django.db.models.functions import Lower
 from django.http import Http404, HttpResponse, HttpResponseForbidden, HttpResponseRedirect, JsonResponse
 from django.urls import reverse
@@ -25,6 +25,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from slack_sdk import WebClient
 
+from citations.lazyqueryset import LazyQuerySet, CitationLQ, FundingStreamLQ
 from citations.consumer.write import delete_instance
 from citations.external import resolve_drs, resolve_stac_query, get_stac_query, get_metagrid_query
 from citations.facet_mappings import ESGVOC_FACET_LABELS, STAC_LABELS, STAC_COLLECTIONS
@@ -63,7 +64,7 @@ from citations.serializers import (
     chain_new_objects,
     handle_update,
 )
-from citations.utils import logstream, get_drs_url, add_new_references, party_hash_func
+from citations.utils import logstream, get_drs_url, add_new_references, party_hash_func, fullname
 import logging
 
 logger = logging.getLogger(__name__)
@@ -433,18 +434,7 @@ def render_reference_html(ref: dict) -> dict:
     return ref
 
 
-def fullname(party: dict) -> str:
-    """
-    Display the fullname of a party based on if the middle name is blank or not
-    """
-    if party.get("middle_names"):
-        if party["middle_names"] != "":
-            return f"{party['first_name']} {party['middle_names']} {party['last_name']}"
-
-    return f"{party['first_name']} {party['last_name']}"
-
-
-def deep_search(queryset, term: str, order_by: tuple, all_versions=True):
+def deep_search(queryset: QuerySet, term: str, order_by: tuple, all_versions=True):
     """
     Fuzzy search for a term within the queryset.
 
@@ -468,17 +458,20 @@ def deep_search(queryset, term: str, order_by: tuple, all_versions=True):
         return queryset.filter(q).order_by(*order_by)
 
 
-def filter_versions(queryset):
+def filter_versions(queryset, extra_filters: dict = None):
     """
     Find only the latest version of every citation record.
 
     Will find the titles of all records in the queryset and filter out the non-latest version records.
     """
+    extra_filters = extra_filters or {}
 
     titles = list(set(queryset.values_list("title", flat=True).distinct()))
     instances = []
     for t in sorted(titles):
-        instances.append(queryset.filter(title=t).order_by("version").last())
+        q = queryset.filter(title=t, **extra_filters).order_by("version").last()
+        if q is not None:
+            instances.append(q)
     return instances
 
 
@@ -554,8 +547,9 @@ class PaginatedListView(GenericRenderedView):
     """
 
     __slots__ = ['list_param_reqs']
+    lazyqueryset = LazyQuerySet
 
-    def get_pagination(self, search_queryset, page_number: int = 1):
+    def get_pagination(self, search_queryset: LazyQuerySet, page_number: int = 1):
         paginator = Paginator(search_queryset, self.paginate_by)
         return paginator.get_page(page_number)
 
@@ -612,6 +606,7 @@ class PaginatedListView(GenericRenderedView):
 
         searches, count, term = self.perform_search()
 
+        # Avoid adjusting ALL search results for this? Negates pagination.
         adj_searches = self.adjust_for_UI_render(searches)
 
         # Pagination
@@ -641,14 +636,11 @@ class PaginatedListView(GenericRenderedView):
         # Normal full-page load
         return self.render_to_response(context)
 
-    def adjust_for_UI_render(self, queryset) -> list:
+    def adjust_for_UI_render(self, queryset: QuerySet) -> list:
         """
         Convert queryset to JSON representations
         """
-        return [
-            {k: getattr(q, k, None) for k in self.list_param_reqs}
-            for q in queryset
-        ]
+        return self.lazyqueryset(queryset, self.list_param_reqs)
 
 
 class GenericAPIView(
@@ -899,15 +891,7 @@ class FundingStreamsView(PaginatedListView):
     order_by = (Lower("name"),)
 
     list_param_reqs = ['id','name','affiliation']
-
-    def adjust_for_UI_render(self, queryset) -> list:
-        adj_queryset = []
-        for q in queryset:
-            serial = {k: getattr(q, k, None) for k in self.list_param_reqs}
-            # self.serializer_class(q).get_data()
-            serial["affiliation_id"] = q.affiliation_id
-            adj_queryset.append(serial)
-        return adj_queryset
+    lazyqueryset = FundingStreamLQ
 
 
 class CitationsView(PaginatedListView):
@@ -915,19 +899,54 @@ class CitationsView(PaginatedListView):
     partial_template = "partials/citations_partial.html"
     model = Citations
     serializer_class = CitationsSerializer
-    paginate_by = 10
+    paginate_by = 50
     order_by=('-version','title')
 
     list_param_reqs = ['title','version','doi_url','primary']
+    lazyqueryset = CitationLQ
+
+    faceted_search = ['project_id','activity_id','institution_id','source_id']
 
     def get_context_data(self, *args, **kwargs):
         context = super().get_context_data(*args, **kwargs)
         context["all_versions"] = bool(
             self.request.GET.get("legacy_versions", "") != ""
         )
+
+        context['facets'] = {
+            label:[
+                {
+                    'value': c,
+                    'selected': True if self.request.GET.get(label) == c else False
+                }
+                for c in Citations.objects.filter(**self.extra_filters()).values_list(label, flat=True).distinct()
+            ] for label in self.faceted_search
+        }
+
+        context["published_only"] = self.request.GET.get('published_only')
+            
         return context
 
+    def extra_filters(self) -> dict:
+
+        extra_filters = {}
+        for label in self.faceted_search:
+            if self.request.GET.get(label) != 'all' and self.request.GET.get(label) is not None:
+                extra_filters[label] = self.request.GET.get(label)
+
+        if self.request.GET.get('published_only'):
+            extra_filters['published'] = bool(self.request.GET.get('published_only') == 'yes')
+
+        return extra_filters
+
+
     def perform_search(self, show_all_versions: bool = False) -> tuple:
+        """
+        Perform Citation Searches and apply extra filters
+        """
+
+        extra_filters = self.extra_filters()
+
         show_all_versions = bool(self.request.GET.get("legacy_versions", "") != "")
         term = None
         if (
@@ -936,37 +955,19 @@ class CitationsView(PaginatedListView):
         ):
             term = self.request.GET.get("search")
             search_citations = deep_search(
-                self.model.objects.all(),
+                self.model.objects.filter(**extra_filters),
                 term,
                 order_by=self.order_by,
                 all_versions=show_all_versions,
             )
         else:
             if show_all_versions:
-                search_citations = self.model.objects.all().order_by(*self.order_by)
+                search_citations = self.model.objects.filter(**extra_filters).order_by(*self.order_by)
             else:
-                search_citations = filter_versions(self.model.objects)
+                search_citations = filter_versions(self.model.objects, extra_filters=extra_filters)
 
         count = len(search_citations)
         return search_citations, count, term
-
-    def adjust_for_UI_render(self, queryset) -> list:
-        # Adjustments for UI rendering
-        citations = []
-        for citation in queryset:
-            #cite = self.serializer_class(citation).get_data()
-            
-            cite = {k: getattr(citation, k, None) for k in self.list_param_reqs}
-
-            # Rework this to work with list param reqs
-            cite["primary"] = {
-                "fullname": fullname(PartiesSerializer(
-                    cite['primary']
-                ).data),
-                "id": cite['primary'].id,
-            }
-            citations.append(cite)
-        return citations
 
 
 class CitationView(GenericRenderedView):
@@ -1178,6 +1179,8 @@ class PartyView(GenericRenderedView):
             raise Http404("Requested party does not exist")
 
         instance = Parties.objects.get(id=pk)
+        context['supportparty'] = bool(pk == settings.SUPPORT_ID)
+
         context["party"] = PartiesSerializer(instance).get_data()
         context["party_fullname"] = fullname(context["party"])
 

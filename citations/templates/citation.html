@@ -87,6 +87,9 @@
                 </tr>
                 {% endif %}
             </table>
+            {% if not published %}
+            <p><i>Note: This citation is currently unpublished. DOI and referencing information will appear here once the citation is published.</i></p>
+            {% endif %}
             <br>
             <h3><b>{{ citation.project_id }} Facets</b></h3>
             <br>
