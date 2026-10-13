@@ -1271,7 +1271,12 @@ class CitationAPIView(GenericAPIView):
             is_ok, id, response = self._create(request, *args, **kwargs)
             if is_ok:
                 return response
+            else:
+                if settings.DEBUG:
+                    raise response
         except Exception as e:
+            if settings.DEBUG:
+                raise response
             # Exception raised before id can be generated.
             response = e
 
