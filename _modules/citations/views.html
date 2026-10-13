@@ -88,7 +88,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">django.contrib.contenttypes.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">ContentType</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">django.core.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">PermissionDenied</span><span class="p">,</span> <span class="n">ValidationError</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">django.core.paginator</span><span class="w"> </span><span class="kn">import</span> <span class="n">Paginator</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">django.db.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">CharField</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">,</span> <span class="n">Q</span><span class="p">,</span> <span class="n">TextField</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">django.db.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">CharField</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">,</span> <span class="n">Q</span><span class="p">,</span> <span class="n">TextField</span><span class="p">,</span> <span class="n">QuerySet</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">django.db.models.functions</span><span class="w"> </span><span class="kn">import</span> <span class="n">Lower</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">django.http</span><span class="w"> </span><span class="kn">import</span> <span class="n">Http404</span><span class="p">,</span> <span class="n">HttpResponse</span><span class="p">,</span> <span class="n">HttpResponseForbidden</span><span class="p">,</span> <span class="n">HttpResponseRedirect</span><span class="p">,</span> <span class="n">JsonResponse</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">django.urls</span><span class="w"> </span><span class="kn">import</span> <span class="n">reverse</span>
@@ -102,6 +102,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">rest_framework.views</span><span class="w"> </span><span class="kn">import</span> <span class="n">APIView</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">slack_sdk</span><span class="w"> </span><span class="kn">import</span> <span class="n">WebClient</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">citations.lazyqueryset</span><span class="w"> </span><span class="kn">import</span> <span class="n">LazyQuerySet</span><span class="p">,</span> <span class="n">CitationLQ</span><span class="p">,</span> <span class="n">FundingStreamLQ</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">citations.consumer.write</span><span class="w"> </span><span class="kn">import</span> <span class="n">delete_instance</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">citations.external</span><span class="w"> </span><span class="kn">import</span> <span class="n">resolve_drs</span><span class="p">,</span> <span class="n">resolve_stac_query</span><span class="p">,</span> <span class="n">get_stac_query</span><span class="p">,</span> <span class="n">get_metagrid_query</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">citations.facet_mappings</span><span class="w"> </span><span class="kn">import</span> <span class="n">ESGVOC_FACET_LABELS</span><span class="p">,</span> <span class="n">STAC_LABELS</span><span class="p">,</span> <span class="n">STAC_COLLECTIONS</span>
@@ -140,7 +141,7 @@
     <span class="n">chain_new_objects</span><span class="p">,</span>
     <span class="n">handle_update</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">citations.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">logstream</span><span class="p">,</span> <span class="n">get_drs_url</span><span class="p">,</span> <span class="n">add_new_references</span><span class="p">,</span> <span class="n">party_hash_func</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">citations.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">logstream</span><span class="p">,</span> <span class="n">get_drs_url</span><span class="p">,</span> <span class="n">add_new_references</span><span class="p">,</span> <span class="n">party_hash_func</span><span class="p">,</span> <span class="n">fullname</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
@@ -543,23 +544,9 @@
 
 
 
-<div class="viewcode-block" id="fullname">
-<a class="viewcode-back" href="../../views.html#citations.views.fullname">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">fullname</span><span class="p">(</span><span class="n">party</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Display the fullname of a party based on if the middle name is blank or not</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">party</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;middle_names&quot;</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">party</span><span class="p">[</span><span class="s2">&quot;middle_names&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
-            <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">party</span><span class="p">[</span><span class="s1">&#39;first_name&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">party</span><span class="p">[</span><span class="s1">&#39;middle_names&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">party</span><span class="p">[</span><span class="s1">&#39;last_name&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
-
-    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">party</span><span class="p">[</span><span class="s1">&#39;first_name&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">party</span><span class="p">[</span><span class="s1">&#39;last_name&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span></div>
-
-
-
 <div class="viewcode-block" id="deep_search">
 <a class="viewcode-back" href="../../views.html#citations.views.deep_search">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">deep_search</span><span class="p">(</span><span class="n">queryset</span><span class="p">,</span> <span class="n">term</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">order_by</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">,</span> <span class="n">all_versions</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">deep_search</span><span class="p">(</span><span class="n">queryset</span><span class="p">:</span> <span class="n">QuerySet</span><span class="p">,</span> <span class="n">term</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">order_by</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">,</span> <span class="n">all_versions</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Fuzzy search for a term within the queryset.</span>
 
@@ -586,17 +573,20 @@
 
 <div class="viewcode-block" id="filter_versions">
 <a class="viewcode-back" href="../../views.html#citations.views.filter_versions">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">filter_versions</span><span class="p">(</span><span class="n">queryset</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">filter_versions</span><span class="p">(</span><span class="n">queryset</span><span class="p">,</span> <span class="n">extra_filters</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Find only the latest version of every citation record.</span>
 
 <span class="sd">    Will find the titles of all records in the queryset and filter out the non-latest version records.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">extra_filters</span> <span class="o">=</span> <span class="n">extra_filters</span> <span class="ow">or</span> <span class="p">{}</span>
 
     <span class="n">titles</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">queryset</span><span class="o">.</span><span class="n">values_list</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">,</span> <span class="n">flat</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">distinct</span><span class="p">()))</span>
     <span class="n">instances</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">titles</span><span class="p">):</span>
-        <span class="n">instances</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">queryset</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">t</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">last</span><span class="p">())</span>
+        <span class="n">q</span> <span class="o">=</span> <span class="n">queryset</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">t</span><span class="p">,</span> <span class="o">**</span><span class="n">extra_filters</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">last</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">q</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">instances</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">instances</span></div>
 
 
@@ -687,8 +677,9 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;list_param_reqs&#39;</span><span class="p">]</span>
+    <span class="n">lazyqueryset</span> <span class="o">=</span> <span class="n">LazyQuerySet</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">get_pagination</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">search_queryset</span><span class="p">,</span> <span class="n">page_number</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_pagination</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">search_queryset</span><span class="p">:</span> <span class="n">LazyQuerySet</span><span class="p">,</span> <span class="n">page_number</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">):</span>
         <span class="n">paginator</span> <span class="o">=</span> <span class="n">Paginator</span><span class="p">(</span><span class="n">search_queryset</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">paginate_by</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">paginator</span><span class="o">.</span><span class="n">get_page</span><span class="p">(</span><span class="n">page_number</span><span class="p">)</span>
 
@@ -753,6 +744,7 @@
 
         <span class="n">searches</span><span class="p">,</span> <span class="n">count</span><span class="p">,</span> <span class="n">term</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">perform_search</span><span class="p">()</span>
 
+        <span class="c1"># Avoid adjusting ALL search results for this? Negates pagination.</span>
         <span class="n">adj_searches</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">adjust_for_UI_render</span><span class="p">(</span><span class="n">searches</span><span class="p">)</span>
 
         <span class="c1"># Pagination</span>
@@ -785,14 +777,11 @@
 
 <div class="viewcode-block" id="PaginatedListView.adjust_for_UI_render">
 <a class="viewcode-back" href="../../views.html#citations.views.PaginatedListView.adjust_for_UI_render">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">adjust_for_UI_render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queryset</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">adjust_for_UI_render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queryset</span><span class="p">:</span> <span class="n">QuerySet</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Convert queryset to JSON representations</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="p">[</span>
-            <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">list_param_reqs</span><span class="p">}</span>
-            <span class="k">for</span> <span class="n">q</span> <span class="ow">in</span> <span class="n">queryset</span>
-        <span class="p">]</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">lazyqueryset</span><span class="p">(</span><span class="n">queryset</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">list_param_reqs</span><span class="p">)</span></div>
 </div>
 
 
@@ -1086,18 +1075,7 @@
     <span class="n">order_by</span> <span class="o">=</span> <span class="p">(</span><span class="n">Lower</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">),)</span>
 
     <span class="n">list_param_reqs</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">,</span><span class="s1">&#39;name&#39;</span><span class="p">,</span><span class="s1">&#39;affiliation&#39;</span><span class="p">]</span>
-
-<div class="viewcode-block" id="FundingStreamsView.adjust_for_UI_render">
-<a class="viewcode-back" href="../../views.html#citations.views.FundingStreamsView.adjust_for_UI_render">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">adjust_for_UI_render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queryset</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
-        <span class="n">adj_queryset</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">q</span> <span class="ow">in</span> <span class="n">queryset</span><span class="p">:</span>
-            <span class="n">serial</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">list_param_reqs</span><span class="p">}</span>
-            <span class="c1"># self.serializer_class(q).get_data()</span>
-            <span class="n">serial</span><span class="p">[</span><span class="s2">&quot;affiliation_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">q</span><span class="o">.</span><span class="n">affiliation_id</span>
-            <span class="n">adj_queryset</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">serial</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">adj_queryset</span></div>
-</div>
+    <span class="n">lazyqueryset</span> <span class="o">=</span> <span class="n">FundingStreamLQ</span></div>
 
 
 
@@ -1108,10 +1086,13 @@
     <span class="n">partial_template</span> <span class="o">=</span> <span class="s2">&quot;partials/citations_partial.html&quot;</span>
     <span class="n">model</span> <span class="o">=</span> <span class="n">Citations</span>
     <span class="n">serializer_class</span> <span class="o">=</span> <span class="n">CitationsSerializer</span>
-    <span class="n">paginate_by</span> <span class="o">=</span> <span class="mi">10</span>
+    <span class="n">paginate_by</span> <span class="o">=</span> <span class="mi">50</span>
     <span class="n">order_by</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;-version&#39;</span><span class="p">,</span><span class="s1">&#39;title&#39;</span><span class="p">)</span>
 
     <span class="n">list_param_reqs</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">,</span><span class="s1">&#39;version&#39;</span><span class="p">,</span><span class="s1">&#39;doi_url&#39;</span><span class="p">,</span><span class="s1">&#39;primary&#39;</span><span class="p">]</span>
+    <span class="n">lazyqueryset</span> <span class="o">=</span> <span class="n">CitationLQ</span>
+
+    <span class="n">faceted_search</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;project_id&#39;</span><span class="p">,</span><span class="s1">&#39;activity_id&#39;</span><span class="p">,</span><span class="s1">&#39;institution_id&#39;</span><span class="p">,</span><span class="s1">&#39;source_id&#39;</span><span class="p">]</span>
 
 <div class="viewcode-block" id="CitationsView.get_context_data">
 <a class="viewcode-back" href="../../views.html#citations.views.CitationsView.get_context_data">[docs]</a>
@@ -1120,12 +1101,44 @@
         <span class="n">context</span><span class="p">[</span><span class="s2">&quot;all_versions&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;legacy_versions&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span>
         <span class="p">)</span>
+
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;facets&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">label</span><span class="p">:[</span>
+                <span class="p">{</span>
+                    <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">c</span><span class="p">,</span>
+                    <span class="s1">&#39;selected&#39;</span><span class="p">:</span> <span class="kc">True</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">label</span><span class="p">)</span> <span class="o">==</span> <span class="n">c</span> <span class="k">else</span> <span class="kc">False</span>
+                <span class="p">}</span>
+                <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">extra_filters</span><span class="p">())</span><span class="o">.</span><span class="n">values_list</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="n">flat</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">distinct</span><span class="p">()</span>
+            <span class="p">]</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">faceted_search</span>
+        <span class="p">}</span>
+
+        <span class="n">context</span><span class="p">[</span><span class="s2">&quot;published_only&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;published_only&#39;</span><span class="p">)</span>
+            
         <span class="k">return</span> <span class="n">context</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">extra_filters</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+
+        <span class="n">extra_filters</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">faceted_search</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">label</span><span class="p">)</span> <span class="o">!=</span> <span class="s1">&#39;all&#39;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">label</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">extra_filters</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;published_only&#39;</span><span class="p">):</span>
+            <span class="n">extra_filters</span><span class="p">[</span><span class="s1">&#39;published&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;published_only&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;yes&#39;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">extra_filters</span>
 
 
 <div class="viewcode-block" id="CitationsView.perform_search">
 <a class="viewcode-back" href="../../views.html#citations.views.CitationsView.perform_search">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">perform_search</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">show_all_versions</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Perform Citation Searches and apply extra filters</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">extra_filters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">extra_filters</span><span class="p">()</span>
+
         <span class="n">show_all_versions</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;legacy_versions&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
         <span class="n">term</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="p">(</span>
@@ -1134,40 +1147,19 @@
         <span class="p">):</span>
             <span class="n">term</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;search&quot;</span><span class="p">)</span>
             <span class="n">search_citations</span> <span class="o">=</span> <span class="n">deep_search</span><span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="o">**</span><span class="n">extra_filters</span><span class="p">),</span>
                 <span class="n">term</span><span class="p">,</span>
                 <span class="n">order_by</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">order_by</span><span class="p">,</span>
                 <span class="n">all_versions</span><span class="o">=</span><span class="n">show_all_versions</span><span class="p">,</span>
             <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">show_all_versions</span><span class="p">:</span>
-                <span class="n">search_citations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">()</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">order_by</span><span class="p">)</span>
+                <span class="n">search_citations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="o">**</span><span class="n">extra_filters</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">order_by</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">search_citations</span> <span class="o">=</span> <span class="n">filter_versions</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">objects</span><span class="p">)</span>
+                <span class="n">search_citations</span> <span class="o">=</span> <span class="n">filter_versions</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">objects</span><span class="p">,</span> <span class="n">extra_filters</span><span class="o">=</span><span class="n">extra_filters</span><span class="p">)</span>
 
         <span class="n">count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">search_citations</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">search_citations</span><span class="p">,</span> <span class="n">count</span><span class="p">,</span> <span class="n">term</span></div>
-
-
-<div class="viewcode-block" id="CitationsView.adjust_for_UI_render">
-<a class="viewcode-back" href="../../views.html#citations.views.CitationsView.adjust_for_UI_render">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">adjust_for_UI_render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queryset</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
-        <span class="c1"># Adjustments for UI rendering</span>
-        <span class="n">citations</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">citation</span> <span class="ow">in</span> <span class="n">queryset</span><span class="p">:</span>
-            <span class="c1">#cite = self.serializer_class(citation).get_data()</span>
-            
-            <span class="n">cite</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">citation</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">list_param_reqs</span><span class="p">}</span>
-
-            <span class="c1"># Rework this to work with list param reqs</span>
-            <span class="n">cite</span><span class="p">[</span><span class="s2">&quot;primary&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="s2">&quot;fullname&quot;</span><span class="p">:</span> <span class="n">fullname</span><span class="p">(</span><span class="n">PartiesSerializer</span><span class="p">(</span>
-                    <span class="n">cite</span><span class="p">[</span><span class="s1">&#39;primary&#39;</span><span class="p">]</span>
-                <span class="p">)</span><span class="o">.</span><span class="n">data</span><span class="p">),</span>
-                <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">cite</span><span class="p">[</span><span class="s1">&#39;primary&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
-            <span class="p">}</span>
-            <span class="n">citations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cite</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">citations</span></div>
 </div>
 
 
@@ -1403,6 +1395,8 @@
             <span class="k">raise</span> <span class="n">Http404</span><span class="p">(</span><span class="s2">&quot;Requested party does not exist&quot;</span><span class="p">)</span>
 
         <span class="n">instance</span> <span class="o">=</span> <span class="n">Parties</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">pk</span><span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;supportparty&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">pk</span> <span class="o">==</span> <span class="n">settings</span><span class="o">.</span><span class="n">SUPPORT_ID</span><span class="p">)</span>
+
         <span class="n">context</span><span class="p">[</span><span class="s2">&quot;party&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">PartiesSerializer</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
         <span class="n">context</span><span class="p">[</span><span class="s2">&quot;party_fullname&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">fullname</span><span class="p">(</span><span class="n">context</span><span class="p">[</span><span class="s2">&quot;party&quot;</span><span class="p">])</span>
 

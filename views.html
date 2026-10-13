@@ -58,7 +58,6 @@
 <li class="toctree-l2"><a class="reference internal" href="#citations.views.render_abstract"><code class="docutils literal notranslate"><span class="pre">render_abstract()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#citations.views.render_rights"><code class="docutils literal notranslate"><span class="pre">render_rights()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#citations.views.render_reference_html"><code class="docutils literal notranslate"><span class="pre">render_reference_html()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#citations.views.fullname"><code class="docutils literal notranslate"><span class="pre">fullname()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#citations.views.deep_search"><code class="docutils literal notranslate"><span class="pre">deep_search()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#citations.views.filter_versions"><code class="docutils literal notranslate"><span class="pre">filter_versions()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#citations.views.check_publish_ok"><code class="docutils literal notranslate"><span class="pre">check_publish_ok()</span></code></a></li>
@@ -106,7 +105,6 @@
 <li class="toctree-l2"><a class="reference internal" href="#citations.views.FundingStreamsView"><code class="docutils literal notranslate"><span class="pre">FundingStreamsView</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#citations.views.FundingStreamsView.model"><code class="docutils literal notranslate"><span class="pre">FundingStreamsView.model</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#citations.views.FundingStreamsView.serializer_class"><code class="docutils literal notranslate"><span class="pre">FundingStreamsView.serializer_class</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#citations.views.FundingStreamsView.adjust_for_UI_render"><code class="docutils literal notranslate"><span class="pre">FundingStreamsView.adjust_for_UI_render()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#citations.views.CitationsView"><code class="docutils literal notranslate"><span class="pre">CitationsView</span></code></a><ul>
@@ -114,7 +112,6 @@
 <li class="toctree-l3"><a class="reference internal" href="#citations.views.CitationsView.serializer_class"><code class="docutils literal notranslate"><span class="pre">CitationsView.serializer_class</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#citations.views.CitationsView.get_context_data"><code class="docutils literal notranslate"><span class="pre">CitationsView.get_context_data()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#citations.views.CitationsView.perform_search"><code class="docutils literal notranslate"><span class="pre">CitationsView.perform_search()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#citations.views.CitationsView.adjust_for_UI_render"><code class="docutils literal notranslate"><span class="pre">CitationsView.adjust_for_UI_render()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#citations.views.CitationView"><code class="docutils literal notranslate"><span class="pre">CitationView</span></code></a><ul>
@@ -361,21 +358,15 @@ if the user already has permission for that institution.</p>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="citations.views.fullname">
-<span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">fullname</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">party</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="_modules/citations/views.html#fullname"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.fullname" title="Link to this definition"></a></dt>
-<dd><p>Display the fullname of a party based on if the middle name is blank or not</p>
-</dd></dl>
-
-<dl class="py function">
 <dt class="sig sig-object py" id="citations.views.deep_search">
-<span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">deep_search</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">queryset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">term</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">order_by</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">all_versions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#deep_search"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.deep_search" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">deep_search</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">queryset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">QuerySet</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">term</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">order_by</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">all_versions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#deep_search"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.deep_search" title="Link to this definition"></a></dt>
 <dd><p>Fuzzy search for a term within the queryset.</p>
 <p>This also allows ordering of search results and filtering on versions.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="citations.views.filter_versions">
-<span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">filter_versions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">queryset</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#filter_versions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.filter_versions" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">filter_versions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">queryset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_filters</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#filter_versions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.filter_versions" title="Link to this definition"></a></dt>
 <dd><p>Find only the latest version of every citation record.</p>
 <p>Will find the titles of all records in the queryset and filter out the non-latest version records.</p>
 </dd></dl>
@@ -429,7 +420,7 @@ if the user already has permission for that institution.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="citations.views.PaginatedListView.adjust_for_UI_render">
-<span class="sig-name descname"><span class="pre">adjust_for_UI_render</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">queryset</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="reference internal" href="_modules/citations/views.html#PaginatedListView.adjust_for_UI_render"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.PaginatedListView.adjust_for_UI_render" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">adjust_for_UI_render</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">queryset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">QuerySet</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="reference internal" href="_modules/citations/views.html#PaginatedListView.adjust_for_UI_render"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.PaginatedListView.adjust_for_UI_render" title="Link to this definition"></a></dt>
 <dd><p>Convert queryset to JSON representations</p>
 </dd></dl>
 
@@ -560,12 +551,6 @@ if the user already has permission for that institution.</p>
 <dd><p>alias of <a class="reference internal" href="serializer.html#citations.serializers.FundingStreamsSerializer" title="citations.serializers.FundingStreamsSerializer"><code class="xref py py-class docutils literal notranslate"><span class="pre">FundingStreamsSerializer</span></code></a></p>
 </dd></dl>
 
-<dl class="py method">
-<dt class="sig sig-object py" id="citations.views.FundingStreamsView.adjust_for_UI_render">
-<span class="sig-name descname"><span class="pre">adjust_for_UI_render</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">queryset</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="reference internal" href="_modules/citations/views.html#FundingStreamsView.adjust_for_UI_render"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.FundingStreamsView.adjust_for_UI_render" title="Link to this definition"></a></dt>
-<dd><p>Convert queryset to JSON representations</p>
-</dd></dl>
-
 </dd></dl>
 
 <dl class="py class">
@@ -592,13 +577,7 @@ if the user already has permission for that institution.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="citations.views.CitationsView.perform_search">
 <span class="sig-name descname"><span class="pre">perform_search</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">show_all_versions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span></span></span><a class="reference internal" href="_modules/citations/views.html#CitationsView.perform_search"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.CitationsView.perform_search" title="Link to this definition"></a></dt>
-<dd><p>Obtain the search term and apply a deep ‘fuzzy’ search to all instances of the model.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="citations.views.CitationsView.adjust_for_UI_render">
-<span class="sig-name descname"><span class="pre">adjust_for_UI_render</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">queryset</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="reference internal" href="_modules/citations/views.html#CitationsView.adjust_for_UI_render"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.CitationsView.adjust_for_UI_render" title="Link to this definition"></a></dt>
-<dd><p>Convert queryset to JSON representations</p>
+<dd><p>Perform Citation Searches and apply extra filters</p>
 </dd></dl>
 
 </dd></dl>

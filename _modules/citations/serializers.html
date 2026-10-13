@@ -348,6 +348,62 @@
 
 
 
+<span class="c1"># def authors_from_esgvoc(data: dict):</span>
+<span class="c1">#     &quot;&quot;&quot;</span>
+<span class="c1">#     Extract any authors from ev</span>
+<span class="c1">#     &quot;&quot;&quot;</span>
+<span class="c1">#     if not ev:</span>
+<span class="c1">#         return &quot;&quot;</span>
+
+<span class="c1">#     # Extract existing contact authors</span>
+
+<span class="c1">#     new_contacts = {}</span>
+<span class="c1">#     existing_ids = []</span>
+
+<span class="c1">#     project_id = data.get(&quot;project_id&quot;).lower()</span>
+    
+<span class="c1">#     facet_labels = ESGVOC_FACET_LABELS[project_id]</span>
+
+<span class="c1">#     for label in FACET_ABSTRACT_DESCRIPTIONS.keys():</span>
+<span class="c1">#         if label not in facet_labels:</span>
+<span class="c1">#             continue</span>
+
+<span class="c1">#         facet = facet_labels[label]</span>
+
+<span class="c1">#         if not bool(data.get(facet)):</span>
+<span class="c1">#             continue</span>
+        
+<span class="c1">#         component = ev.get_term_in_collection(</span>
+<span class="c1">#             project_id=project_id, </span>
+<span class="c1">#             collection_id=label, </span>
+<span class="c1">#             term_id=data[facet].lower().replace(&#39;_&#39;,&#39;-&#39;) # Shift to dashes</span>
+<span class="c1">#         ) or ev.get_term_in_collection(</span>
+<span class="c1">#             project_id=project_id, </span>
+<span class="c1">#             collection_id=label, </span>
+<span class="c1">#             term_id=data[facet].lower().replace(&#39;-&#39;,&#39;_&#39;) # Shift to underscores</span>
+<span class="c1">#         )</span>
+
+<span class="c1">#         authors = getattr(component, &#39;authors&#39;,None)</span>
+<span class="c1">#         if authors:</span>
+
+<span class="c1">#             for party in authors:</span>
+<span class="c1">#                 c = {</span>
+<span class="c1">#                     &#39;first_name&#39;:party[&#39;name&#39;].split(&#39; &#39;)[0],</span>
+<span class="c1">#                     &#39;last_name&#39;: party[&#39;name&#39;].split(&#39; &#39;)[-1],</span>
+<span class="c1">#                     &#39;orcid&#39;:party.get(&#39;orcid&#39;,None),</span>
+<span class="c1">#                     &#39;email&#39;:party.get(&#39;email&#39;,None)</span>
+<span class="c1">#                 }</span>
+<span class="c1">#                 if len(party.split(&#39; &#39;)) &gt; 2:</span>
+<span class="c1">#                     c[&#39;middle_names&#39;] = party[&#39;name&#39;].split(&#39; &#39;)[1:-1]</span>
+
+<span class="c1">#                 party_id = party_hash_func(c)</span>
+<span class="c1">#                 if party_id not in new_contacts and party_id not in existing_ids:</span>
+<span class="c1">#                     new_contacts[party_id] = c</span>
+
+<span class="c1">#     # Return all contacts that are new</span>
+
+<span class="c1">#     return [c for c in new_contacts.values()]</span>
+
 <div class="viewcode-block" id="abstract_from_esgvoc">
 <a class="viewcode-back" href="../../serializer.html#citations.serializers.abstract_from_esgvoc">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">abstract_from_esgvoc</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
