@@ -509,7 +509,7 @@ class GenericSerializerMixin(serializers.ModelSerializer):
         # If trying to create an existing record, switch to updating it.
         if self.Meta.model.objects.filter(pk=pk):
             return self.update(
-                self.Meta.model.objects.get(pk=pk), filtered_data, publish=publish
+                self.Meta.model.objects.get(pk=pk), filtered_data | {'publish': publish}
             )
 
         # Run publication (DOI Minting workflow)
@@ -859,7 +859,7 @@ class CitationsSerializer(GenericSerializerMixin):
         filtered_data = super().create(validated_data)
 
         # Ensure correct ordering - parties only
-        instance = Citations.objects.get(id=filtered_data['id'])
+        instance = Citations.objects.filter(title=filtered_data['title'], version=filtered_data['version'])[0]
         self._set_order(instance, filtered_data.get('contacts',[]))
 
         return filtered_data
