@@ -919,7 +919,7 @@ class CitationsView(PaginatedListView):
                     'value': c,
                     'selected': True if self.request.GET.get(label) == c else False
                 }
-                for c in Citations.objects.filter(**self.extra_filters()).values_list(label, flat=True).distinct()
+                for c in sorted(Citations.objects.filter(**self.extra_filters()).values_list(label, flat=True).distinct())
             ] for label in self.faceted_search
         }
 
