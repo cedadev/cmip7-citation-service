@@ -231,7 +231,7 @@
     <span class="p">}</span>
 
     <span class="k">if</span> <span class="s2">&quot;test&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">settings</span><span class="o">.</span><span class="n">DATACITE_API_URL</span><span class="p">:</span>
-        <span class="n">payload</span><span class="p">[</span><span class="s2">&quot;attributes&quot;</span><span class="p">][</span><span class="s2">&quot;event&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;publish&quot;</span>
+        <span class="n">payload</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][</span><span class="s2">&quot;attributes&quot;</span><span class="p">][</span><span class="s2">&quot;event&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;publish&quot;</span>
 
     <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Sending Request to: </span><span class="si">{</span><span class="n">settings</span><span class="o">.</span><span class="n">DATACITE_API_URL</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
