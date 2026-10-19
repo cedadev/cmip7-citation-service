@@ -25,7 +25,7 @@ class LazyQuerySet:
 class FundingStreamLQ(LazyQuerySet):
 
     def render(self, item: Model):
-        fs = {k: getattr(item, k, None) for k in self.list_param_reqs}
+        fs = {k: getattr(item, k, None) for k in self.required_params}
         fs["affiliation_id"] = item.affiliation_id
         return fs
 

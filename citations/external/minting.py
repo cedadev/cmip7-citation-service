@@ -149,7 +149,7 @@ def mint_doi_for_record(
     }
 
     if "test" not in settings.DATACITE_API_URL:
-        payload["attributes"]["event"] = "publish"
+        payload['data']["attributes"]["event"] = "publish"
 
     logger.info(f"Sending Request to: {settings.DATACITE_API_URL}")
 
