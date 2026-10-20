@@ -257,7 +257,7 @@ def extract_from_orcid(orcid):
 
     # Demo loader for loading ORCID institutions to Party (if already known)
     if r is None:
-        return None
+        return []
 
     institutions = []
     for k, v in r.items():

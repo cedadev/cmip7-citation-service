@@ -647,10 +647,14 @@ class PartiesSerializer(GenericSerializerMixin):
 
         if data.get("affiliations", None) is not None:
             # Properly connect non-blank affiliations
-            affiliation_data += json.loads(data.pop("affiliations")[0])
+            affils = data.pop('affiliations')
+            if isinstance(affils, str):
+                affils = json.loads(affils)
 
-        if not isinstance(affiliation_data, list):
-            affiliation_data = [affiliation_data]
+            for affil in affils:
+                if isinstance(affil, str):
+                    affil = json.loads(affil)
+                affiliation_data += [affil]
 
         # Create new institutions from the affiliations for this Author/Party
         if len(affiliation_data) > 0:
