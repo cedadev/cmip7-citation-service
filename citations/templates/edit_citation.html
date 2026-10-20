@@ -389,23 +389,12 @@
 
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 <script>
+
 document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => {
       new bootstrap.Popover(el);
     });
 });
-document.addEventListener("keydown", function(e) {
-    if (e.key === 'Enter'){
-        location.reload();
-    }
-    //if (e.key === 'Tab') {
-    //    e.preventDefault();
-    //    const row = e.target.closest("tr");
-    //    const inputs = row.querySelectorAll("input");
-    //    window.alert(inputs[0].id);
-    //}
-
-})
 
 document.addEventListener("DOMContentLoaded", function () {
     // Contacts Form Syntax
