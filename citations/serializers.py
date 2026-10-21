@@ -650,21 +650,35 @@ class PartiesSerializer(GenericSerializerMixin):
                     affil = json.loads(affil)
                 affiliation_data += [affil]
 
+        affil_matches = {}
+        for a in affiliation_data:
+
+            if isinstance(a,str):
+                if a not in affil_matches:
+                    affil_matches[a] = {}
+                affil_matches[a].update({'name':a})
+            else:
+                if a['name'] not in affil_matches:
+                    affil_matches[a['name']] = {}
+                affil_matches[a['name']].update(a)
+
+
         # Create new institutions from the affiliations for this Author/Party
-        if len(affiliation_data) > 0:
+        if len(affil_matches.values()) > 0:
             data["affiliations"] = [
                 chain_new_objects(
-                    {"name": a},
+                    a,
                     InstitutionsSerializer,
                     Institutions,
                     user_id=user_id
                 )
-                for a in affiliation_data
+                for a in affil_matches.values()
             ]
 
         # ALWAYS reset ID of party object as it comes in.
         # Add ID from hashed version of all names
         data["id"] = PartiesSerializer.Meta.get_id(data)
+
         return data
 
 
