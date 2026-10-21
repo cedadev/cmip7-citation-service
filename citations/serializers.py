@@ -411,6 +411,9 @@ def chain_new_objects(
         serial.save()
         inst_pk = serial.instance["id"]
     else:
+        # Ensure no resetting of ID for existing record
+        data.pop('id',None)
+        data.pop('pk',None)
         # Update the existing record with new data - if allowed
         instance = instance[0]
         serial = serializer(data=data | {'user_id':user_id}, instance=instance)
@@ -428,7 +431,7 @@ def chain_new_objects(
         # extra kafka messages if that is in place.
         if update:
             serial.save()
-        inst_pk = serial.validated_data.get("id", instance.pk)
+        inst_pk = instance.pk
 
     # Returns the id of the record
     # NOTE: If the internal kafka queue is set up, it is possible the ID will be for a record that does not yet exist.
@@ -579,10 +582,6 @@ class InstitutionsSerializer(GenericSerializerMixin):
         @classmethod
         def get_id(cls, data):
 
-            if 'pk' in data:
-                return data['pk']
-            if 'id' in data:
-                return data['id']
             return hashlib.sha1(data["name"].encode()).hexdigest()
 
     def fill_data_parameters(self, data, *args, **kwargs):
@@ -622,11 +621,6 @@ class PartiesSerializer(GenericSerializerMixin):
 
         @classmethod
         def get_id(cls, data):
-
-            if 'pk' in data:
-                return data['pk']
-            if 'id' in data:
-                return data['id']
 
             naming_hash = (
                 data["first_name"]
@@ -668,9 +662,9 @@ class PartiesSerializer(GenericSerializerMixin):
                 for a in affiliation_data
             ]
 
-        if "id" not in data:
-            # Add ID from hashed version of all names
-            data["id"] = PartiesSerializer.Meta.get_id(data)
+        # ALWAYS reset ID of party object as it comes in.
+        # Add ID from hashed version of all names
+        data["id"] = PartiesSerializer.Meta.get_id(data)
         return data
 
 
@@ -727,10 +721,7 @@ class ReferencesSerializer(GenericSerializerMixin):
 
         @classmethod
         def get_id(cls, data):
-            if 'pk' in data:
-                return data['pk']
-            if 'id' in data:
-                return data['id']
+            # References MUST have an ID
             return data['id']
 
     def fill_data_parameters(self, data: dict, *args, **kwargs):
