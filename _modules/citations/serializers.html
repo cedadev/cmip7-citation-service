@@ -505,6 +505,9 @@
         <span class="n">serial</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
         <span class="n">inst_pk</span> <span class="o">=</span> <span class="n">serial</span><span class="o">.</span><span class="n">instance</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span>
     <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Ensure no resetting of ID for existing record</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">,</span><span class="kc">None</span><span class="p">)</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;pk&#39;</span><span class="p">,</span><span class="kc">None</span><span class="p">)</span>
         <span class="c1"># Update the existing record with new data - if allowed</span>
         <span class="n">instance</span> <span class="o">=</span> <span class="n">instance</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="n">serial</span> <span class="o">=</span> <span class="n">serializer</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span> <span class="o">|</span> <span class="p">{</span><span class="s1">&#39;user_id&#39;</span><span class="p">:</span><span class="n">user_id</span><span class="p">},</span> <span class="n">instance</span><span class="o">=</span><span class="n">instance</span><span class="p">)</span>
@@ -522,7 +525,7 @@
         <span class="c1"># extra kafka messages if that is in place.</span>
         <span class="k">if</span> <span class="n">update</span><span class="p">:</span>
             <span class="n">serial</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
-        <span class="n">inst_pk</span> <span class="o">=</span> <span class="n">serial</span><span class="o">.</span><span class="n">validated_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="n">instance</span><span class="o">.</span><span class="n">pk</span><span class="p">)</span>
+        <span class="n">inst_pk</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">pk</span>
 
     <span class="c1"># Returns the id of the record</span>
     <span class="c1"># NOTE: If the internal kafka queue is set up, it is possible the ID will be for a record that does not yet exist.</span>
@@ -694,10 +697,6 @@
         <span class="nd">@classmethod</span>
         <span class="k">def</span><span class="w"> </span><span class="nf">get_id</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
 
-            <span class="k">if</span> <span class="s1">&#39;pk&#39;</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;pk&#39;</span><span class="p">]</span>
-            <span class="k">if</span> <span class="s1">&#39;id&#39;</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span>
             <span class="k">return</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha1</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
 
 <div class="viewcode-block" id="InstitutionsSerializer.fill_data_parameters">
@@ -747,11 +746,6 @@
         <span class="nd">@classmethod</span>
         <span class="k">def</span><span class="w"> </span><span class="nf">get_id</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
 
-            <span class="k">if</span> <span class="s1">&#39;pk&#39;</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;pk&#39;</span><span class="p">]</span>
-            <span class="k">if</span> <span class="s1">&#39;id&#39;</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span>
-
             <span class="n">naming_hash</span> <span class="o">=</span> <span class="p">(</span>
                 <span class="n">data</span><span class="p">[</span><span class="s2">&quot;first_name&quot;</span><span class="p">]</span>
                 <span class="o">+</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;middle_names&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
@@ -794,9 +788,9 @@
                 <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">affiliation_data</span>
             <span class="p">]</span>
 
-        <span class="k">if</span> <span class="s2">&quot;id&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
-            <span class="c1"># Add ID from hashed version of all names</span>
-            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">PartiesSerializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">get_id</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="c1"># ALWAYS reset ID of party object as it comes in.</span>
+        <span class="c1"># Add ID from hashed version of all names</span>
+        <span class="n">data</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">PartiesSerializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">get_id</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">data</span></div>
 </div>
 
@@ -863,10 +857,7 @@
 
         <span class="nd">@classmethod</span>
         <span class="k">def</span><span class="w"> </span><span class="nf">get_id</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
-            <span class="k">if</span> <span class="s1">&#39;pk&#39;</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;pk&#39;</span><span class="p">]</span>
-            <span class="k">if</span> <span class="s1">&#39;id&#39;</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span>
+            <span class="c1"># References MUST have an ID</span>
             <span class="k">return</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span>
 
 <div class="viewcode-block" id="ReferencesSerializer.fill_data_parameters">
