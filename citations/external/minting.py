@@ -132,7 +132,7 @@ def mint_doi_for_record(
                 },
                 "publicationYear": yyyy,  # Do we want this as a field in the citation service?
                 "types": {"resourceTypeGeneral": "Collection"},
-                "url": settings.SERVICE_URL + "/citation/" + id,
+                "url": os.path.join(settings.SERVICE_URL,"citation",id),
                 "version": data["version"],
                 "rightsList": [],
                 "fundingReferences": funds,
@@ -165,7 +165,7 @@ def mint_doi_for_record(
         "content-type": "application/json",
         "authorization": f"Basic {token}",
     }
-
+    logger.debug(payload)
     r = requests.post(settings.DATACITE_API_URL, json=payload, headers=headers)
 
     if r.status_code >= 300:
