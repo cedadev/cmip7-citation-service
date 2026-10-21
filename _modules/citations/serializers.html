@@ -776,21 +776,35 @@
                     <span class="n">affil</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">affil</span><span class="p">)</span>
                 <span class="n">affiliation_data</span> <span class="o">+=</span> <span class="p">[</span><span class="n">affil</span><span class="p">]</span>
 
+        <span class="n">affil_matches</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">affiliation_data</span><span class="p">:</span>
+
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="nb">str</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">a</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">affil_matches</span><span class="p">:</span>
+                    <span class="n">affil_matches</span><span class="p">[</span><span class="n">a</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+                <span class="n">affil_matches</span><span class="p">[</span><span class="n">a</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s1">&#39;name&#39;</span><span class="p">:</span><span class="n">a</span><span class="p">})</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">a</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">affil_matches</span><span class="p">:</span>
+                    <span class="n">affil_matches</span><span class="p">[</span><span class="n">a</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+                <span class="n">affil_matches</span><span class="p">[</span><span class="n">a</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+
+
         <span class="c1"># Create new institutions from the affiliations for this Author/Party</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">affiliation_data</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">affil_matches</span><span class="o">.</span><span class="n">values</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">data</span><span class="p">[</span><span class="s2">&quot;affiliations&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
                 <span class="n">chain_new_objects</span><span class="p">(</span>
-                    <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">a</span><span class="p">},</span>
+                    <span class="n">a</span><span class="p">,</span>
                     <span class="n">InstitutionsSerializer</span><span class="p">,</span>
                     <span class="n">Institutions</span><span class="p">,</span>
                     <span class="n">user_id</span><span class="o">=</span><span class="n">user_id</span>
                 <span class="p">)</span>
-                <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">affiliation_data</span>
+                <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">affil_matches</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
             <span class="p">]</span>
 
         <span class="c1"># ALWAYS reset ID of party object as it comes in.</span>
         <span class="c1"># Add ID from hashed version of all names</span>
         <span class="n">data</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">PartiesSerializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">get_id</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
         <span class="k">return</span> <span class="n">data</span></div>
 </div>
 

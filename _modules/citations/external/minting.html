@@ -214,7 +214,7 @@
                 <span class="p">},</span>
                 <span class="s2">&quot;publicationYear&quot;</span><span class="p">:</span> <span class="n">yyyy</span><span class="p">,</span>  <span class="c1"># Do we want this as a field in the citation service?</span>
                 <span class="s2">&quot;types&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;resourceTypeGeneral&quot;</span><span class="p">:</span> <span class="s2">&quot;Collection&quot;</span><span class="p">},</span>
-                <span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="n">settings</span><span class="o">.</span><span class="n">SERVICE_URL</span> <span class="o">+</span> <span class="s2">&quot;/citation/&quot;</span> <span class="o">+</span> <span class="nb">id</span><span class="p">,</span>
+                <span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">SERVICE_URL</span><span class="p">,</span><span class="s2">&quot;citation&quot;</span><span class="p">,</span><span class="nb">id</span><span class="p">),</span>
                 <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;version&quot;</span><span class="p">],</span>
                 <span class="s2">&quot;rightsList&quot;</span><span class="p">:</span> <span class="p">[],</span>
                 <span class="s2">&quot;fundingReferences&quot;</span><span class="p">:</span> <span class="n">funds</span><span class="p">,</span>
@@ -247,7 +247,7 @@
         <span class="s2">&quot;content-type&quot;</span><span class="p">:</span> <span class="s2">&quot;application/json&quot;</span><span class="p">,</span>
         <span class="s2">&quot;authorization&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Basic </span><span class="si">{</span><span class="n">token</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
     <span class="p">}</span>
-
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
     <span class="n">r</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">DATACITE_API_URL</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">payload</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">status_code</span> <span class="o">&gt;=</span> <span class="mi">300</span><span class="p">:</span>
