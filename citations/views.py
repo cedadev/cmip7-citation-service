@@ -331,7 +331,7 @@ def render_cite_as(citation: Citations):
     # Add version to cite as?
     return {
         "title": f'{"; ".join(all_authors)}. ({yyyy}).',
-        "rotc": f"{citation.title}. v{citation.version}. {settings.PUBLISHER}.",
+        "rotc": f"ESGF-NG {citation.title}. v{citation.version}. {settings.PUBLISHER}.",
     }
 
 
