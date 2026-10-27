@@ -18,7 +18,7 @@
         </tr>
         <tr>
             <th>ORCID</th>
-            <td><a href='https://orcid.org/my-orcid?emailVerified=true&orcid={{ party.orcid }}'>{{ party.orcid }}</a></td>
+            <td><a href='https://orcid.org/{{ party.orcid }}'>{{ party.orcid }}</a></td>
         </tr>
         <tr>
             <th>Email</th>
@@ -46,17 +46,30 @@
     <table class="table table-striped border border-light">
         <tr>
             <th>Name</th>
+            <th>Status</th>
             <th>Role</th>
         </tr>
         {% for citation in primaries %}
         <tr>
             <td><a href = "{% url 'citations:citation' title=citation.title %}?version={{ citation.version }}">{{ citation.title }} (v{{ citation.version }})</a></td>
+            <td>{% if citation.published %}
+                <span class="badge bg-primary" style="color:white;">Published</span>
+                {% else %}
+                <span class="badge bg-secondary" style="color:white;">Unpublished</span>
+                {% endif %}
+            </td>
             <td>Primary</td>
         </tr>
         {% endfor %}
         {% for citation in contacts %}
         <tr>
             <td><a href = "{% url 'citations:citation' title=citation.title %}?version={{ citation.version }}">{{ citation.title }} (v{{ citation.version }})</a></td>
+            <td>{% if citation.published %}
+                <span class="badge bg-primary" style="color:white;">APublished</span>
+                {% else %}
+                <span class="badge bg-secondary" style="color:white;">Unpublished</span>
+                {% endif %}
+            </td>
             <td>Contact</td>
         </tr>
         {% endfor %}

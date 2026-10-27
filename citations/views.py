@@ -1185,12 +1185,14 @@ class PartyView(GenericRenderedView):
         context["party_fullname"] = fullname(context["party"])
 
         primary_citations = [
-            {"title": citation.title, "version": citation.version, "id": citation.id}
+            {"title": citation.title, "version": citation.version, 
+             "id": citation.id, "published": citation.published}
             for citation in Citations.objects.filter(primary=instance)
         ]
         context["primaries"] = primary_citations
         contact_citations = [
-            {"title": citation.title, "version": citation.version, "id": citation.id}
+            {"title": citation.title, "version": citation.version, 
+            "id": citation.id, "published": citation.published}
             for citation in Citations.objects.filter(contacts=instance)
         ]
         context["contacts"] = contact_citations
