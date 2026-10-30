@@ -65,7 +65,7 @@
         <tr>
             <td><a href = "{% url 'citations:citation' title=citation.title %}?version={{ citation.version }}">{{ citation.title }} (v{{ citation.version }})</a></td>
             <td>{% if citation.published %}
-                <span class="badge bg-primary" style="color:white;">APublished</span>
+                <span class="badge bg-primary" style="color:white;">Published</span>
                 {% else %}
                 <span class="badge bg-secondary" style="color:white;">Unpublished</span>
                 {% endif %}
