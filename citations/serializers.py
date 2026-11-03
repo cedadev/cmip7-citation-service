@@ -959,7 +959,8 @@ class CitationsSerializer(GenericSerializerMixin):
                     PartiesSerializer,
                     Parties,
                     optionals=optional_party,
-                    user_id=user_id
+                    user_id=user_id,
+                    allow_update=True
                 )
                 primary = search_primary
             data["primary_id"] = primary
@@ -973,7 +974,8 @@ class CitationsSerializer(GenericSerializerMixin):
                         PartiesSerializer,
                         Parties,
                         optionals=optional_party,
-                        user_id=user_id
+                        user_id=user_id,
+                        allow_update=True
                     )
                     contacts.append(search_contact)
                 else:
