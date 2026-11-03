@@ -634,22 +634,23 @@ class PartiesSerializer(GenericSerializerMixin):
         Auto-fill content into the data dict.
         """
 
-        # Pull information from ORCID
         affiliation_data = []
-        if data.get("orcid", None):
+        affils = data.pop('affiliations',[]) or []
+
+        if isinstance(affils, str):
+            affils = json.loads(affils)
+
+        for affil in affils:
+            if isinstance(affil, str):
+                affil = json.loads(affil)
+            affiliation_data += [affil]
+
+        # Pull from ORCID only if no other affiliations already supplied
+        if data.get("orcid", None) and len(affiliation_data) == 0:
             affiliation_data += extract_from_orcid(data["orcid"])
 
-        if data.get("affiliations", None) is not None:
-            # Properly connect non-blank affiliations
-            affils = data.pop('affiliations')
-            if isinstance(affils, str):
-                affils = json.loads(affils)
-
-            for affil in affils:
-                if isinstance(affil, str):
-                    affil = json.loads(affil)
-                affiliation_data += [affil]
-
+        # While not pulling ORCID as well as existing affiliations,
+        # affiliations may be duplicated in Party submitted info.
         affil_matches = {}
         for a in affiliation_data:
 
@@ -661,7 +662,6 @@ class PartiesSerializer(GenericSerializerMixin):
                 if a['name'] not in affil_matches:
                     affil_matches[a['name']] = {}
                 affil_matches[a['name']].update(a)
-
 
         # Create new institutions from the affiliations for this Author/Party
         if len(affil_matches.values()) > 0:
@@ -959,7 +959,8 @@ class CitationsSerializer(GenericSerializerMixin):
                     PartiesSerializer,
                     Parties,
                     optionals=optional_party,
-                    user_id=user_id
+                    user_id=user_id,
+                    allow_update=True
                 )
                 primary = search_primary
             data["primary_id"] = primary
@@ -973,7 +974,8 @@ class CitationsSerializer(GenericSerializerMixin):
                         PartiesSerializer,
                         Parties,
                         optionals=optional_party,
-                        user_id=user_id
+                        user_id=user_id,
+                        allow_update=True
                     )
                     contacts.append(search_contact)
                 else:
