@@ -1170,11 +1170,41 @@ class FundingStreamView(GenericRenderedView):
         return context
 
 
-class PartyView(GenericRenderedView):
+class InstitutionPermissionMixin(PermissionRequiredMixin):
+
+    def check_allowed(self, request, pk: str = None, inst: str = None, *args, **kwargs):
+        """
+        Setup for form view
+        """
+
+        # Party-view supplies via kwargs, citation view directly.
+        pk = pk or request.GET.get("pk")
+
+        if not request.user.user_permissions.filter(codename="add_citations"):
+            return False
+
+        # invalid institution
+        inst = inst or '<NONE>'
+        if pk:
+            # Editing existing record or creating from template.
+            citation = self.model.objects.filter(pk=pk).order_by("version").last()
+            if not citation:
+                raise Http404(f'Citation for {pk} does not exist')
+            inst = citation.institution_id
+
+        return bool(request.user.user_permissions.filter(
+                codename=f"edit_{inst}"
+            ))
+
+
+class PartyView(InstitutionPermissionMixin,GenericRenderedView):
     template_name = "party.html"
+
+    permission_required = "citations.add_citations"
 
     def get_context_data(self, pk, **kwargs):
         context = super().get_context_data(**kwargs)
+
         if not Parties.objects.filter(id=pk):
             raise Http404("Requested party does not exist")
 
@@ -1186,16 +1216,25 @@ class PartyView(GenericRenderedView):
 
         primary_citations = [
             {"title": citation.title, "version": citation.version, 
-             "id": citation.id, "published": citation.published}
+             "id": citation.id, "published": citation.published, "institution": citation.institution_id}
             for citation in Citations.objects.filter(primary=instance)
         ]
         context["primaries"] = primary_citations
         contact_citations = [
             {"title": citation.title, "version": citation.version, 
-            "id": citation.id, "published": citation.published}
+            "id": citation.id, "published": citation.published, "institution": citation.institution_id}
             for citation in Citations.objects.filter(contacts=instance)
         ]
         context["contacts"] = contact_citations
+
+        institutions = [c['institution'] for c in context['primaries']] + \
+            [c['institution'] for c in context['contacts']]
+
+        any_affil = []
+        for inst in institutions:
+            any_affil.append(self.check_allowed(self.request, inst=inst))
+        if any(any_affil):
+            context['reviewer_party'] = True
 
         return context
 
@@ -1409,14 +1448,20 @@ def check_changes(instance, data):
             changed_data[attr] = value
     return changed_data
 
-
-class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
+class CitationFormMixin(InstitutionPermissionMixin, GenericRenderedView, FormView):
 
     permission_required = "citations.add_citations"
     raise_exception = True
     template_name = "edit_citation.html"
     model = Citations
     serializer_class = CitationsSerializer
+
+    def dispatch(self, *args, **kwargs):
+    
+        if not self.check_allowed(*args, **kwargs):
+            return HttpResponseRedirect(reverse("citations:reviewer_request"))
+        else:
+            return super().dispatch(*args, **kwargs)
 
     def check_form_clashes(
             self, 
@@ -1570,28 +1615,6 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
             # Create New
             new_version = 1
         return new_version
-
-    def dispatch(self, request, *args, **kwargs):
-        """
-        Setup for form view
-        """
-
-        if not request.user.user_permissions.filter(codename="add_citations"):
-            return HttpResponseRedirect(reverse("citations:reviewer_request"))
-
-        pk = kwargs.get("pk") or request.GET.get("pk")
-        if pk:
-            # Editing existing record or creating from template.
-            citation = self.model.objects.filter(pk=pk).order_by("version").last()
-            if not citation:
-                raise Http404(f'Citation for {pk} does not exist')
-            if request.user.user_permissions.filter(
-                codename=f"edit_{citation.institution_id}"
-            ):
-                return super().dispatch(request, *args, **kwargs)
-            return HttpResponseRedirect(reverse("citations:reviewer_request"))
-        else:
-            return super().dispatch(request, *args, **kwargs)
 
     def reload_formset_values(self, context: dict, post):
         """
@@ -2273,7 +2296,7 @@ class ReviewerRequestView(LoginRequiredMixin, GenericRenderedView, FormView):
 
         return HttpResponseRedirect(reverse("citations:citations"))
 
-class EditPublishedCitationFormView(PermissionRequiredMixin, GenericRenderedView, FormView):
+class EditPublishedCitationFormView(InstitutionPermissionMixin, GenericRenderedView, FormView):
 
     permission_required = "citations.add_citations"
     raise_exception = True
@@ -2297,6 +2320,13 @@ class EditPublishedCitationFormView(PermissionRequiredMixin, GenericRenderedView
 
     # Also adds context to either edit the existing record on form submission
     # Or creates a new record with the given data
+
+    def dispatch(self, *args, **kwargs):
+    
+        if not self.check_allowed(*args, **kwargs):
+            return HttpResponseRedirect(reverse("citations:reviewer_request"))
+        else:
+            return super().dispatch(*args, **kwargs)
 
     def update_data(self, instance, data):
         """
@@ -2428,27 +2458,6 @@ class EditPublishedCitationFormView(PermissionRequiredMixin, GenericRenderedView
         messages.success(self.request, msg)
 
         return HttpResponseRedirect(reverse("citations:citation", args=args))
-
-    def dispatch(self, request, *args, **kwargs):
-        """
-        Setup for form view
-        """
-        if not request.user.user_permissions.filter(codename="add_citations"):
-            return HttpResponseRedirect(reverse("citations:reviewer_request"))
-
-        pk = kwargs.get("pk") or request.GET.get("pk")
-        if pk:
-            # Editing existing record or creating from template.
-            citation = self.model.objects.filter(pk=pk).order_by("version").last()
-            if not citation:
-                raise Http404(f'Citation for {pk} does not exist')
-            if request.user.user_permissions.filter(
-                codename=f"edit_{citation.institution_id}"
-            ):
-                return super().dispatch(request, *args, **kwargs)
-            return HttpResponseRedirect(reverse("citations:reviewer_request"))
-        else:
-            return super().dispatch(request, *args, **kwargs)
 
     def reload_formset_values(self, context: dict, post):
         """

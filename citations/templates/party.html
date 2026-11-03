@@ -26,6 +26,7 @@
         </tr>
     </table>
 
+    <div>
     <h2>Affiliations</h2>
     <table class="table table-striped border border-light">
         <tr>
@@ -40,7 +41,17 @@
         </tr>
         {% endfor %}
     </table>
+    {% if reviewer_party %}
+        <a href="{% url 'citations:edit_citation' pk=party.id %}">
+                <input id="edit" class="btn btn-primary m-0" value="Edit Affiliations" type="button" readonly>
+        </a>
+    {% else %}
+    <p><i>Contact your modelling centre/institution reviewer representative if information needs to be updated.</i></p>
+    {% endif %}
+    <br>
+    </div>
 
+    <div>
     <h2>Citation Contributions</h2>
     {% endif %}
     <table class="table table-striped border border-light">
@@ -74,4 +85,5 @@
         </tr>
         {% endfor %}
     </table>
+    </div>
 {% endblock %}
