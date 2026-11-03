@@ -760,22 +760,23 @@
 <span class="sd">        Auto-fill content into the data dict.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-        <span class="c1"># Pull information from ORCID</span>
         <span class="n">affiliation_data</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;orcid&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="n">affils</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;affiliations&#39;</span><span class="p">,[])</span> <span class="ow">or</span> <span class="p">[]</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">affils</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">affils</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">affils</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">affil</span> <span class="ow">in</span> <span class="n">affils</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">affil</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="n">affil</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">affil</span><span class="p">)</span>
+            <span class="n">affiliation_data</span> <span class="o">+=</span> <span class="p">[</span><span class="n">affil</span><span class="p">]</span>
+
+        <span class="c1"># Pull from ORCID only if no other affiliations already supplied</span>
+        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;orcid&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">affiliation_data</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">affiliation_data</span> <span class="o">+=</span> <span class="n">extract_from_orcid</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;orcid&quot;</span><span class="p">])</span>
 
-        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;affiliations&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="c1"># Properly connect non-blank affiliations</span>
-            <span class="n">affils</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;affiliations&#39;</span><span class="p">)</span>
-            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">affils</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-                <span class="n">affils</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">affils</span><span class="p">)</span>
-
-            <span class="k">for</span> <span class="n">affil</span> <span class="ow">in</span> <span class="n">affils</span><span class="p">:</span>
-                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">affil</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-                    <span class="n">affil</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">affil</span><span class="p">)</span>
-                <span class="n">affiliation_data</span> <span class="o">+=</span> <span class="p">[</span><span class="n">affil</span><span class="p">]</span>
-
+        <span class="c1"># While not pulling ORCID as well as existing affiliations,</span>
+        <span class="c1"># affiliations may be duplicated in Party submitted info.</span>
         <span class="n">affil_matches</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">affiliation_data</span><span class="p">:</span>
 
@@ -787,7 +788,6 @@
                 <span class="k">if</span> <span class="n">a</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">affil_matches</span><span class="p">:</span>
                     <span class="n">affil_matches</span><span class="p">[</span><span class="n">a</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
                 <span class="n">affil_matches</span><span class="p">[</span><span class="n">a</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
-
 
         <span class="c1"># Create new institutions from the affiliations for this Author/Party</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">affil_matches</span><span class="o">.</span><span class="n">values</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
@@ -1109,7 +1109,8 @@
                     <span class="n">PartiesSerializer</span><span class="p">,</span>
                     <span class="n">Parties</span><span class="p">,</span>
                     <span class="n">optionals</span><span class="o">=</span><span class="n">optional_party</span><span class="p">,</span>
-                    <span class="n">user_id</span><span class="o">=</span><span class="n">user_id</span>
+                    <span class="n">user_id</span><span class="o">=</span><span class="n">user_id</span><span class="p">,</span>
+                    <span class="n">allow_update</span><span class="o">=</span><span class="kc">True</span>
                 <span class="p">)</span>
                 <span class="n">primary</span> <span class="o">=</span> <span class="n">search_primary</span>
             <span class="n">data</span><span class="p">[</span><span class="s2">&quot;primary_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">primary</span>
@@ -1123,7 +1124,8 @@
                         <span class="n">PartiesSerializer</span><span class="p">,</span>
                         <span class="n">Parties</span><span class="p">,</span>
                         <span class="n">optionals</span><span class="o">=</span><span class="n">optional_party</span><span class="p">,</span>
-                        <span class="n">user_id</span><span class="o">=</span><span class="n">user_id</span>
+                        <span class="n">user_id</span><span class="o">=</span><span class="n">user_id</span><span class="p">,</span>
+                        <span class="n">allow_update</span><span class="o">=</span><span class="kc">True</span>
                     <span class="p">)</span>
                     <span class="n">contacts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">search_contact</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
