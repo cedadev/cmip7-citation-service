@@ -130,6 +130,9 @@ def download_bibtex(request, title, *args, **kwargs):
     timestamp = record.publication_timestamp
 
     primary = fullname(PartiesSerializer(record.primary).data)
+    contacts = [fullname(PartiesSerializer(c).data) for c in record.contacts.all()]
+
+    allparties = ' and '.join([primary] + contacts)
 
     yyyymmdd = timestamp.split('T')[0].replace('-','')
     yyyy = yyyymmdd[:4]
@@ -140,7 +143,7 @@ def download_bibtex(request, title, *args, **kwargs):
         '   title = {' + record.title + '},',
         '   publisher = {' + settings.PUBLISHER_LONGNAME + '},',
         '   year = {' + yyyy + '},',
-        '   author = {' + primary + '},',
+        '   author = {' + allparties + '},',
         '   doi = {' + doi + '},',
         '   citation_version = {v' + str(record.version) + '}', 
         '}'
@@ -184,11 +187,12 @@ def download_ris(request, title, *args, **kwargs):
     timestamp = record.publication_timestamp
 
     primary = get_citable_party(record.primary)
+    contacts = [get_citable_party(c) for c in record.contacts.all()]
 
     yyyymmdd = timestamp.split('T')[0].replace('-','')
     yyyy = yyyymmdd[:4]
 
-    ris = '\n'.join([
+    ris = [
         'TY  - DATA',
         f'ID  - {doi_full}',
         f'T1  - {record.title}',
@@ -196,13 +200,16 @@ def download_ris(request, title, *args, **kwargs):
         f'PY  - {yyyy}',
         f'UR  - {doi_full}',
         f'DO  - {doi}',
-        f'AU  - {primary}',
+        f'AU  - {primary}'] + [ \
+        f'AU  - {c}' for c in contacts] + [ \
         f'N1  - citation_version: {record.version}', 
         'ER  -'
-    ])
+    ]
+
+    ristext = '\n'.join(ris)
 
     response = HttpResponse(
-        ris, content_type='text/plain'
+        ristext, content_type='text/plain'
     )
 
     response["Content-Disposition"] = (
@@ -331,7 +338,7 @@ def render_cite_as(citation: Citations):
     # Add version to cite as?
     return {
         "title": f'{"; ".join(all_authors)}. ({yyyy}).',
-        "rotc": f"ESGF-NG {citation.title}. v{citation.version}. {settings.PUBLISHER}.",
+        "rotc": f"ESGF-NG {citation.title}. v{citation.version}. {settings.PUBLISHER_LONGNAME}.",
     }
 
 
