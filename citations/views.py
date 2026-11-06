@@ -1338,7 +1338,10 @@ class CitationAPIView(GenericAPIView):
         serializer.is_valid(raise_exception=True)
 
         if "institution_id" in data:
-            create_new_permission(request.user, data["institution_id"], raise_exception=True)
+            try:
+                create_new_permission(request.user, data["institution_id"], raise_exception=True)
+            except PermissionDenied as e:
+                return False, None, e
             
         title = serializer.validated_data.get("title")
 
