@@ -747,14 +747,23 @@ class SpecificAPIView(
     def put(self, request, *args, **kwargs):
         return self.update(request, *args, **kwargs)
 
-    def is_deletable(self, *args, **kwargs):
+    def is_deletable(self, request, *args, **kwargs):
+
+        if not request.user.user_permissions.filter(codename="add_citations"):
+            return HttpResponseForbidden(
+                "Permission denied for deletion of object."
+            )
         return True
 
     def delete(self, request, *args, **kwargs):
         instance = self.get_object()
 
         # Determine if this instance is connected to any other records?
-        if not self.is_deletable(instance):
+        deletable = self.is_deletable(request, instance)
+
+        if isinstance(deletable, HttpResponseForbidden):
+            return deletable
+        if not deletable:
             return HttpResponseForbidden(
                 "Not able to delete this instance as it is associated with other entities"
             )
@@ -1233,12 +1242,18 @@ class SpecificPartyAPIView(SpecificAPIView):
     queryset = Parties.objects.all()
     serializer_class = PartiesSerializer
 
-    def is_deletable(self, instance: Parties):
+    def is_deletable(self, request, instance: Parties):
+        is_deletable = super().is_deletable(request, instance)
+        if not isinstance(is_deletable,bool):
+            return is_deletable
+        if not is_deletable:
+            return False
 
         if Citations.objects.filter(primary_id=instance.pk):
             return False
         if Citations.objects.filter(contacts__in=[instance.pk]):
             return False
+        
         return True
 
 
