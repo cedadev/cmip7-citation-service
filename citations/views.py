@@ -1503,10 +1503,21 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
         if self.request.session.get('citation_clashes'):
             if len(clashes.keys()) <= len(self.request.session['citation_clashes'].keys()):
                 proceed = True
-                for k in clashes.keys():
+
+                iter = 0
+                while proceed and iter < len(clashes.keys()):
+
+                    k = list(clashes.keys())[iter]
+
+                    # New clash not present in the old session - immediately raise new issue
+                    if k not in self.request.session['citation_clashes']:
+                        proceed = False
+
+                    # Check details of past vs new clash - if they are different, don't proceed.
                     for swipe in clashes[k]:
                         if not any([swipe == scar for scar in self.request.session['citation_clashes'][k]]):
                             proceed = False
+                    iter += 1
 
         # Reset session clashes to nothing and return
         if proceed:
