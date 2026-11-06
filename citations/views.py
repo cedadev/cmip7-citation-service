@@ -1485,17 +1485,20 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
         Check all clashing information here
         """
 
+        # Determine form clashes on party info
         clashes = self.check_form_clashes(
             contact_formset,
             PartiesSerializer,
             Parties,
             ['email','orcid'],
             party_hash_func)
-        
+
+        # Reset session clashes if there are none
         if not clashes:
             self.request.session['citation_clashes'] = None
             return
 
+        # Check against existing clashes
         proceed = False
         if self.request.session.get('citation_clashes'):
             if len(clashes.keys()) <= len(self.request.session['citation_clashes'].keys()):
@@ -1505,10 +1508,12 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
                         if not any([swipe == scar for scar in self.request.session['citation_clashes'][k]]):
                             proceed = False
 
+        # Reset session clashes to nothing and return
         if proceed:
             self.request.session['citation_clashes'] = None
             return
-        
+
+        # Not proceeding - raise clashes as errors
         self.request.session['citation_clashes'] = clashes
 
         contact_map = []
