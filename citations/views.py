@@ -1385,6 +1385,23 @@ class SpecificCitationAPIView(SpecificAPIView):
         "cites",
     ]
 
+    def is_deletable(self, request, instance: Citations, *args, **kwargs):
+
+        is_deletable = super().is_deletable(request, instance)
+        if not isinstance(is_deletable,bool):
+            return is_deletable
+        if not is_deletable:
+            return False
+
+        institute = instance.institution_id
+        if institute:
+            if not request.user.user_permissions.filter(codename=f"edit_{institute}"):
+                return HttpResponseForbidden(
+                    "Permission denied for deletion of object."
+                )
+
+        return True
+
     def update(self, request, *args, **kwargs):
 
         data = unwrap_request(dict(request.data))
