@@ -75,12 +75,10 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#citations.views.GenericAPIView"><code class="docutils literal notranslate"><span class="pre">GenericAPIView</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#citations.views.GenericAPIView.get_permissions"><code class="docutils literal notranslate"><span class="pre">GenericAPIView.get_permissions()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#citations.views.GenericAPIView.initialize_request"><code class="docutils literal notranslate"><span class="pre">GenericAPIView.initialize_request()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#citations.views.SpecificAPIView"><code class="docutils literal notranslate"><span class="pre">SpecificAPIView</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#citations.views.SpecificAPIView.get_permissions"><code class="docutils literal notranslate"><span class="pre">SpecificAPIView.get_permissions()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#citations.views.SpecificAPIView.initialize_request"><code class="docutils literal notranslate"><span class="pre">SpecificAPIView.initialize_request()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#citations.views.PartiesView"><code class="docutils literal notranslate"><span class="pre">PartiesView</span></code></a><ul>
@@ -115,6 +113,7 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#citations.views.CitationView"><code class="docutils literal notranslate"><span class="pre">CitationView</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#citations.views.CitationView.find_record"><code class="docutils literal notranslate"><span class="pre">CitationView.find_record()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#citations.views.CitationView.get_context_data"><code class="docutils literal notranslate"><span class="pre">CitationView.get_context_data()</span></code></a></li>
 </ul>
 </li>
@@ -436,12 +435,6 @@ if the user already has permission for that institution.</p>
 <dd><p>Instantiates and returns the list of permissions that this view requires.</p>
 </dd></dl>
 
-<dl class="py method">
-<dt class="sig sig-object py" id="citations.views.GenericAPIView.initialize_request">
-<span class="sig-name descname"><span class="pre">initialize_request</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#GenericAPIView.initialize_request"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.GenericAPIView.initialize_request" title="Link to this definition"></a></dt>
-<dd><p>Decode Information Given to POST requests</p>
-</dd></dl>
-
 </dd></dl>
 
 <dl class="py class">
@@ -452,12 +445,6 @@ if the user already has permission for that institution.</p>
 <dt class="sig sig-object py" id="citations.views.SpecificAPIView.get_permissions">
 <span class="sig-name descname"><span class="pre">get_permissions</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#SpecificAPIView.get_permissions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.SpecificAPIView.get_permissions" title="Link to this definition"></a></dt>
 <dd><p>Instantiates and returns the list of permissions that this view requires.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="citations.views.SpecificAPIView.initialize_request">
-<span class="sig-name descname"><span class="pre">initialize_request</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#SpecificAPIView.initialize_request"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.SpecificAPIView.initialize_request" title="Link to this definition"></a></dt>
-<dd><p>Decode Information Given to POST requests</p>
 </dd></dl>
 
 </dd></dl>
@@ -586,6 +573,13 @@ if the user already has permission for that institution.</p>
 <dt class="sig sig-object py" id="citations.views.CitationView">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">citations.views.</span></span><span class="sig-name descname"><span class="pre">CitationView</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#CitationView"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.CitationView" title="Link to this definition"></a></dt>
 <dd><dl class="py method">
+<dt class="sig sig-object py" id="citations.views.CitationView.find_record">
+<span class="sig-name descname"><span class="pre">find_record</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">title</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#CitationView.find_record"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.CitationView.find_record" title="Link to this definition"></a></dt>
+<dd><p>Obtain the correct ID for the record in question.</p>
+<p>ID is unique so should be the source of truth</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="citations.views.CitationView.get_context_data">
 <span class="sig-name descname"><span class="pre">get_context_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">title</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/citations/views.html#CitationView.get_context_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#citations.views.CitationView.get_context_data" title="Link to this definition"></a></dt>
 <dd><p>Adds the CEDA branding or generic base for rendering.</p>

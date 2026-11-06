@@ -212,6 +212,9 @@
     <span class="n">timestamp</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">publication_timestamp</span>
 
     <span class="n">primary</span> <span class="o">=</span> <span class="n">fullname</span><span class="p">(</span><span class="n">PartiesSerializer</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">primary</span><span class="p">)</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+    <span class="n">contacts</span> <span class="o">=</span> <span class="p">[</span><span class="n">fullname</span><span class="p">(</span><span class="n">PartiesSerializer</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="o">.</span><span class="n">data</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">record</span><span class="o">.</span><span class="n">contacts</span><span class="o">.</span><span class="n">all</span><span class="p">()]</span>
+
+    <span class="n">allparties</span> <span class="o">=</span> <span class="s1">&#39; and &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">primary</span><span class="p">]</span> <span class="o">+</span> <span class="n">contacts</span><span class="p">)</span>
 
     <span class="n">yyyymmdd</span> <span class="o">=</span> <span class="n">timestamp</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;T&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">,</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
     <span class="n">yyyy</span> <span class="o">=</span> <span class="n">yyyymmdd</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span>
@@ -222,7 +225,7 @@
         <span class="s1">&#39;   title = {&#39;</span> <span class="o">+</span> <span class="n">record</span><span class="o">.</span><span class="n">title</span> <span class="o">+</span> <span class="s1">&#39;},&#39;</span><span class="p">,</span>
         <span class="s1">&#39;   publisher = {&#39;</span> <span class="o">+</span> <span class="n">settings</span><span class="o">.</span><span class="n">PUBLISHER_LONGNAME</span> <span class="o">+</span> <span class="s1">&#39;},&#39;</span><span class="p">,</span>
         <span class="s1">&#39;   year = {&#39;</span> <span class="o">+</span> <span class="n">yyyy</span> <span class="o">+</span> <span class="s1">&#39;},&#39;</span><span class="p">,</span>
-        <span class="s1">&#39;   author = {&#39;</span> <span class="o">+</span> <span class="n">primary</span> <span class="o">+</span> <span class="s1">&#39;},&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;   author = {&#39;</span> <span class="o">+</span> <span class="n">allparties</span> <span class="o">+</span> <span class="s1">&#39;},&#39;</span><span class="p">,</span>
         <span class="s1">&#39;   doi = {&#39;</span> <span class="o">+</span> <span class="n">doi</span> <span class="o">+</span> <span class="s1">&#39;},&#39;</span><span class="p">,</span>
         <span class="s1">&#39;   citation_version = {v&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">version</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;}&#39;</span><span class="p">,</span> 
         <span class="s1">&#39;}&#39;</span>
@@ -269,11 +272,12 @@
     <span class="n">timestamp</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">publication_timestamp</span>
 
     <span class="n">primary</span> <span class="o">=</span> <span class="n">get_citable_party</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">primary</span><span class="p">)</span>
+    <span class="n">contacts</span> <span class="o">=</span> <span class="p">[</span><span class="n">get_citable_party</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">record</span><span class="o">.</span><span class="n">contacts</span><span class="o">.</span><span class="n">all</span><span class="p">()]</span>
 
     <span class="n">yyyymmdd</span> <span class="o">=</span> <span class="n">timestamp</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;T&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">,</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
     <span class="n">yyyy</span> <span class="o">=</span> <span class="n">yyyymmdd</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span>
 
-    <span class="n">ris</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span>
+    <span class="n">ris</span> <span class="o">=</span> <span class="p">[</span>
         <span class="s1">&#39;TY  - DATA&#39;</span><span class="p">,</span>
         <span class="sa">f</span><span class="s1">&#39;ID  - </span><span class="si">{</span><span class="n">doi_full</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
         <span class="sa">f</span><span class="s1">&#39;T1  - </span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">title</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
@@ -281,13 +285,16 @@
         <span class="sa">f</span><span class="s1">&#39;PY  - </span><span class="si">{</span><span class="n">yyyy</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
         <span class="sa">f</span><span class="s1">&#39;UR  - </span><span class="si">{</span><span class="n">doi_full</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
         <span class="sa">f</span><span class="s1">&#39;DO  - </span><span class="si">{</span><span class="n">doi</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
-        <span class="sa">f</span><span class="s1">&#39;AU  - </span><span class="si">{</span><span class="n">primary</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s1">&#39;AU  - </span><span class="si">{</span><span class="n">primary</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span> \
+        <span class="sa">f</span><span class="s1">&#39;AU  - </span><span class="si">{</span><span class="n">c</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">contacts</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span> \
         <span class="sa">f</span><span class="s1">&#39;N1  - citation_version: </span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">version</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> 
         <span class="s1">&#39;ER  -&#39;</span>
-    <span class="p">])</span>
+    <span class="p">]</span>
+
+    <span class="n">ristext</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">ris</span><span class="p">)</span>
 
     <span class="n">response</span> <span class="o">=</span> <span class="n">HttpResponse</span><span class="p">(</span>
-        <span class="n">ris</span><span class="p">,</span> <span class="n">content_type</span><span class="o">=</span><span class="s1">&#39;text/plain&#39;</span>
+        <span class="n">ristext</span><span class="p">,</span> <span class="n">content_type</span><span class="o">=</span><span class="s1">&#39;text/plain&#39;</span>
     <span class="p">)</span>
 
     <span class="n">response</span><span class="p">[</span><span class="s2">&quot;Content-Disposition&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
@@ -428,7 +435,7 @@
     <span class="c1"># Add version to cite as?</span>
     <span class="k">return</span> <span class="p">{</span>
         <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="s2">&quot;; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">all_authors</span><span class="p">)</span><span class="si">}</span><span class="s1">. (</span><span class="si">{</span><span class="n">yyyy</span><span class="si">}</span><span class="s1">).&#39;</span><span class="p">,</span>
-        <span class="s2">&quot;rotc&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;ESGF-NG </span><span class="si">{</span><span class="n">citation</span><span class="o">.</span><span class="n">title</span><span class="si">}</span><span class="s2">. v</span><span class="si">{</span><span class="n">citation</span><span class="o">.</span><span class="n">version</span><span class="si">}</span><span class="s2">. </span><span class="si">{</span><span class="n">settings</span><span class="o">.</span><span class="n">PUBLISHER</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;rotc&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;ESGF-NG </span><span class="si">{</span><span class="n">citation</span><span class="o">.</span><span class="n">title</span><span class="si">}</span><span class="s2">. v</span><span class="si">{</span><span class="n">citation</span><span class="o">.</span><span class="n">version</span><span class="si">}</span><span class="s2">. </span><span class="si">{</span><span class="n">settings</span><span class="o">.</span><span class="n">PUBLISHER_LONGNAME</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">,</span>
     <span class="p">}</span></div>
 
 
@@ -592,7 +599,13 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">unwrap_request</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-    <span class="k">return</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+    <span class="n">keep_data</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+            <span class="k">continue</span>
+        <span class="n">keep_data</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+    <span class="k">return</span> <span class="n">keep_data</span>
 
 
 <div class="viewcode-block" id="check_publish_ok">
@@ -786,10 +799,37 @@
 
 
 
+<span class="k">class</span><span class="w"> </span><span class="nc">CommonAPIMixin</span><span class="p">:</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">initialize_request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Decode JSON serialized Information Given to POST requests</span>
+
+<span class="sd">        If needed, str-JSON data is decoded here.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">req</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">initialize_request</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="c1"># Modify req.data here</span>
+        <span class="n">mutable</span> <span class="o">=</span> <span class="n">req</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">json_fields</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">mutable</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">field</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mutable</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">field</span><span class="p">),</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">mutable</span><span class="p">[</span><span class="n">field</span><span class="p">]</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">mutable</span><span class="p">[</span><span class="n">field</span><span class="p">])</span>
+                <span class="k">except</span> <span class="n">json</span><span class="o">.</span><span class="n">decoder</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">:</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">mutable</span><span class="p">[</span><span class="n">field</span><span class="p">]</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">mutable</span><span class="p">[</span><span class="n">field</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;&#39;&quot;</span><span class="p">,</span> <span class="s1">&#39;&quot;&#39;</span><span class="p">))</span>
+                    <span class="k">except</span> <span class="n">json</span><span class="o">.</span><span class="n">decoder</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">:</span>
+                        <span class="k">pass</span> <span class="c1"># Still not JSON</span>
+        <span class="n">req</span><span class="o">.</span><span class="n">_full_data</span> <span class="o">=</span> <span class="n">mutable</span>  <span class="c1"># override parsed data</span>
+
+        <span class="k">return</span> <span class="n">req</span>
+
+
 <div class="viewcode-block" id="GenericAPIView">
 <a class="viewcode-back" href="../../views.html#citations.views.GenericAPIView">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">GenericAPIView</span><span class="p">(</span>
-    <span class="n">mixins</span><span class="o">.</span><span class="n">ListModelMixin</span><span class="p">,</span> <span class="n">mixins</span><span class="o">.</span><span class="n">CreateModelMixin</span><span class="p">,</span> <span class="n">generics</span><span class="o">.</span><span class="n">GenericAPIView</span>
+    <span class="n">CommonAPIMixin</span><span class="p">,</span> <span class="n">mixins</span><span class="o">.</span><span class="n">ListModelMixin</span><span class="p">,</span> 
+    <span class="n">mixins</span><span class="o">.</span><span class="n">CreateModelMixin</span><span class="p">,</span> <span class="n">generics</span><span class="o">.</span><span class="n">GenericAPIView</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Generic Method Additions to the API View</span>
@@ -822,34 +862,14 @@
         <span class="n">serializer</span><span class="o">.</span><span class="n">is_valid</span><span class="p">(</span><span class="n">raise_exception</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="n">serializer</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">user_id</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">username</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="n">serializer</span><span class="o">.</span><span class="n">validated_data</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="n">status</span><span class="o">.</span><span class="n">HTTP_201_CREATED</span><span class="p">)</span>
-
-<div class="viewcode-block" id="GenericAPIView.initialize_request">
-<a class="viewcode-back" href="../../views.html#citations.views.GenericAPIView.initialize_request">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">initialize_request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Decode Information Given to POST requests</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">req</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">initialize_request</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-
-        <span class="c1"># Modify req.data here</span>
-        <span class="n">mutable</span> <span class="o">=</span> <span class="n">req</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">json_fields</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">mutable</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">field</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mutable</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">field</span><span class="p">),</span> <span class="nb">str</span><span class="p">):</span>
-                <span class="k">try</span><span class="p">:</span>
-                    <span class="n">mutable</span><span class="p">[</span><span class="n">field</span><span class="p">]</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">mutable</span><span class="p">[</span><span class="n">field</span><span class="p">])</span>
-                <span class="k">except</span> <span class="n">json</span><span class="o">.</span><span class="n">decoder</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">:</span>
-                    <span class="n">mutable</span><span class="p">[</span><span class="n">field</span><span class="p">]</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">mutable</span><span class="p">[</span><span class="n">field</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;&#39;&quot;</span><span class="p">,</span> <span class="s1">&#39;&quot;&#39;</span><span class="p">))</span>
-        <span class="n">req</span><span class="o">.</span><span class="n">_full_data</span> <span class="o">=</span> <span class="n">mutable</span>  <span class="c1"># override parsed data</span>
-
-        <span class="k">return</span> <span class="n">req</span></div>
-</div>
+        <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="n">serializer</span><span class="o">.</span><span class="n">validated_data</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="n">status</span><span class="o">.</span><span class="n">HTTP_201_CREATED</span><span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="SpecificAPIView">
 <a class="viewcode-back" href="../../views.html#citations.views.SpecificAPIView">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">SpecificAPIView</span><span class="p">(</span>
+    <span class="n">CommonAPIMixin</span><span class="p">,</span>
     <span class="n">mixins</span><span class="o">.</span><span class="n">CreateModelMixin</span><span class="p">,</span>
     <span class="n">mixins</span><span class="o">.</span><span class="n">RetrieveModelMixin</span><span class="p">,</span>
     <span class="n">mixins</span><span class="o">.</span><span class="n">UpdateModelMixin</span><span class="p">,</span>
@@ -913,25 +933,7 @@
             <span class="c1"># forcibly invalidate the prefetch cache on the instance.</span>
             <span class="n">instance</span><span class="o">.</span><span class="n">_prefetched_objects_cache</span> <span class="o">=</span> <span class="p">{}</span>
 
-        <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="n">serializer</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
-
-<div class="viewcode-block" id="SpecificAPIView.initialize_request">
-<a class="viewcode-back" href="../../views.html#citations.views.SpecificAPIView.initialize_request">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">initialize_request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Decode Information Given to POST requests</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">req</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">initialize_request</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-
-        <span class="c1"># Modify req.data here</span>
-        <span class="n">mutable</span> <span class="o">=</span> <span class="n">req</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">json_fields</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">mutable</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">field</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mutable</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">field</span><span class="p">),</span> <span class="nb">str</span><span class="p">):</span>
-                <span class="n">mutable</span><span class="p">[</span><span class="n">field</span><span class="p">]</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">mutable</span><span class="p">[</span><span class="n">field</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="n">req</span><span class="o">.</span><span class="n">_full_data</span> <span class="o">=</span> <span class="n">mutable</span>  <span class="c1"># override parsed data</span>
-
-        <span class="k">return</span> <span class="n">req</span></div>
-</div>
+        <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="n">serializer</span><span class="o">.</span><span class="n">data</span><span class="p">)</span></div>
 
 
 
@@ -1192,6 +1194,36 @@
         <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
 
+<div class="viewcode-block" id="CitationView.find_record">
+<a class="viewcode-back" href="../../views.html#citations.views.CitationView.find_record">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">find_record</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Obtain the correct ID for the record in question.</span>
+
+<span class="sd">        ID is unique so should be the source of truth</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># 1. Check if title is actually ID</span>
+        <span class="k">if</span> <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">title</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">title</span>
+
+        <span class="c1"># 2. Dismiss no record for this title</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">Http404</span><span class="p">(</span><span class="s2">&quot;The requested citation title does not yet exist.&quot;</span><span class="p">)</span>
+
+         <span class="c1"># 3. Check version</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">):</span>
+            <span class="n">vn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">)</span>
+            <span class="n">citation</span> <span class="o">=</span> <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="n">vn</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">citation</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">Http404</span><span class="p">(</span><span class="s2">&quot;The requested citation does not yet exist.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">citation</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">id</span>
+
+        <span class="c1"># 4. Get latest</span>
+        <span class="n">citation</span> <span class="o">=</span> <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">last</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">citation</span><span class="o">.</span><span class="n">id</span></div>
+
+
 <div class="viewcode-block" id="CitationView.get_context_data">
 <a class="viewcode-back" href="../../views.html#citations.views.CitationView.get_context_data">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
@@ -1199,34 +1231,13 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Accept&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;application/json&#39;</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">redirect</span><span class="p">()</span>
 
-        <span class="n">version</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="k">if</span> <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">title</span><span class="p">):</span>
-            <span class="n">c</span> <span class="o">=</span> <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">title</span><span class="p">)</span>
-            <span class="n">title</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">title</span>
-            <span class="n">version</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">version</span>
-        <span class="k">elif</span> <span class="ow">not</span> <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="n">Http404</span><span class="p">(</span><span class="s2">&quot;The requested citation title does not yet exist.&quot;</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">pass</span>
+        <span class="nb">id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_record</span><span class="p">(</span><span class="n">title</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">version</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">):</span>
-            <span class="n">vn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">)</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="n">citation</span> <span class="o">=</span> <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="n">vn</span><span class="p">)</span>
-            <span class="k">except</span> <span class="n">Citations</span><span class="o">.</span><span class="n">DoesNotExist</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="n">Http404</span><span class="p">(</span><span class="s2">&quot;The requested citation does not yet exist.&quot;</span><span class="p">)</span>
-            <span class="n">citation_data</span> <span class="o">=</span> <span class="n">CitationsSerializer</span><span class="p">(</span><span class="n">citation</span><span class="p">)</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">version</span><span class="p">:</span>
-                <span class="n">citation</span> <span class="o">=</span> <span class="p">(</span>
-                    <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">last</span><span class="p">()</span>
-                <span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">citation</span> <span class="o">=</span> <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="n">version</span><span class="p">)</span>
-            <span class="n">citation_data</span> <span class="o">=</span> <span class="n">CitationsSerializer</span><span class="p">(</span><span class="n">citation</span><span class="p">)</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
+        <span class="n">citation</span> <span class="o">=</span> <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+        <span class="n">citation_data</span> <span class="o">=</span> <span class="n">CitationsSerializer</span><span class="p">(</span><span class="n">citation</span><span class="p">)</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
 
         <span class="n">latest_version</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">last</span><span class="p">()</span><span class="o">.</span><span class="n">version</span>
+            <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">citation</span><span class="o">.</span><span class="n">title</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">last</span><span class="p">()</span><span class="o">.</span><span class="n">version</span>
         <span class="p">)</span>
 
         <span class="n">reviewer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span>
@@ -1593,7 +1604,7 @@
 
     <span class="k">def</span><span class="w"> </span><span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 
-        <span class="n">data</span> <span class="o">=</span> <span class="n">unwrap_request</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">unwrap_request</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">data</span><span class="p">))</span>
         <span class="n">instance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_object</span><span class="p">()</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">instance</span><span class="o">.</span><span class="n">editable</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s1">&#39;error&#39;</span><span class="p">:</span>
@@ -1714,30 +1725,46 @@
 <span class="sd">        Check all clashing information here</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
+        <span class="c1"># Determine form clashes on party info</span>
         <span class="n">clashes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_form_clashes</span><span class="p">(</span>
             <span class="n">contact_formset</span><span class="p">,</span>
             <span class="n">PartiesSerializer</span><span class="p">,</span>
             <span class="n">Parties</span><span class="p">,</span>
             <span class="p">[</span><span class="s1">&#39;email&#39;</span><span class="p">,</span><span class="s1">&#39;orcid&#39;</span><span class="p">],</span>
             <span class="n">party_hash_func</span><span class="p">)</span>
-        
+
+        <span class="c1"># Reset session clashes if there are none</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">clashes</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="p">[</span><span class="s1">&#39;citation_clashes&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="k">return</span>
 
+        <span class="c1"># Check against existing clashes</span>
         <span class="n">proceed</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;citation_clashes&#39;</span><span class="p">):</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">clashes</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">&lt;=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="p">[</span><span class="s1">&#39;citation_clashes&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
                 <span class="n">proceed</span> <span class="o">=</span> <span class="kc">True</span>
-                <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">clashes</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+
+                <span class="nb">iter</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">while</span> <span class="n">proceed</span> <span class="ow">and</span> <span class="nb">iter</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">clashes</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+
+                    <span class="n">k</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">clashes</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="nb">iter</span><span class="p">]</span>
+
+                    <span class="c1"># New clash not present in the old session - immediately raise new issue</span>
+                    <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="p">[</span><span class="s1">&#39;citation_clashes&#39;</span><span class="p">]:</span>
+                        <span class="n">proceed</span> <span class="o">=</span> <span class="kc">False</span>
+
+                    <span class="c1"># Check details of past vs new clash - if they are different, don&#39;t proceed.</span>
                     <span class="k">for</span> <span class="n">swipe</span> <span class="ow">in</span> <span class="n">clashes</span><span class="p">[</span><span class="n">k</span><span class="p">]:</span>
                         <span class="k">if</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">([</span><span class="n">swipe</span> <span class="o">==</span> <span class="n">scar</span> <span class="k">for</span> <span class="n">scar</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="p">[</span><span class="s1">&#39;citation_clashes&#39;</span><span class="p">][</span><span class="n">k</span><span class="p">]]):</span>
                             <span class="n">proceed</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="nb">iter</span> <span class="o">+=</span> <span class="mi">1</span>
 
+        <span class="c1"># Reset session clashes to nothing and return</span>
         <span class="k">if</span> <span class="n">proceed</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="p">[</span><span class="s1">&#39;citation_clashes&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="k">return</span>
-        
+
+        <span class="c1"># Not proceeding - raise clashes as errors</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="p">[</span><span class="s1">&#39;citation_clashes&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">clashes</span>
 
         <span class="n">contact_map</span> <span class="o">=</span> <span class="p">[]</span>
@@ -1964,7 +1991,8 @@
                 <span class="k">continue</span>
 
             <span class="n">filter_kwargs</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="s1">&#39;pk&#39;</span><span class="p">:</span> <span class="n">serializer</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">get_id</span><span class="p">(</span><span class="n">formdata</span><span class="p">)</span>
+                <span class="n">k</span><span class="p">:</span> <span class="n">formdata</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">serializer</span><span class="o">.</span><span class="n">Meta</span><span class="p">,</span><span class="s1">&#39;required_fields&#39;</span><span class="p">,[])</span> <span class="o">+</span> \
+                <span class="nb">getattr</span><span class="p">(</span><span class="n">serializer</span><span class="o">.</span><span class="n">Meta</span><span class="p">,</span><span class="s1">&#39;immutable_fields&#39;</span><span class="p">,[])))</span>
             <span class="p">}</span>
             <span class="n">inst</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="o">**</span><span class="n">filter_kwargs</span><span class="p">)</span>
 
