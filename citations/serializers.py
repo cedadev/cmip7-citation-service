@@ -461,6 +461,15 @@ class GenericSerializerMixin(serializers.ModelSerializer):
         filtered_data = {}
         validated_data = self.fill_data_parameters(validated_data, user_id=user_id)
         for k in list(validated_data.keys()):
+
+            if k == 'first_name' and validated_data[k] == 'Tilo ':
+                pass
+
+            # Check value
+            if str(validated_data[k]).startswith(' ') or str(validated_data[k]).endswith(' '):
+                raise MethodNotAllowed(f'The field "{k}" cannot start or end with a "space"')
+
+            # Check key
             if (
                 k in self.Meta.fields
                 or k.replace("_id", "") in self.Meta.id_relations
@@ -581,6 +590,8 @@ class InstitutionsSerializer(GenericSerializerMixin):
 
         @classmethod
         def get_id(cls, data):
+            if 'pk' in data and 'name' not in data:
+                return data['pk']
 
             return hashlib.sha1(data["name"].encode()).hexdigest()
 
@@ -621,7 +632,8 @@ class PartiesSerializer(GenericSerializerMixin):
 
         @classmethod
         def get_id(cls, data):
-
+            if 'pk' in data and 'first_name' not in data:
+                return data['pk']
             naming_hash = (
                 data["first_name"]
                 + data.get("middle_names", "")
@@ -795,6 +807,7 @@ class CitationsSerializer(GenericSerializerMixin):
         non_copying_fields = ["doi_url", "publication_timestamp","abstract", "experiment_id"]
         id_relations = ["primary"]
         insert_order_relations = ["contacts"]
+        immutable_fields = ['title','id','version']
 
         relations = [
             "contacts",
@@ -895,7 +908,7 @@ class CitationsSerializer(GenericSerializerMixin):
             for ref in data.get(reftype, []):
                 if isinstance(ref, str):
 
-                    if not ReferencesSerializer(References.objects.filter(pk=ref)):
+                    if not References.objects.filter(pk=ref):
                         raise ValueError(
                             "Unable to interpret reference ID with no existing " \
                             "reference record."

@@ -483,7 +483,13 @@ def filter_versions(queryset, extra_filters: dict = None):
 
 
 def unwrap_request(data: dict) -> dict:
-    return {k: v for k, v in data.items()}
+
+    keep_data = {}
+    for k, v in data.items():
+        if isinstance(v, list) and not any(v):
+            continue
+        keep_data[k] = v
+    return keep_data
 
 
 def check_publish_ok(request, data: dict) -> tuple:
@@ -650,8 +656,35 @@ class PaginatedListView(GenericRenderedView):
         return self.lazyqueryset(queryset, self.list_param_reqs)
 
 
+class CommonAPIMixin:
+
+    def initialize_request(self, request, *args, **kwargs):
+        """
+        Decode JSON serialized Information Given to POST requests
+
+        If needed, str-JSON data is decoded here.
+        """
+        req = super().initialize_request(request, *args, **kwargs)
+
+        # Modify req.data here
+        mutable = req.data.copy()
+        for field in self.json_fields:
+            if mutable.get(field, "") != "" and isinstance(mutable.get(field), str):
+                try:
+                    mutable[field] = json.loads(mutable[field])
+                except json.decoder.JSONDecodeError:
+                    try:
+                        mutable[field] = json.loads(mutable[field].replace("'", '"'))
+                    except json.decoder.JSONDecodeError:
+                        pass # Still not JSON
+        req._full_data = mutable  # override parsed data
+
+        return req
+
+
 class GenericAPIView(
-    mixins.ListModelMixin, mixins.CreateModelMixin, generics.GenericAPIView
+    CommonAPIMixin, mixins.ListModelMixin, 
+    mixins.CreateModelMixin, generics.GenericAPIView
 ):
     """
     Generic Method Additions to the API View
@@ -683,26 +716,9 @@ class GenericAPIView(
 
         return Response(serializer.validated_data, status=status.HTTP_201_CREATED)
 
-    def initialize_request(self, request, *args, **kwargs):
-        """
-        Decode Information Given to POST requests
-        """
-        req = super().initialize_request(request, *args, **kwargs)
-
-        # Modify req.data here
-        mutable = req.data.copy()
-        for field in self.json_fields:
-            if mutable.get(field, "") != "" and isinstance(mutable.get(field), str):
-                try:
-                    mutable[field] = json.loads(mutable[field])
-                except json.decoder.JSONDecodeError:
-                    mutable[field] = json.loads(mutable[field].replace("'", '"'))
-        req._full_data = mutable  # override parsed data
-
-        return req
-
 
 class SpecificAPIView(
+    CommonAPIMixin,
     mixins.CreateModelMixin,
     mixins.RetrieveModelMixin,
     mixins.UpdateModelMixin,
@@ -764,21 +780,6 @@ class SpecificAPIView(
             instance._prefetched_objects_cache = {}
 
         return Response(serializer.data)
-
-    def initialize_request(self, request, *args, **kwargs):
-        """
-        Decode Information Given to POST requests
-        """
-        req = super().initialize_request(request, *args, **kwargs)
-
-        # Modify req.data here
-        mutable = req.data.copy()
-        for field in self.json_fields:
-            if mutable.get(field, "") != "" and isinstance(mutable.get(field), str):
-                mutable[field] = json.loads(mutable[field])[0]
-        req._full_data = mutable  # override parsed data
-
-        return req
 
 
 class PartiesView(PaginatedListView):
@@ -1003,39 +1004,45 @@ class CitationView(GenericRenderedView):
         return super().get(request, *args, **kwargs)
 
 
+    def find_record(self, title, **kwargs):
+        """
+        Obtain the correct ID for the record in question.
+
+        ID is unique so should be the source of truth
+        """
+
+        # 1. Check if title is actually ID
+        if Citations.objects.filter(id=title):
+            return title
+
+        # 2. Dismiss no record for this title
+        if not Citations.objects.filter(title=title):
+            raise Http404("The requested citation title does not yet exist.")
+
+         # 3. Check version
+        if self.request.GET.get("version"):
+            vn = self.request.GET.get("version")
+            citation = Citations.objects.filter(title=title, version=vn)
+            if not citation:
+                raise Http404("The requested citation does not yet exist.")
+            return citation[0].id
+
+        # 4. Get latest
+        citation = Citations.objects.filter(title=title).order_by("version").last()
+        return citation.id
+
     def get_context_data(self, title, **kwargs):
         context = super().get_context_data(**kwargs)
         if self.request.headers.get('Accept') == 'application/json':
             return redirect()
 
-        version = None
-        if Citations.objects.filter(id=title):
-            c = Citations.objects.get(id=title)
-            title = c.title
-            version = c.version
-        elif not Citations.objects.filter(title=title):
-            raise Http404("The requested citation title does not yet exist.")
-        else:
-            pass
+        id = self.find_record(title, **kwargs)
 
-        if not version and self.request.GET.get("version"):
-            vn = self.request.GET.get("version")
-            try:
-                citation = Citations.objects.get(title=title, version=vn)
-            except Citations.DoesNotExist:
-                raise Http404("The requested citation does not yet exist.")
-            citation_data = CitationsSerializer(citation).get_data()
-        else:
-            if not version:
-                citation = (
-                    Citations.objects.filter(title=title).order_by("version").last()
-                )
-            else:
-                citation = Citations.objects.get(title=title, version=version)
-            citation_data = CitationsSerializer(citation).get_data()
+        citation = Citations.objects.get(id=id)
+        citation_data = CitationsSerializer(citation).get_data()
 
         latest_version = (
-            Citations.objects.filter(title=title).order_by("version").last().version
+            Citations.objects.filter(title=citation.title).order_by("version").last().version
         )
 
         reviewer = self.request.user
@@ -1365,7 +1372,7 @@ class SpecificCitationAPIView(SpecificAPIView):
 
     def update(self, request, *args, **kwargs):
 
-        data = unwrap_request(request.data)
+        data = unwrap_request(dict(request.data))
         instance = self.get_object()
         if not instance.editable:
             return JsonResponse({'error':
@@ -1716,7 +1723,8 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
                 continue
 
             filter_kwargs = {
-                'pk': serializer.Meta.get_id(formdata)
+                k: formdata[k] for k in list(set(getattr(serializer.Meta,'required_fields',[]) + \
+                getattr(serializer.Meta,'immutable_fields',[])))
             }
             inst = model.objects.filter(**filter_kwargs)
 
