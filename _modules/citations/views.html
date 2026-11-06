@@ -901,14 +901,23 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">put</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">is_deletable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">is_deletable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">user_permissions</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">codename</span><span class="o">=</span><span class="s2">&quot;add_citations&quot;</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">HttpResponseForbidden</span><span class="p">(</span>
+                <span class="s2">&quot;Permission denied for deletion of object.&quot;</span>
+            <span class="p">)</span>
         <span class="k">return</span> <span class="kc">True</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="n">instance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_object</span><span class="p">()</span>
 
         <span class="c1"># Determine if this instance is connected to any other records?</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_deletable</span><span class="p">(</span><span class="n">instance</span><span class="p">):</span>
+        <span class="n">deletable</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_deletable</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">instance</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">deletable</span><span class="p">,</span> <span class="n">HttpResponseForbidden</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">deletable</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">deletable</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">HttpResponseForbidden</span><span class="p">(</span>
                 <span class="s2">&quot;Not able to delete this instance as it is associated with other entities&quot;</span>
             <span class="p">)</span>
@@ -1453,12 +1462,18 @@
     <span class="n">queryset</span> <span class="o">=</span> <span class="n">Parties</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
     <span class="n">serializer_class</span> <span class="o">=</span> <span class="n">PartiesSerializer</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">is_deletable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance</span><span class="p">:</span> <span class="n">Parties</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">is_deletable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">instance</span><span class="p">:</span> <span class="n">Parties</span><span class="p">):</span>
+        <span class="n">is_deletable</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">is_deletable</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">instance</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">is_deletable</span><span class="p">,</span><span class="nb">bool</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">is_deletable</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">is_deletable</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
 
         <span class="k">if</span> <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">primary_id</span><span class="o">=</span><span class="n">instance</span><span class="o">.</span><span class="n">pk</span><span class="p">):</span>
             <span class="k">return</span> <span class="kc">False</span>
         <span class="k">if</span> <span class="n">Citations</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">contacts__in</span><span class="o">=</span><span class="p">[</span><span class="n">instance</span><span class="o">.</span><span class="n">pk</span><span class="p">]):</span>
             <span class="k">return</span> <span class="kc">False</span>
+        
         <span class="k">return</span> <span class="kc">True</span></div>
 
 
