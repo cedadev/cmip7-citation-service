@@ -16,6 +16,10 @@ logstream = logging.StreamHandler()
 formatter = logging.Formatter("%(levelname)s [%(name)s]: %(message)s")
 logstream.setFormatter(formatter)
 
+logger = logging.getLogger(__name__)
+logger.addHandler(logstream)
+logger.propagate = False
+
 def fullname(party: dict) -> str:
     """
     Display the fullname of a party based on if the middle name is blank or not
@@ -142,7 +146,13 @@ def obtain_all_references(data: dict) -> dict:
 
             title = getattr(ref, "title", None) or re.search(
                 r"^.*?\d{4}", ref.citation
-            ).group(0)
+            )
+            
+            if not title:
+                logger.error(f'Reference title could not be determined for {ref.doi} - skipped')
+                continue
+                
+            title = title.group(0)
             cites.append({"title": title, "citeas": citeas, "id": ref.doi})
 
     return cites
