@@ -136,7 +136,16 @@ def obtain_all_references(data: dict) -> dict:
         # Under review based on ESGVOC changes.
         for ref in component.references:
 
-            if not hasattr(ref,'doi'):
+            if not hasattr(ref,'doi') or not hasattr(ref,'citation'):
+                continue
+
+            invalid_reference = (
+                'paper.under.review' in ref.citation or \
+                'paper.under.review' in ref.doi or \
+                ref.doi == 'N/A')
+
+            if invalid_reference:
+                logger.error(f'Reference contains invalid features: {ref.citation} {ref.doi} - skipped')
                 continue
             
             if ref.doi in ref.citation:
