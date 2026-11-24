@@ -707,9 +707,9 @@ class FundingStreamsSerializer(GenericSerializerMixin):
 
         @classmethod
         def get_id(cls, data):
-            if 'pk' in data:
+            if data.get('pk',None):
                 return data['pk']
-            if 'id' in data:
+            if data.get('id',None):
                 return data['id']
             return hashlib.sha1(data["name"].encode()).hexdigest()
 
@@ -728,8 +728,7 @@ class FundingStreamsSerializer(GenericSerializerMixin):
                 user_id=user_id
             )
 
-        if "id" not in data:
-            data["id"] = FundingStreamsSerializer.Meta.get_id(data)
+        data["id"] = FundingStreamsSerializer.Meta.get_id(data)
 
         return data
 

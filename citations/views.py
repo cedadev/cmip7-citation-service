@@ -1876,8 +1876,10 @@ class CitationFormMixin(PermissionRequiredMixin, GenericRenderedView, FormView):
         
             # Don't need correct form order when validating
             for form_pt in formset:
-                if not form_pt.is_valid() and not form_pt.empty_permitted:
+                if len(form_pt.changed_data) == 0:
+                    continue
 
+                if not form_pt.is_valid() and not form_pt.empty_permitted:
                     if formset == reference_formset:
                         if check_empty_custom(form_pt, nonempty_fields=["relation"]):
                             continue

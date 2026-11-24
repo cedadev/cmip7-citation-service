@@ -1,6 +1,6 @@
 [project]
 name = "cmip7-citation-service"
-version = "1.1.2"
+version = "1.2.0"
 description = "A citation service for the CMIP7 project"
 authors = [
     {name = "Daniel Westwood",email = "daniel.westwood@stfc.ac.uk"}
@@ -38,6 +38,11 @@ packages = [
     { include = 'citation_site' },
     { include = 'citations' }
 ]
+
+[tool.poetry.group.dev.dependencies]
+sphinx = "^9.2.0"
+ruff = "^0.17.6"
+sphinx-rtd-theme = "^3.1.0"
 
 [project.scripts]
 
