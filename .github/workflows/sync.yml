@@ -1,0 +1,48 @@
+name: Create PR from main to pre_prod
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 5 * * *"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create sync PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git fetch origin main pre_prod
+
+          # Skip if no new commits
+          if [ "$(git rev-list --count origin/pre_prod..origin/main)" -eq 0 ]; then
+            echo "pre_prod is already up to date"
+            exit 0
+          fi
+
+          # Skip if an open sync PR already exists
+          EXISTING=$(gh pr list \
+            --base pre_prod \
+            --head main \
+            --state open \
+            --json number \
+            --jq '.[0].number')
+
+          if [ "$EXISTING" != "null" ]; then
+            echo "PR #$EXISTING already exists"
+            exit 0
+          fi
+
+          gh pr create \
+            --base pre_prod \
+            --head main \
+            --title "Production sync: main → pre_prod" \
+            --body "Automated PR to bring production changes into pre_prod."
