@@ -203,7 +203,9 @@ def publish_record(data: dict, id: str) -> str:
     if not bool(drs_url):
         drs_url = get_drs_url(data)
 
-    if not resolve_drs(drs_url) and not resolve_stac_query(data):
+    data_found = resolve_drs(drs_url) or resolve_stac_query(data) or settings.DEBUG
+
+    if not data_found:
         return False, {"published": False}
 
     pub_ts = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
