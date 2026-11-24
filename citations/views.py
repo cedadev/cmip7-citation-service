@@ -130,7 +130,11 @@ def download_bibtex(request, title, *args, **kwargs):
     timestamp = record.publication_timestamp
 
     primary = fullname(PartiesSerializer(record.primary).data)
-    contacts = [fullname(PartiesSerializer(c).data) for c in record.contacts.all()]
+
+    contacts = []
+    for relation in CitationParty.objects.filter(citation=record.id):
+        contact = relation.party
+        contacts.append(get_citable_party(contact))
 
     allparties = ' and '.join([primary] + contacts)
 
@@ -187,7 +191,10 @@ def download_ris(request, title, *args, **kwargs):
     timestamp = record.publication_timestamp
 
     primary = get_citable_party(record.primary)
-    contacts = [get_citable_party(c) for c in record.contacts.all()]
+    contacts = []
+    for relation in CitationParty.objects.filter(citation=record.id):
+        contact = relation.party
+        contacts.append(get_citable_party(contact))
 
     yyyymmdd = timestamp.split('T')[0].replace('-','')
     yyyy = yyyymmdd[:4]
