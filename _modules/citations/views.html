@@ -212,7 +212,11 @@
     <span class="n">timestamp</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">publication_timestamp</span>
 
     <span class="n">primary</span> <span class="o">=</span> <span class="n">fullname</span><span class="p">(</span><span class="n">PartiesSerializer</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">primary</span><span class="p">)</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
-    <span class="n">contacts</span> <span class="o">=</span> <span class="p">[</span><span class="n">fullname</span><span class="p">(</span><span class="n">PartiesSerializer</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="o">.</span><span class="n">data</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">record</span><span class="o">.</span><span class="n">contacts</span><span class="o">.</span><span class="n">all</span><span class="p">()]</span>
+
+    <span class="n">contacts</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">relation</span> <span class="ow">in</span> <span class="n">CitationParty</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">citation</span><span class="o">=</span><span class="n">record</span><span class="o">.</span><span class="n">id</span><span class="p">):</span>
+        <span class="n">contact</span> <span class="o">=</span> <span class="n">relation</span><span class="o">.</span><span class="n">party</span>
+        <span class="n">contacts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">get_citable_party</span><span class="p">(</span><span class="n">contact</span><span class="p">))</span>
 
     <span class="n">allparties</span> <span class="o">=</span> <span class="s1">&#39; and &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">primary</span><span class="p">]</span> <span class="o">+</span> <span class="n">contacts</span><span class="p">)</span>
 
@@ -272,7 +276,10 @@
     <span class="n">timestamp</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">publication_timestamp</span>
 
     <span class="n">primary</span> <span class="o">=</span> <span class="n">get_citable_party</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">primary</span><span class="p">)</span>
-    <span class="n">contacts</span> <span class="o">=</span> <span class="p">[</span><span class="n">get_citable_party</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">record</span><span class="o">.</span><span class="n">contacts</span><span class="o">.</span><span class="n">all</span><span class="p">()]</span>
+    <span class="n">contacts</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">relation</span> <span class="ow">in</span> <span class="n">CitationParty</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">citation</span><span class="o">=</span><span class="n">record</span><span class="o">.</span><span class="n">id</span><span class="p">):</span>
+        <span class="n">contact</span> <span class="o">=</span> <span class="n">relation</span><span class="o">.</span><span class="n">party</span>
+        <span class="n">contacts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">get_citable_party</span><span class="p">(</span><span class="n">contact</span><span class="p">))</span>
 
     <span class="n">yyyymmdd</span> <span class="o">=</span> <span class="n">timestamp</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;T&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">,</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
     <span class="n">yyyy</span> <span class="o">=</span> <span class="n">yyyymmdd</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span>
@@ -2122,8 +2129,10 @@
         
             <span class="c1"># Don&#39;t need correct form order when validating</span>
             <span class="k">for</span> <span class="n">form_pt</span> <span class="ow">in</span> <span class="n">formset</span><span class="p">:</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">form_pt</span><span class="o">.</span><span class="n">is_valid</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">form_pt</span><span class="o">.</span><span class="n">empty_permitted</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">form_pt</span><span class="o">.</span><span class="n">changed_data</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">continue</span>
 
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">form_pt</span><span class="o">.</span><span class="n">is_valid</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">form_pt</span><span class="o">.</span><span class="n">empty_permitted</span><span class="p">:</span>
                     <span class="k">if</span> <span class="n">formset</span> <span class="o">==</span> <span class="n">reference_formset</span><span class="p">:</span>
                         <span class="k">if</span> <span class="n">check_empty_custom</span><span class="p">(</span><span class="n">form_pt</span><span class="p">,</span> <span class="n">nonempty_fields</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;relation&quot;</span><span class="p">]):</span>
                             <span class="k">continue</span>

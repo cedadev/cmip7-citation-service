@@ -291,7 +291,9 @@
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">bool</span><span class="p">(</span><span class="n">drs_url</span><span class="p">):</span>
         <span class="n">drs_url</span> <span class="o">=</span> <span class="n">get_drs_url</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">resolve_drs</span><span class="p">(</span><span class="n">drs_url</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">resolve_stac_query</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+    <span class="n">data_found</span> <span class="o">=</span> <span class="n">resolve_drs</span><span class="p">(</span><span class="n">drs_url</span><span class="p">)</span> <span class="ow">or</span> <span class="n">resolve_stac_query</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="ow">or</span> <span class="n">settings</span><span class="o">.</span><span class="n">DEBUG</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">data_found</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;published&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span>
 
     <span class="n">pub_ts</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1">T%H:%M:%SZ&#39;</span><span class="p">)</span>
